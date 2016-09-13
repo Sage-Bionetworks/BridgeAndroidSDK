@@ -2,10 +2,8 @@ package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
-import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -13,14 +11,12 @@ import com.google.gson.Gson;
 
 import org.apache.commons.lang3.StringUtils;
 import org.researchstack.backbone.ResourcePathManager;
-import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.storage.database.AppDatabase;
 import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.storage.file.FileAccess;
-import org.researchstack.backbone.storage.file.StorageAccessException;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.FormatHelper;
@@ -42,8 +38,10 @@ import org.sagebionetworks.bridge.android.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
+import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.sdk.rest.BridgeService;
 import org.sagebionetworks.bridge.sdk.rest.UserSessionInfo;
+import org.sagebionetworks.bridge.sdk.rest.model.BridgeMessageResponse;
 import org.sagebionetworks.bridge.sdk.rest.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.sdk.rest.model.EmailBody;
 import org.sagebionetworks.bridge.sdk.rest.model.SharingOptionBody;
@@ -69,6 +67,7 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.GsonConverterFactory;
 import retrofit2.Retrofit;
@@ -81,14 +80,18 @@ import rx.schedulers.Schedulers;
 * a complete port of the Sage Bridge Java SDK for android: https://github.com/Sage-Bionetworks/BridgeJavaSDK
  */
 public abstract class BridgeDataProvider extends DataProvider {
-    public static final String TEMP_CONSENT_JSON_FILE_NAME = "/consent_sig";
-    public static final String USER_SESSION_PATH = "/user_session";
-    public static final String USER_PATH = "/user";
 
     private BridgeService service;
     protected UserSessionInfo userSessionInfo;
     protected Gson gson = new Gson();
     protected boolean signedIn = false;
+
+    protected Retrofit retrofit;
+    protected BridgeHeaderInterceptor interceptor;
+    protected AppPrefs appPrefs;
+    protected StorageAccessWrapper storageAccess;
+    protected UserLocalStorage userLocalStorage;
+    protected ConsentLocalStorage consentLocalStorage;
 
     // these are used to get task/step guids without rereading the json files and iterating through
     private Map<String, String> loadedTaskGuids = new HashMap<>();
@@ -99,53 +102,63 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     protected abstract ResourcePathManager.Resource getTasksAndSchedules();
 
-    protected abstract String getBaseUrl();
+    private final String studyId;
+    private final String userAgent;
+    private final String baseUrl;
 
-    protected abstract String getStudyId();
+    //used by tests to mock service
+    BridgeDataProvider(String baseUrl, String studyId, String userAgent, BridgeService service, AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage, ConsentLocalStorage consentLocalStorage) {
+        this.baseUrl = baseUrl;
+        this.studyId = studyId;
+        this.userAgent = userAgent;
+        this.appPrefs = appPrefs;
+        this.service = service;
+        this.storageAccess = storageAccess;
+        this.userLocalStorage = userLocalStorage;
+        this.consentLocalStorage = consentLocalStorage;
 
-    protected final String getUserAgent() {
-        return getStudyName() + "/" + getAppVersion() + " (" + getDeviceName() + "; Android " + Build.VERSION.RELEASE + ") BridgeSDK/0";
+        updateBridgeService(null);
     }
 
-    protected abstract String getStudyName();
+    public BridgeDataProvider(String baseUrl, String studyId, String userAgent) {
+        this.baseUrl = baseUrl;
+        this.studyId = studyId;
+        this.userAgent = userAgent;
+        updateBridgeService(null);
+    }
 
-    protected abstract int getAppVersion();
+    private static class BridgeHeaderInterceptor implements Interceptor {
+        private String userAgent;
+        private String sessionToken;
 
-    private String getDeviceName() {
-        String manufacturer = Build.MANUFACTURER;
-        if (TextUtils.isEmpty(manufacturer)) {
-            manufacturer = "Unknown";
+        public BridgeHeaderInterceptor(String userAgent, String sessionToken) {
+            this.userAgent = userAgent;
+            setSessionToken(sessionToken);
         }
 
-        String model = Build.MODEL;
-        if (TextUtils.isEmpty(model)) {
-            model = "Android";
+        public void setSessionToken(String sessionToken) {
+            this.sessionToken = sessionToken;
         }
 
-        if (model.startsWith(manufacturer)) {
-            return capitalize(model);
-        } else {
-            return capitalize(manufacturer) + " " + model;
+        public String getSessionToken() {
+            return sessionToken;
+        }
+
+        @Override
+        public Response intercept(Chain chain) throws IOException {
+            Request original = chain.request();
+
+            Request request = original.newBuilder()
+                    .header("User-Agent", userAgent)
+                    .header("Bridge-Session", sessionToken)
+                    .method(original.method(), original.body())
+                    .build();
+
+            return chain.proceed(request);
         }
     }
 
-    private String capitalize(String s) {
-        if (s == null || s.length() == 0) {
-            return "";
-        }
-        char first = s.charAt(0);
-        if (Character.isUpperCase(first)) {
-            return s;
-        } else {
-            return Character.toUpperCase(first) + s.substring(1);
-        }
-    }
-
-    public BridgeDataProvider() {
-        buildRetrofitService(null);
-    }
-
-    private void buildRetrofitService(UserSessionInfo userSessionInfo) {
+    private void updateBridgeService(UserSessionInfo userSessionInfo) {
         final String sessionToken;
         if (userSessionInfo != null) {
             sessionToken = userSessionInfo.getSessionToken();
@@ -153,19 +166,17 @@ public abstract class BridgeDataProvider extends DataProvider {
             sessionToken = "";
         }
 
-        Interceptor headerInterceptor = chain -> {
-            Request original = chain.request();
+        if (interceptor == null) {
+            interceptor = new BridgeHeaderInterceptor(userAgent, sessionToken);
+        }
+        interceptor.setSessionToken(sessionToken);
 
-            Request request = original.newBuilder()
-                    .header("User-Agent", getUserAgent())
-                    .header("Bridge-Session", sessionToken)
-                    .method(original.method(), original.body())
-                    .build();
+        if (service != null) {
 
-            return chain.proceed(request);
-        };
+            return;
+        }
 
-        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().addInterceptor(headerInterceptor);
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().addInterceptor(interceptor);
 
         if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor(message -> LogExt.i(
@@ -177,9 +188,9 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         OkHttpClient client = clientBuilder.build();
 
-        Retrofit retrofit = new Retrofit.Builder().addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+        retrofit = new Retrofit.Builder().addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
-                .baseUrl(getBaseUrl())
+                .baseUrl(baseUrl)
                 .client(client)
                 .build();
         service = retrofit.create(BridgeService.class);
@@ -187,16 +198,20 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public Observable<DataResponse> initialize(Context context) {
+        appPrefs = AppPrefs.getInstance(context);
+        consentLocalStorage = new ConsentLocalStorage(context, gson, storageAccess.getFileAccess());
+        userLocalStorage = new UserLocalStorage(context, gson, storageAccess.getFileAccess());
+
         return Observable.defer(() -> {
-            userSessionInfo = loadUserSession(context);
+            userSessionInfo = userLocalStorage.loadUserSession(context);
             signedIn = userSessionInfo != null;
 
-            buildRetrofitService(userSessionInfo);
+            updateBridgeService(userSessionInfo);
             return Observable.just(new DataResponse(true, null));
 
         }).doOnNext(response -> {
             // will crash if the user hasn't created a pincode yet, need to fix needsAuth()
-            if (StorageAccess.getInstance().hasPinCode(context)) {
+            if (storageAccess.hasPinCode(context)) {
                 checkForTempConsentAndUpload(context);
                 uploadPendingFiles(context);
             }
@@ -205,11 +220,9 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     private void checkForTempConsentAndUpload(Context context) {
         // If we are signed in, not consented on the server, but consented locally, upload consent
-        if (isSignedIn(context) && !userSessionInfo.isConsented() && StorageAccess.getInstance()
-                .getFileAccess()
-                .dataExists(context, TEMP_CONSENT_JSON_FILE_NAME)) {
+        if (isSignedIn(context) && !userSessionInfo.isConsented() && consentLocalStorage.hasConsent()) {
             try {
-                ConsentSignatureBody consent = loadConsentSignatureBody(context);
+                ConsentSignatureBody consent = consentLocalStorage.loadConsent();
                 uploadConsent(context, BuildConfig.STUDY_SUBPOPULATION_GUID, consent);
             } catch (Exception e) {
                 throw new RuntimeException("Error loading consent", e);
@@ -223,20 +236,18 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @Override
     public boolean isConsented(Context context) {
-        return userSessionInfo.isConsented() || StorageAccess.getInstance()
-                .getFileAccess()
-                .dataExists(context, TEMP_CONSENT_JSON_FILE_NAME);
+        return userSessionInfo.isConsented() || consentLocalStorage.hasConsent();
     }
 
     @Override
     public Observable<DataResponse> withdrawConsent(Context context, String reason) {
-        return service.withdrawConsent(getStudyId(), new WithdrawalBody(reason))
+        return service.withdrawConsent(studyId, new WithdrawalBody(reason))
                 .compose(ObservableUtils.applyDefault())
                 .doOnNext(response -> {
                     if (response.isSuccess()) {
                         userSessionInfo.setConsented(false);
-                        saveUserSession(context, userSessionInfo);
-                        buildRetrofitService(userSessionInfo);
+                        userLocalStorage.saveUserSession(userSessionInfo);
+                        updateBridgeService(userSessionInfo);
                     } else {
                         handleError(context, response.code());
                     }
@@ -247,18 +258,19 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public Observable<DataResponse> signUp(Context context, String email, String username, String password) {
         // we should pass in data groups, remove roles
-        SignUpBody body = new SignUpBody(getStudyId(), email, username, password, null, null);
+        SignUpBody body = new SignUpBody(studyId, email, username, password, null, null);
 
         // saving email to user object should exist elsewhere.
         // Save email to user object.
-        User user = loadUser(context);
+        User user = userLocalStorage.loadUser(context);
         if (user == null) {
             user = new User();
         }
         user.setEmail(email);
-        saveUser(context, user);
+        userLocalStorage.saveUser(user);
 
-        return service.signUp(body).map(message -> {
+        Observable<BridgeMessageResponse> bridgeResponse = service.signUp(body);
+        return bridgeResponse.map(message -> {
             DataResponse response = new DataResponse();
             response.setSuccess(true);
             return response;
@@ -268,7 +280,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public Observable<DataResponse> signIn(Context context, String username, String password) {
-        SignInBody body = new SignInBody(getStudyId(), username, password);
+        SignInBody body = new SignInBody(studyId, username, password);
 
         // response 412 still has a response body, so catch all http errors here
         return service.signIn(body).doOnNext(response -> {
@@ -289,8 +301,8 @@ public abstract class BridgeDataProvider extends DataProvider {
                 // if we are direct from signing in, we need to load the user profile object
                 // from the server. that wouldn't work right now
                 signedIn = true;
-                saveUserSession(context, userSessionInfo);
-                buildRetrofitService(userSessionInfo);
+                userLocalStorage.saveUserSession(userSessionInfo);
+                updateBridgeService(userSessionInfo);
                 checkForTempConsentAndUpload(context);
                 uploadPendingFiles(context);
             }
@@ -307,13 +319,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public Observable<DataResponse> resendEmailVerification(Context context, String email) {
-        EmailBody body = new EmailBody(getStudyId(), email);
+        EmailBody body = new EmailBody(studyId, email);
         return service.resendEmailVerification(body);
     }
 
     @Override
     public boolean isSignedUp(Context context) {
-        User user = loadUser(context);
+        User user = userLocalStorage.loadUser(context);
         return user != null && user.getEmail() != null;
     }
 
@@ -325,15 +337,15 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void saveConsent(Context context, TaskResult consentResult) {
         ConsentSignatureBody signature = createConsentSignatureBody(consentResult);
-        writeJsonString(context, gson.toJson(signature), TEMP_CONSENT_JSON_FILE_NAME);
+        consentLocalStorage.saveConsent(signature);
 
-        User user = loadUser(context);
+        User user = userLocalStorage.loadUser(context);
         if (user == null) {
             user = new User();
         }
         user.setName(signature.name);
         user.setBirthDate(signature.birthdate);
-        saveUser(context, user);
+        userLocalStorage.saveUser(user);
     }
 
     @NonNull
@@ -358,7 +370,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         // Save Consent Information
         // User is not signed in yet, so we need to save consent info to disk for later upload
-        return new ConsentSignatureBody(getStudyId(),
+        return new ConsentSignatureBody(studyId,
                 fullName,
                 new Date(birthdateInMillis),
                 base64Image,
@@ -368,7 +380,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public User getUser(Context context) {
-        return loadUser(context);
+        return userLocalStorage.loadUser(context);
     }
 
     @Override
@@ -384,7 +396,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .doOnNext(response -> {
                     if (response.isSuccess()) {
                         userSessionInfo.setSharingScope(scope);
-                        saveUserSession(context, userSessionInfo);
+                        userLocalStorage.saveUserSession(userSessionInfo);
                     } else {
                         handleError(context, response.code());
                     }
@@ -396,10 +408,6 @@ public abstract class BridgeDataProvider extends DataProvider {
                 });
     }
 
-    private ConsentSignatureBody loadConsentSignatureBody(Context context) {
-        String consentJson = loadJsonString(context, TEMP_CONSENT_JSON_FILE_NAME);
-        return gson.fromJson(consentJson, ConsentSignatureBody.class);
-    }
 
     @Override
     public void uploadConsent(Context context, TaskResult consentResult) {
@@ -414,14 +422,14 @@ public abstract class BridgeDataProvider extends DataProvider {
                             response.code() == 409) // success or already consented
                     {
                         userSessionInfo.setConsented(true);
-                        saveUserSession(context, userSessionInfo);
+                        userLocalStorage.saveUserSession(userSessionInfo);
 
                         LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
                                 response.message());
 
-                        FileAccess fileAccess = StorageAccess.getInstance().getFileAccess();
-                        if (fileAccess.dataExists(context, TEMP_CONSENT_JSON_FILE_NAME)) {
-                            fileAccess.clearData(context, TEMP_CONSENT_JSON_FILE_NAME);
+                        FileAccess fileAccess = storageAccess.getFileAccess();
+                        if (consentLocalStorage.hasConsent()) {
+                            consentLocalStorage.deleteConsent();
                         }
                     } else {
                         throw new RuntimeException(
@@ -433,13 +441,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public String getUserEmail(Context context) {
-        User user = loadUser(context);
+        User user = userLocalStorage.loadUser(context);
         return user == null ? null : user.getEmail();
     }
 
     @Override
     public Observable<DataResponse> forgotPassword(Context context, String email) {
-        return service.requestResetPassword(new EmailBody(getStudyId(), email)).map(response -> {
+        return service.requestResetPassword(new EmailBody(studyId, email)).map(response -> {
             if (response.isSuccess()) {
                 return new DataResponse(true, response.body().getMessage());
             } else {
@@ -448,48 +456,11 @@ public abstract class BridgeDataProvider extends DataProvider {
         });
     }
 
-    private void saveUserSession(Context context, UserSessionInfo userInfo) {
-        String userSessionJson = gson.toJson(userInfo);
-        writeJsonString(context, userSessionJson, USER_SESSION_PATH);
-    }
-
-    private User loadUser(Context context) {
-        try {
-            String user = loadJsonString(context, USER_PATH);
-            return gson.fromJson(user, User.class);
-        } catch (StorageAccessException e) {
-            return null;
-        }
-    }
-
-    private void saveUser(Context context, User profile) {
-        writeJsonString(context, gson.toJson(profile), USER_PATH);
-    }
-
-    private void writeJsonString(Context context, String userSessionJson, String userSessionPath) {
-        StorageAccess.getInstance()
-                .getFileAccess()
-                .writeData(context, userSessionPath, userSessionJson.getBytes());
-    }
-
-    private UserSessionInfo loadUserSession(Context context) {
-        try {
-            String userSessionJson = loadJsonString(context, USER_SESSION_PATH);
-            return gson.fromJson(userSessionJson, UserSessionInfo.class);
-        } catch (StorageAccessException e) {
-            return null;
-        }
-    }
-
-    private String loadJsonString(Context context, String path) {
-        return new String(StorageAccess.getInstance().getFileAccess().readData(context, path));
-    }
-
     @Override
     public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
         SchedulesAndTasksModel schedulesAndTasksModel = getTasksAndSchedules().create(context);
 
-        AppDatabase db = StorageAccess.getInstance().getAppDatabase();
+        AppDatabase db = storageAccess.getAppDatabase();
 
         List<SchedulesAndTasksModel.ScheduleModel> schedules = new ArrayList<>();
         for (SchedulesAndTasksModel.ScheduleModel schedule : schedulesAndTasksModel.schedules) {
@@ -556,7 +527,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void uploadTaskResult(Context context, TaskResult taskResult) {
         // Update/Create TaskNotificationService
-        if (AppPrefs.getInstance(context).isTaskReminderEnabled()) {
+        if (appPrefs.isTaskReminderEnabled()) {
             Log.i("SampleDataProvider", "uploadTaskResult() _ isTaskReminderEnabled() = true");
 
             String chronTime = findChronTime(taskResult.getIdentifier());
@@ -602,7 +573,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                     getPublicKeyResId(),
                     getFilesDir(context));
 
-            ((UploadQueue) StorageAccess.getInstance().getAppDatabase()).saveUploadRequest(request);
+            ((UploadQueue) storageAccess.getAppDatabase()).saveUploadRequest(request);
             uploadPendingFiles(context);
         } catch (IOException e) {
             throw new RuntimeException("Error encrypting initial task data", e);
@@ -641,7 +612,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
 
     public void uploadPendingFiles(Context context) {
-        List<UploadRequest> uploadRequests = ((UploadQueue) StorageAccess.getInstance()
+        List<UploadRequest> uploadRequests = ((UploadQueue) storageAccess
                 .getAppDatabase()).loadUploadRequests();
 
         // There is an issue here, being that this will loop through the upload requests and upload
@@ -678,7 +649,7 @@ public abstract class BridgeDataProvider extends DataProvider {
             if (completeResponse.isSuccess()) {
                 LogExt.d(getClass(), "Notified bridge of s3 upload, need to confirm");
                 // update UploadRequest in DB with id for later confirmation
-                ((UploadQueue) StorageAccess.getInstance().getAppDatabase()).saveUploadRequest(
+                ((UploadQueue) storageAccess.getAppDatabase()).saveUploadRequest(
                         request);
             } else {
                 handleError(context, completeResponse.code());
@@ -743,7 +714,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                                 "Status is still 'requested' for some reason, will retry upload later");
                         // removing bridge id so upload is retried later
                         request.bridgeId = null;
-                        ((UploadQueue) StorageAccess.getInstance()
+                        ((UploadQueue) storageAccess
                                 .getAppDatabase()).saveUploadRequest(request);
                         break;
 
@@ -805,7 +776,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     private void deleteUploadRequest(Context context, UploadRequest request) {
-        ((UploadQueue) StorageAccess.getInstance().getAppDatabase()).deleteUploadRequest(request);
+        ((UploadQueue) storageAccess.getAppDatabase()).deleteUploadRequest(request);
 
         File file = new File(getFilesDir(context), request.name);
         if (file.exists() && file.delete()) {

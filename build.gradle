@@ -31,8 +31,8 @@ android {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'org.researchstack:skin:1.0.0.rc3'
+
+    compile 'org.researchstack:skin:1.1.1'
     compile 'com.android.support:appcompat-v7:23.2.1' //23.3.0 crashes on AppCompatButton's onClick
     compile 'net.zetetic:android-database-sqlcipher:3.3.1-2@aar'
     apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
@@ -40,4 +40,8 @@ dependencies {
     compile 'com.madgag.spongycastle:core:1.54.0.0'
     compile 'com.madgag.spongycastle:prov:1.54.0.0'
     compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.robolectric:robolectric:3.0'
+    testCompile 'org.mockito:mockito-core:1.10.19'
 }
