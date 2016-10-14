@@ -1,0 +1,67 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+allprojects {
+    version = '0.0.1'
+    group = 'org.sagebionetworks.bridge'
+
+    repositories {
+        jcenter()
+        mavenLocal() // for updates to local dependencies
+    }
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.1.3'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+subprojects {
+    apply plugin: 'android-library'
+    apply plugin: 'com.jfrog.bintray'
+    apply plugin: 'com.github.dcendents.android-maven'
+
+    bintray {
+        user = 'liujoshua'
+        key = '995741d1c4422379a1392a4e1115c89c26f3a873'
+
+        configurations = ['archives']
+
+        publish = true // autopublish
+
+        pkg {
+            userOrg = 'sage-bionetworks'
+            repo = 'bridge-maven-release'
+            name = project.name
+            licenses = ['Apache-2.0']
+            vcsUrl = 'https://github.com/Sage-Bionetworks/BridgeAndroidSDK.git'
+            githubRepo = 'Sage-Bionetworks/BridgeAndroidSDK'
+        }
+    }
+
+    apply plugin: 'maven-publish'
+    if (!project.ext.properties.containsKey("artifactId")) {
+        ext.artifactId = project.name
+    }
+
+    install {
+        repositories.mavenInstaller {
+            pom.project {
+                packaging 'aar'
+            }
+        }
+    }
+}
+
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
