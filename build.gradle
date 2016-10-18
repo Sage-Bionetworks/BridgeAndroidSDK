@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 allprojects {
-    version = '0.0.1'
+    version = '0.0.2'
     group = 'org.sagebionetworks.bridge'
 
     repositories {
