@@ -4,7 +4,7 @@ android {
     compileSdkVersion 24
     buildToolsVersion "24.0.2"
 
-    publishNonDefault true // allow inter-project inclusion of this library's debug build
+//    publishNonDefault true // allow inter-project inclusion of this library's debug build
 
     defaultConfig {
         minSdkVersion 16
