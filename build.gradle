@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 allprojects {
-    version = '0.0.2'
+    version = '0.0.3'
     group = 'org.sagebionetworks.bridge'
 
     repositories {
@@ -29,6 +29,7 @@ subprojects {
     apply plugin: 'android-library'
     apply plugin: 'com.jfrog.bintray'
     apply plugin: 'com.github.dcendents.android-maven'
+
 
     bintray {
         user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
@@ -60,9 +61,37 @@ subprojects {
             }
         }
     }
+
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            task sourcesJar(type: Jar) {
+                from android.sourceSets.main.java.srcDirs
+                classifier = 'sources'
+            }
+
+            task javadoc(type: Javadoc) {
+                source = android.sourceSets.main.java.srcDirs
+                classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+            }
+
+            task javadocJar(type: Jar, dependsOn: javadoc) {
+                classifier = 'javadoc'
+                from javadoc.destinationDir
+            }
+            artifacts {
+                archives javadocJar
+                archives sourcesJar
+            }
+
+            task findConventions << {
+                println project.getConvention()
+            }
+        }
+    }
 }
 
 
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
