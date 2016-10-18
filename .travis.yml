@@ -12,7 +12,7 @@ android:
     - android-23
     - extra-android-m2repository
     - extra-google-m2repository  
-script
+script:
     - ./gradlew clean build
 deploy:
     provider: script
