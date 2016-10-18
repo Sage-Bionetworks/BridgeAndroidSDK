@@ -31,8 +31,8 @@ subprojects {
     apply plugin: 'com.github.dcendents.android-maven'
 
     bintray {
-        user = 'liujoshua'
-        key = '995741d1c4422379a1392a4e1115c89c26f3a873'
+        user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+        key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
 
         configurations = ['archives']
 
