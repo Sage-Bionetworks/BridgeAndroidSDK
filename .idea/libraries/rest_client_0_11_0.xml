@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="rest-client-0.11.0">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/.m2/repository/org/sagebionetworks/bridge/rest-client/0.11.0/rest-client-0.11.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
