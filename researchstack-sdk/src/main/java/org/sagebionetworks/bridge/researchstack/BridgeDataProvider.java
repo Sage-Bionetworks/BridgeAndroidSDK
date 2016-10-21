@@ -37,7 +37,7 @@ import org.researchstack.skin.notification.TaskAlertReceiver;
 import org.researchstack.skin.schedule.ScheduleHelper;
 import org.researchstack.skin.task.ConsentTask;
 import org.researchstack.skin.task.SmartSurveyTask;
-import org.sagebionetworks.bridge.android.BuildConfig;
+import org.sagebionetworks.bridge.researchstack.BuildConfig;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
