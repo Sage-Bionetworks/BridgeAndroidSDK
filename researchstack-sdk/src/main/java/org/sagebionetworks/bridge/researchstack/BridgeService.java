@@ -1,16 +1,17 @@
-package org.sagebionetworks.bridge.sdk.rest;
+package org.sagebionetworks.bridge.researchstack;
 
 import org.researchstack.skin.DataResponse;
-import org.sagebionetworks.bridge.sdk.rest.model.BridgeMessageResponse;
+import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
+import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadValidationStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.ConsentSignatureBody;
-import org.sagebionetworks.bridge.sdk.rest.model.EmailBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SharingOptionBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUpBody;
-import org.sagebionetworks.bridge.sdk.rest.model.WithdrawalBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
+import org.sagebionetworks.bridge.sdk.restmm.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.EmailBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
 
 import retrofit2.Response;
 import retrofit2.http.Body;

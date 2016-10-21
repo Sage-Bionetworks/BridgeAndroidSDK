@@ -38,22 +38,21 @@ import org.researchstack.skin.schedule.ScheduleHelper;
 import org.researchstack.skin.task.ConsentTask;
 import org.researchstack.skin.task.SmartSurveyTask;
 import org.sagebionetworks.bridge.android.BuildConfig;
-import org.sagebionetworks.bridge.android.upload.UploadQueue;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
+import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
-import org.sagebionetworks.bridge.sdk.rest.BridgeService;
-import org.sagebionetworks.bridge.sdk.rest.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.rest.model.ConsentSignatureBody;
-import org.sagebionetworks.bridge.sdk.rest.model.EmailBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SharingOptionBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUpBody;
-import org.sagebionetworks.bridge.sdk.rest.model.SurveyAnswer;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadSession;
-import org.sagebionetworks.bridge.sdk.rest.model.UploadValidationStatus;
-import org.sagebionetworks.bridge.sdk.rest.model.WithdrawalBody;
-import org.sagebionetworks.bridge.sdk.upload.Info;
+import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
+import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.EmailBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
+import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
+import org.sagebionetworks.bridge.sdk.restmm.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
+import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,9 +69,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.GsonConverterFactory;
 import retrofit2.Retrofit;
-import retrofit2.RxJavaCallAdapterFactory;
+
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 import rx.schedulers.Schedulers;
 
@@ -233,7 +233,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         return service.withdrawConsent(getStudyId(), new WithdrawalBody(reason))
                 .compose(ObservableUtils.applyDefault())
                 .doOnNext(response -> {
-                    if (response.isSuccess()) {
+                    if (response.isSuccessful()) {
                         userSessionInfo.setConsented(false);
                         saveUserSession(context, userSessionInfo);
                         buildRetrofitService(userSessionInfo);
@@ -241,7 +241,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                         handleError(context, response.code());
                     }
                 })
-                .map(response -> new DataResponse(response.isSuccess(), response.message()));
+                .map(response -> new DataResponse(response.isSuccessful(), response.message()));
     }
 
     @Override
@@ -295,14 +295,14 @@ public abstract class BridgeDataProvider extends DataProvider {
                 uploadPendingFiles(context);
             }
         }).map(response -> {
-            boolean success = response.isSuccess() || response.code() == 412;
+            boolean success = response.isSuccessful() || response.code() == 412;
             return new DataResponse(success, response.message());
         });
     }
 
     @Override
     public Observable<DataResponse> signOut(Context context) {
-        return service.signOut().map(response -> new DataResponse(response.isSuccess(), null));
+        return service.signOut().map(response -> new DataResponse(response.isSuccessful(), null));
     }
 
     @Override
@@ -382,7 +382,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         service.dataSharing(new SharingOptionBody(scope))
                 .compose(ObservableUtils.applyDefault())
                 .doOnNext(response -> {
-                    if (response.isSuccess()) {
+                    if (response.isSuccessful()) {
                         userSessionInfo.setSharingScope(scope);
                         saveUserSession(context, userSessionInfo);
                     } else {
@@ -440,7 +440,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public Observable<DataResponse> forgotPassword(Context context, String email) {
         return service.requestResetPassword(new EmailBody(getStudyId(), email)).map(response -> {
-            if (response.isSuccess()) {
+            if (response.isSuccessful()) {
                 return new DataResponse(true, response.body().getMessage());
             } else {
                 return new DataResponse(false, response.message());
@@ -661,7 +661,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     protected void uploadFile(Context context, UploadRequest request) {
         service.requestUploadSession(request).flatMap(response -> {
-            if (response.isSuccess()) {
+            if (response.isSuccessful()) {
                 return uploadToS3(context, request, response.body());
             } else {
                 handleError(context, response.code());
@@ -675,7 +675,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
             return service.uploadComplete(id);
         }).subscribeOn(Schedulers.io()).subscribe(completeResponse -> {
-            if (completeResponse.isSuccess()) {
+            if (completeResponse.isSuccessful()) {
                 LogExt.d(getClass(), "Notified bridge of s3 upload, need to confirm");
                 // update UploadRequest in DB with id for later confirmation
                 ((UploadQueue) StorageAccess.getInstance().getAppDatabase()).saveUploadRequest(
@@ -721,7 +721,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     private void confirmUpload(Context context, UploadRequest request) {
         service.uploadStatus(request.bridgeId).subscribeOn(Schedulers.io()).subscribe(response -> {
-            if (response.isSuccess()) {
+            if (response.isSuccessful()) {
                 UploadValidationStatus uploadStatus = response.body();
 
                 LogExt.d(getClass(), "Received validation status from Bridge(" +

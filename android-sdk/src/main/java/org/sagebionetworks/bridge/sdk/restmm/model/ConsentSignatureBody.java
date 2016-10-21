@@ -1,8 +1,9 @@
-package org.sagebionetworks.bridge.sdk.rest.model;
-
-import org.researchstack.backbone.utils.FormatHelper;
+package org.sagebionetworks.bridge.sdk.restmm.model;
 
 import java.util.Date;
+import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
 
 public class ConsentSignatureBody
 {
@@ -40,7 +41,8 @@ public class ConsentSignatureBody
     {
         this.study = study;
         this.name = name;
-        this.birthdate = FormatHelper.SIMPLE_FORMAT_DATE.format(birthdate);
+        // TODO make sure formatting is correct
+        this.birthdate = LocalDate.fromDateFields(birthdate).toString();
         this.imageData = imageData;
         this.imageMimeType = imageMimeType;
         this.scope = scope;

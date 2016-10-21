@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.upload;
+package org.sagebionetworks.bridge.sdk.restmm.upload;
 
 public class FileInfo
 {

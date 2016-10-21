@@ -1,19 +1,19 @@
-package org.sagebionetworks.bridge.sdk.upload;
+package org.sagebionetworks.bridge.sdk.restmm.upload;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
-import org.researchstack.backbone.utils.LogExt;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Info
 {
     public static final int BRIDGE_PHONE_INFO_LIMIT = 48;
+    private static final Logger logger = LoggerFactory.getLogger(Info.class);
 
     private List<FileInfo> files;
     private String         item;
@@ -52,7 +52,7 @@ public class Info
         }
         catch(PackageManager.NameNotFoundException e)
         {
-            LogExt.e(getClass(), "Could not find package version info");
+            logger.error("Could not find package version info");
             versionName = "Unknown version";
         }
 

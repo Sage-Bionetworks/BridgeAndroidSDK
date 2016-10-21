@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.rest.model;
+package org.sagebionetworks.bridge.researchstack.survey;
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;

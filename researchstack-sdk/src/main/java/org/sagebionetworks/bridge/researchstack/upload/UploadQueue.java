@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.android.upload;
+package org.sagebionetworks.bridge.researchstack.upload;
 
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 

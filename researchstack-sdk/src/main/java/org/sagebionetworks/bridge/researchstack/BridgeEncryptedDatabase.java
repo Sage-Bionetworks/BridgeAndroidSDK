@@ -7,7 +7,7 @@ import net.sqlcipher.database.SQLiteDatabase;
 import org.researchstack.backbone.storage.database.sqlite.SqlCipherDatabaseHelper;
 import org.researchstack.backbone.storage.database.sqlite.UpdatablePassphraseProvider;
 import org.researchstack.backbone.utils.LogExt;
-import org.sagebionetworks.bridge.android.upload.UploadQueue;
+import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 
 import java.sql.SQLException;

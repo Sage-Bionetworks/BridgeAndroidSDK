@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.rest.model;
+package org.sagebionetworks.bridge.sdk.restmm.model;
 public class SignInBody
 {
 

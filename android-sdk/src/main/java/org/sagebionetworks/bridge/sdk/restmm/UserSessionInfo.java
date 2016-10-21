@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.rest;
+package org.sagebionetworks.bridge.sdk.restmm;
 import java.util.Map;
 
 public class UserSessionInfo
