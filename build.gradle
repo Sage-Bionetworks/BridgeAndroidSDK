@@ -1,97 +1,108 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 allprojects {
-    version = '0.0.4'
-    group = 'org.sagebionetworks.bridge'
+  version = '0.0.5'
+  group = 'org.sagebionetworks.bridge'
 
-    repositories {
-        jcenter()
-        maven { url 'http://repo-maven.sagebridge.org/' }
-        mavenLocal() // for updates to local dependencies
-    }
+  repositories {
+    jcenter()
+    maven { url 'http://repo-maven.sagebridge.org/' }
+    mavenLocal()
+  }
+
 }
 
 buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.3'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:2.1.3'
+    classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+    classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
 
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
-    }
+    classpath 'me.tatarka:gradle-retrolambda:3.2.3'
+    // workaround lint bug concerning lombok
+    classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a2'
+
+    classpath "com.neenbedankt.gradle.plugins:android-apt:1.4"
+    // NOTE: Do not place your application dependencies here; they belong
+    // in the individual module build.gradle files
+  }
+  // Exclude the version that the android plugin depends on.
+  configurations.classpath.exclude group: 'com.android.tools.external.lombok'
 }
 
 subprojects {
-    apply plugin: 'android-library'
-    apply plugin: 'com.jfrog.bintray'
-    apply plugin: 'com.github.dcendents.android-maven'
+  apply plugin: 'android-library'
+  apply plugin: 'com.jfrog.bintray'
+  apply plugin: 'com.github.dcendents.android-maven'
 
+  bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') :
+        System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') :
+        System.getenv('BINTRAY_API_KEY')
 
-    bintray {
-        user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-        key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+    configurations = ['archives']
 
-        configurations = ['archives']
+    publish = true // autopublish
 
-        publish = true // autopublish
-
-        pkg {
-            userOrg = 'sage-bionetworks'
-            repo = 'bridge-maven-release'
-            name = project.name
-            licenses = ['Apache-2.0']
-            vcsUrl = 'https://github.com/Sage-Bionetworks/BridgeAndroidSDK.git'
-            githubRepo = 'Sage-Bionetworks/BridgeAndroidSDK'
-        }
+    pkg {
+      userOrg = 'sage-bionetworks'
+      repo = 'bridge-maven-release'
+      name = project.name
+      licenses = ['Apache-2.0']
+      vcsUrl = 'https://github.com/Sage-Bionetworks/BridgeAndroidSDK.git'
+      githubRepo = 'Sage-Bionetworks/BridgeAndroidSDK'
     }
+  }
 
-    apply plugin: 'maven-publish'
-    if (!project.ext.properties.containsKey("artifactId")) {
-        ext.artifactId = project.name
+  apply plugin: 'maven-publish'
+  if (!project.ext.properties.containsKey("artifactId")) {
+    ext.artifactId = project.name
+  }
+
+  install {
+    repositories.mavenInstaller {
+      pom.project {
+        packaging 'aar'
+      }
     }
+  }
 
-    install {
-        repositories.mavenInstaller {
-            pom.project {
-                packaging 'aar'
-            }
-        }
+  afterEvaluate { project ->
+    if (project.hasProperty('android')) {
+      task sourcesJar(type: Jar) {
+        from android.sourceSets.main.java.srcDirs
+        classifier = 'sources'
+      }
+
+      task javadoc(type: Javadoc) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include:"**/classes.jar")
+        classpath += configurations.compile
+        // Exclude generated files
+        exclude '**/BuildConfig.java'
+        exclude '**/R.java'
+      }
+
+      task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+      }
+      artifacts {
+        archives javadocJar
+        archives sourcesJar
+      }
+
+      task findConventions << {
+        println project.getConvention()
+      }
     }
-
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            task sourcesJar(type: Jar) {
-                from android.sourceSets.main.java.srcDirs
-                classifier = 'sources'
-            }
-
-            task javadoc(type: Javadoc) {
-                source = android.sourceSets.main.java.srcDirs
-                classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-            }
-
-            task javadocJar(type: Jar, dependsOn: javadoc) {
-                classifier = 'javadoc'
-                from javadoc.destinationDir
-            }
-            artifacts {
-                archives javadocJar
-                archives sourcesJar
-            }
-
-            task findConventions << {
-                println project.getConvention()
-            }
-        }
-    }
+  }
 }
 
-
 task clean(type: Delete) {
-    delete rootProject.buildDir
+  delete rootProject.buildDir
 }
 

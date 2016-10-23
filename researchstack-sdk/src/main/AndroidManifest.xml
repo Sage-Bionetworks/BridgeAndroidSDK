@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.sagebionetworks.bridge.sdk.researchstack">
+    package="org.sagebionetworks.bridge.researchstack">
 
     <application
         android:allowBackup="true"
