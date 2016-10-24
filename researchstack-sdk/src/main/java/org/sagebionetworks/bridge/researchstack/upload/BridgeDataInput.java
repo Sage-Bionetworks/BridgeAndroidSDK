@@ -1,11 +1,14 @@
 package org.sagebionetworks.bridge.researchstack.upload;
 
 import android.content.Context;
+
 import com.google.gson.Gson;
+
+import org.researchstack.backbone.StorageAccess;
+
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import org.researchstack.backbone.StorageAccess;
 
 public class BridgeDataInput {
   private static Gson gson = new Gson();

@@ -6,22 +6,9 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
+
 import com.google.gson.Gson;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import okhttp3.Interceptor;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
+
 import org.apache.commons.lang3.StringUtils;
 import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.StepResult;
@@ -63,6 +50,23 @@ import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.restmm.model.UploadValidationStatus;
 import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
 import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import okhttp3.Interceptor;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -162,7 +166,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     service = retrofit.create(BridgeService.class);
   }
 
-  @Override public Observable<DataResponse> initialize(Context context) {
+  @Override
+  public Observable<DataResponse> initialize(Context context) {
     appPrefs = AppPrefs.getInstance(context);
     consentLocalStorage = new ConsentLocalStorage(context, gson, storageAccess.getFileAccess());
     userLocalStorage = new UserLocalStorage(context, gson, storageAccess.getFileAccess());
@@ -197,11 +202,13 @@ public abstract class BridgeDataProvider extends DataProvider {
   /**
    * @return true if we are consented
    */
-  @Override public boolean isConsented(Context context) {
+  @Override
+  public boolean isConsented(Context context) {
     return userSessionInfo.isConsented() || consentLocalStorage.hasConsent();
   }
 
-  @Override public Observable<DataResponse> withdrawConsent(Context context, String reason) {
+  @Override
+  public Observable<DataResponse> withdrawConsent(Context context, String reason) {
     return service.withdrawConsent(studyId, new WithdrawalBody(reason))
         .compose(ObservableUtils.applyDefault())
         .doOnNext(response -> {
@@ -216,7 +223,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         .map(response -> new DataResponse(response.isSuccessful(), response.message()));
   }
 
-  @Override public Observable<DataResponse> signUp(Context context, String email, String username,
+  @Override
+  public Observable<DataResponse> signUp(Context context, String email, String username,
       String password) {
     // we should pass in data groups, remove roles
     SignUpBody body = new SignUpBody(studyId, email, username, password, null, null);
@@ -271,25 +279,30 @@ public abstract class BridgeDataProvider extends DataProvider {
     });
   }
 
-  @Override public Observable<DataResponse> signOut(Context context) {
+  @Override
+  public Observable<DataResponse> signOut(Context context) {
     return service.signOut().map(response -> new DataResponse(response.isSuccessful(), null));
   }
 
-  @Override public Observable<DataResponse> resendEmailVerification(Context context, String email) {
+  @Override
+  public Observable<DataResponse> resendEmailVerification(Context context, String email) {
     EmailBody body = new EmailBody(studyId, email);
     return service.resendEmailVerification(body);
   }
 
-  @Override public boolean isSignedUp(Context context) {
+  @Override
+  public boolean isSignedUp(Context context) {
     User user = userLocalStorage.loadUser(context);
     return user != null && user.getEmail() != null;
   }
 
-  @Override public boolean isSignedIn(Context context) {
+  @Override
+  public boolean isSignedIn(Context context) {
     return signedIn;
   }
 
-  @Override public void saveConsent(Context context, TaskResult consentResult) {
+  @Override
+  public void saveConsent(Context context, TaskResult consentResult) {
     ConsentSignatureBody signature = createConsentSignatureBody(consentResult);
     consentLocalStorage.saveConsent(signature);
 
@@ -302,7 +315,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     userLocalStorage.saveUser(user);
   }
 
-  @NonNull protected ConsentSignatureBody createConsentSignatureBody(TaskResult consentResult) {
+  @NonNull
+  protected ConsentSignatureBody createConsentSignatureBody(TaskResult consentResult) {
     StepResult<StepResult> formResult =
         (StepResult<StepResult>) consentResult.getStepResult(ConsentTask.ID_FORM);
 
@@ -326,15 +340,18 @@ public abstract class BridgeDataProvider extends DataProvider {
         "image/png", sharingScope);
   }
 
-  @Override public User getUser(Context context) {
+  @Override
+  public User getUser(Context context) {
     return userLocalStorage.loadUser(context);
   }
 
-  @Override public String getUserSharingScope(Context context) {
+  @Override
+  public String getUserSharingScope(Context context) {
     return userSessionInfo.getSharingScope();
   }
 
-  @Override public void setUserSharingScope(Context context, String scope) {
+  @Override
+  public void setUserSharingScope(Context context, String scope) {
     // Update scope on server
     service.dataSharing(new SharingOptionBody(scope))
         .compose(ObservableUtils.applyDefault())
@@ -352,7 +369,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         });
   }
 
-  @Override public void uploadConsent(Context context, TaskResult consentResult) {
+  @Override
+  public void uploadConsent(Context context, TaskResult consentResult) {
     uploadConsent(context, BuildConfig.STUDY_SUBPOPULATION_GUID,
         createConsentSignatureBody(consentResult));
   }
@@ -382,12 +400,14 @@ public abstract class BridgeDataProvider extends DataProvider {
         });
   }
 
-  @Override public String getUserEmail(Context context) {
+  @Override
+  public String getUserEmail(Context context) {
     User user = userLocalStorage.loadUser(context);
     return user == null ? null : user.getEmail();
   }
 
-  @Override public Observable<DataResponse> forgotPassword(Context context, String email) {
+  @Override
+  public Observable<DataResponse> forgotPassword(Context context, String email) {
     return service.requestResetPassword(new EmailBody(studyId, email)).map(response -> {
       if (response.isSuccessful()) {
         return new DataResponse(true, response.body().getMessage());
@@ -397,7 +417,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     });
   }
 
-  @Override public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
+  @Override
+  public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
     SchedulesAndTasksModel schedulesAndTasksModel = getTasksAndSchedules().create(context);
 
     AppDatabase db = storageAccess.getAppDatabase();
@@ -449,7 +470,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     return taskModel;
   }
 
-  @Override public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+  @Override
+  public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
     // currently we only support task json files, override this method to taskClassName
     if (StringUtils.isEmpty(task.taskFileName)) {
       return null;
@@ -460,7 +482,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     return smartSurveyTask;
   }
 
-  @Override public void uploadTaskResult(Context context, TaskResult taskResult) {
+  @Override
+  public void uploadTaskResult(Context context, TaskResult taskResult) {
     // Update/Create TaskNotificationService
     if (appPrefs.isTaskReminderEnabled()) {
       Log.i("SampleDataProvider", "uploadTaskResult() _ isTaskReminderEnabled() = true");
@@ -538,7 +561,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     context.sendBroadcast(intent);
   }
 
-  @Override public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
+  @Override
+  public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
 
   public void uploadPendingFiles(Context context) {
     List<UploadRequest> uploadRequests =
@@ -587,7 +611,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     });
   }
 
-  @NonNull private Observable<String> uploadToS3(Context context, UploadRequest request,
+  @NonNull
+  private Observable<String> uploadToS3(Context context, UploadRequest request,
       UploadSession uploadSession) {
     // retrofit doesn't like making requests outside of your api, use okhttp to make the call
     return Observable.create(subscriber -> {
@@ -744,7 +769,8 @@ public abstract class BridgeDataProvider extends DataProvider {
       this.sessionToken = sessionToken;
     }
 
-    @Override public Response intercept(Chain chain) throws IOException {
+    @Override
+    public Response intercept(Chain chain) throws IOException {
       Request original = chain.request();
 
       Request request = original.newBuilder()

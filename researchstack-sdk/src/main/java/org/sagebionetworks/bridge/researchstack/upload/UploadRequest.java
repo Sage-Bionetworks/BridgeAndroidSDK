@@ -3,7 +3,8 @@ package org.sagebionetworks.bridge.researchstack.upload;
 import co.touchlab.squeaky.field.DatabaseField;
 import co.touchlab.squeaky.table.DatabaseTable;
 
-@DatabaseTable public class UploadRequest {
+@DatabaseTable
+public class UploadRequest {
   @DatabaseField(generatedId = true) public int id;
   @DatabaseField public String name;
   @DatabaseField public long contentLength;

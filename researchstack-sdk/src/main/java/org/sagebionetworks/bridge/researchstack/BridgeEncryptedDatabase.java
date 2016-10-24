@@ -1,16 +1,20 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
-import co.touchlab.squeaky.db.sqlcipher.SQLiteDatabaseImpl;
-import co.touchlab.squeaky.table.TableUtils;
-import java.sql.SQLException;
-import java.util.List;
+
 import net.sqlcipher.database.SQLiteDatabase;
+
 import org.researchstack.backbone.storage.database.sqlite.SqlCipherDatabaseHelper;
 import org.researchstack.backbone.storage.database.sqlite.UpdatablePassphraseProvider;
 import org.researchstack.backbone.utils.LogExt;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import co.touchlab.squeaky.db.sqlcipher.SQLiteDatabaseImpl;
+import co.touchlab.squeaky.table.TableUtils;
 
 public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper implements UploadQueue {
   public BridgeEncryptedDatabase(Context context, String name,
@@ -19,7 +23,8 @@ public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper implements 
     super(context, name, cursorFactory, version, passphraseProvider);
   }
 
-  @Override public void onCreate(SQLiteDatabase sqLiteDatabase) {
+  @Override
+  public void onCreate(SQLiteDatabase sqLiteDatabase) {
     super.onCreate(sqLiteDatabase);
     try {
       TableUtils.createTables(new SQLiteDatabaseImpl(sqLiteDatabase), UploadRequest.class);
@@ -28,12 +33,14 @@ public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper implements 
     }
   }
 
-  @Override public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
+  @Override
+  public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
     super.onUpgrade(sqLiteDatabase, oldVersion, newVersion);
     // handle future db upgrades here
   }
 
-  @Override public void saveUploadRequest(UploadRequest uploadRequest) {
+  @Override
+  public void saveUploadRequest(UploadRequest uploadRequest) {
     LogExt.d(this.getClass(), "saveUploadRequest() id: " + uploadRequest.id);
 
     try {
@@ -43,7 +50,8 @@ public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper implements 
     }
   }
 
-  @Override public List<UploadRequest> loadUploadRequests() {
+  @Override
+  public List<UploadRequest> loadUploadRequests() {
     try {
       return this.getDao(UploadRequest.class).queryForAll().orderBy("id DESC").list();
     } catch (SQLException e) {
@@ -51,7 +59,8 @@ public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper implements 
     }
   }
 
-  @Override public void deleteUploadRequest(UploadRequest request) {
+  @Override
+  public void deleteUploadRequest(UploadRequest request) {
 
     LogExt.d(this.getClass(), "deleteUploadRequest() id: " + request.id);
 

@@ -1,7 +1,8 @@
 package org.sagebionetworks.bridge.sdk.restmm.model;
 
-import java.util.Date;
 import org.joda.time.LocalDate;
+
+import java.util.Date;
 
 public class ConsentSignatureBody {
   /**

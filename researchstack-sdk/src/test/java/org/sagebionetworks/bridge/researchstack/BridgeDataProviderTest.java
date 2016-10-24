@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,6 +21,7 @@ import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
+
 import retrofit2.Response;
 import rx.Observable;
 import rx.observers.TestSubscriber;
@@ -49,7 +51,8 @@ public class BridgeDataProviderTest {
   private ConsentLocalStorage consentLocalStorage;
   private UserLocalStorage userLocalStorage;
 
-  @Before public void beforeTest() {
+  @Before
+  public void beforeTest() {
     publicKeyRes = mock(ResourcePathManager.Resource.class);
     tasksAndSchedulesRes = mock(ResourcePathManager.Resource.class);
     bridgeService = mock(BridgeService.class);
@@ -74,7 +77,9 @@ public class BridgeDataProviderTest {
     context = mock(Context.class);
   }
 
-  @Ignore @Test public void testInitialize() {
+  @Ignore
+  @Test
+  public void testInitialize() {
     Observable<DataResponse> dataResponseObservable = dataProvider.initialize(context);
 
     TestSubscriber<DataResponse> testSubscriber = new TestSubscriber<>();
@@ -87,7 +92,8 @@ public class BridgeDataProviderTest {
     testSubscriber.assertValueCount(1);
   }
 
-  @Test public void testSignUp() {
+  @Test
+  public void testSignUp() {
     when(bridgeService.signUp(isA(SignUpBody.class))).thenReturn(
         Observable.just(new BridgeMessageResponse()));
 
@@ -106,7 +112,8 @@ public class BridgeDataProviderTest {
     testSubscriber.assertValueCount(1);
   }
 
-  @Test public void testSignIn() {
+  @Test
+  public void testSignIn() {
     UserSessionInfo session = new UserSessionInfo();
 
     Observable<Response<UserSessionInfo>> bridgeResponse =
@@ -130,7 +137,8 @@ public class BridgeDataProviderTest {
     testSubscriber.assertValueCount(1);
   }
 
-  @Test public void testSignOut() {
+  @Test
+  public void testSignOut() {
     Observable<Response> bridgeResponse = Observable.just(Response.success(null));
     when(bridgeService.signOut()).thenReturn(bridgeResponse);
 
@@ -148,72 +156,102 @@ public class BridgeDataProviderTest {
     testSubscriber.assertValueCount(1);
   }
 
-  @Ignore @Test public void testResendEmailVerification() {
+  @Ignore
+  @Test
+  public void testResendEmailVerification() {
     Observable<DataResponse> dataResponseObservable =
         dataProvider.resendEmailVerification(context, "email");
   }
 
-  @Ignore @Test public void testIsSignedUp() {
+  @Ignore
+  @Test
+  public void testIsSignedUp() {
     boolean isSignedUp = dataProvider.isSignedUp(context);
   }
 
-  @Ignore @Test public void testIsSignedIn() {
+  @Ignore
+  @Test
+  public void testIsSignedIn() {
     boolean isSignedIn = dataProvider.isSignedIn(context);
   }
 
-  @Ignore @Test public void testIsConsented() {
+  @Ignore
+  @Test
+  public void testIsConsented() {
     boolean isConsented = dataProvider.isConsented(context);
   }
 
-  @Ignore @Test public void testWithdrawConsent() {
+  @Ignore
+  @Test
+  public void testWithdrawConsent() {
     String reasonString = "reason";
     Observable<DataResponse> dataResponseObservable =
         dataProvider.withdrawConsent(context, reasonString);
   }
 
-  @Ignore @Test public void testUploadConsent() {
+  @Ignore
+  @Test
+  public void testUploadConsent() {
     TaskResult consentResult = mock(TaskResult.class);
     dataProvider.uploadConsent(context, consentResult);
   }
 
-  @Ignore @Test public void testSaveConsent() {
+  @Ignore
+  @Test
+  public void testSaveConsent() {
     TaskResult consentResult = mock(TaskResult.class);
     dataProvider.saveConsent(context, consentResult);
   }
 
-  @Ignore @Test public void testGetUser() {
+  @Ignore
+  @Test
+  public void testGetUser() {
     User user = dataProvider.getUser(context);
   }
 
-  @Ignore @Test public void testGetUserSharingScope() {
+  @Ignore
+  @Test
+  public void testGetUserSharingScope() {
     String scope = dataProvider.getUserSharingScope(context);
   }
 
-  @Ignore @Test public void testGetUserEmail() {
+  @Ignore
+  @Test
+  public void testGetUserEmail() {
     String email = dataProvider.getUserEmail(context);
   }
 
-  @Ignore @Test public void testUploadTaskResult() {
+  @Ignore
+  @Test
+  public void testUploadTaskResult() {
     TaskResult taskResult = mock(TaskResult.class);
     dataProvider.uploadTaskResult(context, taskResult);
   }
 
-  @Ignore @Test public void testLoadTasksAndSchedules() {
+  @Ignore
+  @Test
+  public void testLoadTasksAndSchedules() {
     SchedulesAndTasksModel schedulesAndTasksModel = dataProvider.loadTasksAndSchedules(context);
   }
 
-  @Ignore @Test public void testLoadTask() {
+  @Ignore
+  @Test
+  public void testLoadTask() {
     SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
         mock(SchedulesAndTasksModel.TaskScheduleModel.class);
     Task task = dataProvider.loadTask(context, taskScheduleModel);
   }
 
-  @Ignore @Test public void testProcessInitialTaskResult() {
+  @Ignore
+  @Test
+  public void testProcessInitialTaskResult() {
     TaskResult taskResult = mock(TaskResult.class);
     dataProvider.processInitialTaskResult(context, taskResult);
   }
 
-  @Ignore @Test public void testForgotPassword() {
+  @Ignore
+  @Test
+  public void testForgotPassword() {
     Observable<DataResponse> dataResponseObservable = dataProvider.forgotPassword(context, "email");
   }
 }

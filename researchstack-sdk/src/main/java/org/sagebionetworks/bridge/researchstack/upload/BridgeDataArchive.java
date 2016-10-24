@@ -3,7 +3,24 @@ package org.sagebionetworks.bridge.researchstack.upload;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Base64;
+
 import com.google.gson.Gson;
+
+import org.researchstack.backbone.ResourcePathManager;
+import org.researchstack.backbone.utils.FileUtils;
+import org.researchstack.backbone.utils.LogExt;
+import org.sagebionetworks.bridge.sdk.restmm.upload.FileInfo;
+import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+import org.spongycastle.cms.CMSAlgorithm;
+import org.spongycastle.cms.CMSEnvelopedData;
+import org.spongycastle.cms.CMSEnvelopedDataGenerator;
+import org.spongycastle.cms.CMSException;
+import org.spongycastle.cms.CMSProcessableFile;
+import org.spongycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
+import org.spongycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
+import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
+import org.spongycastle.operator.OutputEncryptor;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -20,20 +37,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import org.researchstack.backbone.ResourcePathManager;
-import org.researchstack.backbone.utils.FileUtils;
-import org.researchstack.backbone.utils.LogExt;
-import org.sagebionetworks.bridge.sdk.restmm.upload.FileInfo;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
-import org.spongycastle.cms.CMSAlgorithm;
-import org.spongycastle.cms.CMSEnvelopedData;
-import org.spongycastle.cms.CMSEnvelopedDataGenerator;
-import org.spongycastle.cms.CMSException;
-import org.spongycastle.cms.CMSProcessableFile;
-import org.spongycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
-import org.spongycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
-import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
-import org.spongycastle.operator.OutputEncryptor;
 
 public class BridgeDataArchive {
   public static final String INFO_JSON_FILENAME = "info.json";
@@ -128,7 +131,8 @@ public class BridgeDataArchive {
     }
   }
 
-  @NonNull private InputStream getEncryptedInputStream(Context context, File tempFile,
+  @NonNull
+  private InputStream getEncryptedInputStream(Context context, File tempFile,
       ResourcePathManager.Resource publicKey) {
     // Creating a CMS encrypted input stream that only recipients can decrypt
     CMSEnvelopedDataGenerator gen = new CMSEnvelopedDataGenerator();

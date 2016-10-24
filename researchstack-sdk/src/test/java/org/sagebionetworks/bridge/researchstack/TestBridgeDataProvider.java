@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+
 import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.skin.AppPrefs;
@@ -26,15 +27,18 @@ public class TestBridgeDataProvider extends BridgeDataProvider {
     this.TASKS_AND_SCHEDULES = tasksAndSchedules;
   }
 
-  @Override public void processInitialTaskResult(Context context, TaskResult taskResult) {
+  @Override
+  public void processInitialTaskResult(Context context, TaskResult taskResult) {
     // handle result from initial task (save profile info to disk, upload to your server, etc)
   }
 
-  @Override protected ResourcePathManager.Resource getPublicKeyResId() {
+  @Override
+  protected ResourcePathManager.Resource getPublicKeyResId() {
     return PUBLIC_KEY_RES;
   }
 
-  @Override protected ResourcePathManager.Resource getTasksAndSchedules() {
+  @Override
+  protected ResourcePathManager.Resource getTasksAndSchedules() {
     return TASKS_AND_SCHEDULES;
   }
 }

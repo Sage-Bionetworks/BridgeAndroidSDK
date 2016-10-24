@@ -1,7 +1,9 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+
 import com.google.gson.Gson;
+
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.StorageAccessException;
 import org.researchstack.skin.model.User;

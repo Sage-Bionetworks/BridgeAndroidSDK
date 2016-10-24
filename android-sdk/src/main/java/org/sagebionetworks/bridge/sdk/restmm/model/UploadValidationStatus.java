@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.sdk.restmm.model;
 
 import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 public final class UploadValidationStatus {

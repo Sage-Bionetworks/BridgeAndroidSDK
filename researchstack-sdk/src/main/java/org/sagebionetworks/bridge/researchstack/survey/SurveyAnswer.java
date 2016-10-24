@@ -1,11 +1,12 @@
 package org.sagebionetworks.bridge.researchstack.survey;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class SurveyAnswer {
   public int questionType;
