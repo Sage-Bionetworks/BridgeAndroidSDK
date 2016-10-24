@@ -8,10 +8,9 @@ import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
 
 /**
- * Wrap @see StorageAccess to help with writing unit tests.
- * <p>
- * StorageAccess declares and initializes static variables which depend on Android classes. This
- * causes an exception to be thrown when the class is referenced, making it unmockable.
+ * Wrap @see StorageAccess to help with writing unit tests. <p> StorageAccess declares and
+ * initializes static variables which depend on Android classes. This causes an exception to be
+ * thrown when the class is referenced, making it unmockable.
  */
 public class StorageAccessWrapper {
 

@@ -105,6 +105,7 @@ public class BridgeDataProviderTest {
     testSubscriber.awaitTerminalEvent();
 
     verify(bridgeService).signUp(isA(SignUpBody.class));
+    verify(userLocalStorage).saveUser(isA(User.class));
 
     testSubscriber.assertNoErrors();
     testSubscriber.assertCompleted();

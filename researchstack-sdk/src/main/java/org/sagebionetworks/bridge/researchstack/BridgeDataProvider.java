@@ -39,6 +39,9 @@ import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.sdk.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
 import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
@@ -82,6 +85,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   private final String studyId;
   private final String userAgent;
   private final String baseUrl;
+  private final ApiClientProvider apiClientProvider;
   protected UserSessionInfo userSessionInfo;
   protected Gson gson = new Gson();
   protected boolean signedIn = false;
@@ -91,6 +95,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   protected StorageAccessWrapper storageAccess;
   protected UserLocalStorage userLocalStorage;
   protected ConsentLocalStorage consentLocalStorage;
+  private ForConsentedUsersApi forConsentedUsersApi;
   private BridgeService service;
   // these are used to get task/step guids without rereading the json files and iterating through
   private Map<String, String> loadedTaskGuids = new HashMap<>();
@@ -110,6 +115,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     this.userLocalStorage = userLocalStorage;
     this.consentLocalStorage = consentLocalStorage;
 
+    this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent);
+
     updateBridgeService(null);
   }
 
@@ -117,6 +124,9 @@ public abstract class BridgeDataProvider extends DataProvider {
     this.baseUrl = baseUrl;
     this.studyId = studyId;
     this.userAgent = userAgent;
+
+    this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent);
+
     updateBridgeService(null);
   }
 
@@ -249,6 +259,9 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> signIn(Context context, String username, String password) {
     SignInBody body = new SignInBody(studyId, username, password);
+
+    forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class,
+        new SignIn().study(studyId).email(username).password(password));
 
     // response 412 still has a response body, so catch all http errors here
     return service.signIn(body).doOnNext(response -> {
@@ -690,36 +703,27 @@ public abstract class BridgeDataProvider extends DataProvider {
   }
 
   /**
-   * 400	BadRequestException	            variable
-   * 400	PublishedSurveyException	    A published survey cannot be updated or deleted (only
-   * closed).
-   * 400	InvalidEntityException	        variable based on fields that are invalid
-   * 401	✓ NotAuthenticatedException	    Not signed in.
+   * 400	BadRequestException	            variable 400	PublishedSurveyException	    A published
+   * survey cannot be updated or deleted (only closed). 400	InvalidEntityException	        variable
+   * based on fields that are invalid 401	✓ NotAuthenticatedException	    Not signed in.
    * 403	UnauthorizedException	        Caller does not have permission to access this service.
-   * 404	EntityNotFoundException	        <entityTypeName> not found.
-   * 409	EntityAlreadyExistsException	<entityTypeName> already exists.
-   * 409	ConcurrentModificationException	<entityTypeName> has the wrong version number; it may have
-   * been saved in the background.
-   * 410	UnsupportedVersionException	    "This app version is not supported. Please update." The
+   * 404	EntityNotFoundException	        <entityTypeName> not found. 409	EntityAlreadyExistsException	<entityTypeName>
+   * already exists. 409	ConcurrentModificationException	<entityTypeName> has the wrong version
+   * number; it may have been saved in the background. 410	UnsupportedVersionException	    "This
    * app
-   * has sent a valid User-Agent header and the server has determined that the app's version is
-   * out-of-date and no longer supported by the configuration of the study on the server. The user
-   * should be prompted to update the application before using it further. Data will not be
-   * accepted
-   * by the server and schedule, activities, surveys, etc. will not be returned to this app until
-   * it
-   * sends a later version number.
-   * 412	✓ ConsentRequiredException	    Consent is required before signing in. This exception is
-   * returned with a JSON payload that includes the user's session. The user is considered signed
-   * in
-   * at this point, but unable to use any service endpoint that requires consent to participate in
-   * the study.
-   * 423	BridgeServerException           "Account disabled, please contact user support" Contact
-   * BridgeIT@sagebase.org to resolve this issue.
-   * 473	StudyLimitExceededException	    The study '<studyName>' has reached the limit of allowed
-   * participants.
-   * 500	BridgeServerException	        variable
-   * 503	ServiceUnavailableException	    variable
+   * version is not supported. Please update." The app has sent a valid User-Agent header and the
+   * server has determined that the app's version is out-of-date and no longer supported by the
+   * configuration of the study on the server. The user should be prompted to update the
+   * application
+   * before using it further. Data will not be accepted by the server and schedule, activities,
+   * surveys, etc. will not be returned to this app until it sends a later version number. 412	✓
+   * ConsentRequiredException	    Consent is required before signing in. This exception is returned
+   * with a JSON payload that includes the user's session. The user is considered signed in at this
+   * point, but unable to use any service endpoint that requires consent to participate in the
+   * study. 423	BridgeServerException           "Account disabled, please contact user support"
+   * Contact BridgeIT@sagebase.org to resolve this issue. 473	StudyLimitExceededException	    The
+   * study '<studyName>' has reached the limit of allowed participants. 500	BridgeServerException
+   * variable 503	ServiceUnavailableException	    variable
    **/
   private void handleError(Context context, int responseCode) {
     String intentAction = null;
