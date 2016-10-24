@@ -7,7 +7,6 @@ allprojects {
     maven { url 'http://repo-maven.sagebridge.org/' }
     mavenLocal()
   }
-
 }
 
 buildscript {
@@ -79,7 +78,8 @@ subprojects {
       task javadoc(type: Javadoc) {
         source = android.sourceSets.main.java.srcDirs
         classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include:"**/classes.jar")
+        classpath +=
+            fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
         classpath += configurations.compile
         // Exclude generated files
         exclude '**/BuildConfig.java'

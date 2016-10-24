@@ -1,20 +1,19 @@
 package org.sagebionetworks.bridge.sdk.restmm.model;
-public class EmailBody
-{
 
-    /**
-     * The identifier for the study under which the user is signing in
-     */
-    private String study;
+public class EmailBody {
 
-    /**
-     * The email address of the user's account
-     */
-    private String email;
+  /**
+   * The identifier for the study under which the user is signing in
+   */
+  private String study;
 
-    public EmailBody(String study, String email)
-    {
-        this.study = study;
-        this.email = email;
-    }
+  /**
+   * The email address of the user's account
+   */
+  private String email;
+
+  public EmailBody(String study, String email) {
+    this.study = study;
+    this.email = email;
+  }
 }

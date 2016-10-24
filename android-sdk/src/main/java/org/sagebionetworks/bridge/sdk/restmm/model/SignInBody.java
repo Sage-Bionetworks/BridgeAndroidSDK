@@ -1,26 +1,25 @@
 package org.sagebionetworks.bridge.sdk.restmm.model;
-public class SignInBody
-{
 
-    /**
-     * The identifier for the study under which the user is signing in
-     */
-    private String study;
+public class SignInBody {
 
-    /**
-     * User's username or email address
-     */
-    private String username;
+  /**
+   * The identifier for the study under which the user is signing in
+   */
+  private String study;
 
-    /**
-     * User's password
-     */
-    private String password;
+  /**
+   * User's username or email address
+   */
+  private String username;
 
-    public SignInBody(String study, String username, String password)
-    {
-        this.study = study;
-        this.username = username;
-        this.password = password;
-    }
+  /**
+   * User's password
+   */
+  private String password;
+
+  public SignInBody(String study, String username, String password) {
+    this.study = study;
+    this.username = username;
+    this.password = password;
+  }
 }
