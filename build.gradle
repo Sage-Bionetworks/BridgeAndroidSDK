@@ -7,7 +7,6 @@ allprojects {
     maven { url 'http://repo-maven.sagebridge.org/' }
     mavenLocal()
   }
-
 }
 
 buildscript {
@@ -37,10 +36,8 @@ subprojects {
   apply plugin: 'com.github.dcendents.android-maven'
 
   bintray {
-    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') :
-        System.getenv('BINTRAY_USER')
-    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') :
-        System.getenv('BINTRAY_API_KEY')
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
 
     configurations = ['archives']
 
@@ -79,7 +76,7 @@ subprojects {
       task javadoc(type: Javadoc) {
         source = android.sourceSets.main.java.srcDirs
         classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include:"**/classes.jar")
+        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
         classpath += configurations.compile
         // Exclude generated files
         exclude '**/BuildConfig.java'
