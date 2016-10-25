@@ -28,19 +28,12 @@ public final class UploadValidationStatus {
   }
 
   /**
-   * <p>
-   * List of validation messages, generally contains error messages. Since a single upload file may
-   * fail validation
-   * in multiple ways, Bridge server will attempt to return all messages to the user. For example,
-   * the upload file
-   * might be unencrypted, uncompressed, and it might not fit any of the expected schemas for the
-   * study.
-   * </p>
-   * <p>
-   * This field is always non-null, but it may be empty. The list is immutable and contains
-   * non-null, non-empty
-   * strings.
-   * </p>
+   * <p> List of validation messages, generally contains error messages. Since a single upload file
+   * may fail validation in multiple ways, Bridge server will attempt to return all messages to the
+   * user. For example, the upload file might be unencrypted, uncompressed, and it might not fit
+   * any
+   * of the expected schemas for the study. </p> <p> This field is always non-null, but it may be
+   * empty. The list is immutable and contains non-null, non-empty strings. </p>
    *
    * @return messageList
    */
@@ -50,8 +43,7 @@ public final class UploadValidationStatus {
 
   /**
    * Represents upload status, such as requested, validation in progress, validation failed, or
-   * succeeded. Always
-   * non-null.
+   * succeeded. Always non-null.
    *
    * @return uploadStatus
    */

@@ -1,26 +1,35 @@
-package org.sagebionetworks.bridge.researchstack;
+package org.sagebionetworks.bridge.android;
 
+import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
 
 /**
  * Created by liujoshua on 9/12/16.
  */
-public abstract class BridgeIdentifiers {
-  public final String getUserAgent() {
-    return getStudyName()
-        + "/"
-        + getAppVersion()
-        + " ("
-        + getDeviceName()
-        + "; Android "
-        + Build.VERSION.RELEASE
-        + ") BridgeSDK/0";
+public class BridgeIdentifiers {
+  private final Context applicationContext;
+
+  public BridgeIdentifiers(Context applicationContext) {
+    this.applicationContext = applicationContext;
   }
 
-  public abstract String getStudyName();
+  public final String getUserAgent() {
+    return getStudyName() + "/" + getAppVersion() + " (" + getDeviceName() + "; Android "
+        + Build.VERSION.RELEASE + ") BridgeSDK/" + getSdkVersion();
+  }
 
-  public abstract int getAppVersion();
+  public final int getSdkVersion() {
+    return applicationContext.getResources().getInteger(R.integer.osb_android_sdk_version);
+  }
+
+  public String getStudyName() {
+    return applicationContext.getResources().getString(R.string.osb_study_name);
+  }
+
+  public int getAppVersion() {
+    return applicationContext.getResources().getInteger(R.integer.osb_app_version);
+  }
 
   private String getDeviceName() {
     String manufacturer = Build.MANUFACTURER;

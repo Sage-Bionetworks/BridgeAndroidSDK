@@ -27,11 +27,13 @@ android {
 
 dependencies {
   compile fileTree(dir: 'libs', include: ['*.jar'])
-  testCompile 'junit:junit:4.12'
 
   compile 'net.danlew:android.joda:2.9.4.2'
   compile 'com.android.support:appcompat-v7:24.2.1'
   compile 'org.sagebionetworks.bridge:rest-client:0.11.6', {
     exclude group: 'joda-time', module: 'joda-time'
   }
+
+  testCompile 'org.slf4j:slf4j-simple:1.7.21'
+  testCompile 'junit:junit:4.12'
 }

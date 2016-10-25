@@ -28,8 +28,8 @@ public class SignUpBody {
   private String[] roles;
 
   /**
-   * An array of data group tags to assign to this user. Client applications can set this up
-   * during sign up, it's not required to be an admin to add these.
+   * An array of data group tags to assign to this user. Client applications can set this up during
+   * sign up, it's not required to be an admin to add these.
    */
   private String[] dataGroups;
 
