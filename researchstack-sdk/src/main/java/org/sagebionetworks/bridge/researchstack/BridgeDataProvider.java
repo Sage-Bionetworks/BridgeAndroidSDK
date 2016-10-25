@@ -6,7 +6,6 @@ import android.support.annotation.Nullable;
 
 import com.google.gson.Gson;
 
-import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
@@ -30,13 +29,10 @@ import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
 import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.EmailBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 
@@ -68,9 +64,9 @@ public abstract class BridgeDataProvider extends DataProvider {
   protected final StorageAccessWrapper storageAccess;
 
   // set in initialize
-  protected  AppPrefs appPrefs;
-  protected  UserLocalStorage userLocalStorage;
-  protected  ConsentLocalStorage consentLocalStorage;
+  protected AppPrefs appPrefs;
+  protected UserLocalStorage userLocalStorage;
+  protected ConsentLocalStorage consentLocalStorage;
 
   private final AuthenticationApi authenticationApi;
 
@@ -215,7 +211,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     user.setEmail(signUp.getEmail());
     userLocalStorage.saveUser(user);
 
-    return ApiUtils.toObservable(authenticationApi.signUp(signUp)).map(message -> {
+    return ApiUtils.toBodyObservable(authenticationApi.signUp(signUp)).map(message -> {
       DataResponse response = new DataResponse();
       response.setSuccess(true);
       return response;
@@ -269,7 +265,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public Observable<DataResponse> resendEmailVerification(Context context, String email) {
-    return ApiUtils.toObservable(
+    return ApiUtils.toBodyObservable(
         authenticationApi.resendEmailVerification(new Email().study(studyId).email(email)))
         .map(response -> new DataResponse(true, null));
   }
@@ -400,13 +396,9 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public Observable<DataResponse> forgotPassword(Context context, String email) {
-    return service.requestResetPassword(new EmailBody(studyId, email)).map(response -> {
-      if (response.isSuccessful()) {
-        return new DataResponse(true, response.body().getMessage());
-      } else {
-        return new DataResponse(false, response.message());
-      }
-    });
+    return ApiUtils.toBodyObservable(
+        authenticationApi.requestResetPassword(new Email().study(studyId).email(email)))
+        .map(message -> new DataResponse(true, message.getMessage()));
   }
 
   @Override
@@ -439,7 +431,6 @@ public abstract class BridgeDataProvider extends DataProvider {
   private String getCreatedOnDate(String identifier) {
     return taskHelper.getCreatedOnDate(identifier);
   }
-
 
   @Override
   public abstract void processInitialTaskResult(Context context, TaskResult taskResult);

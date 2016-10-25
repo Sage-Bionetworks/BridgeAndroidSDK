@@ -162,7 +162,7 @@ public class BridgeDataProviderTest {
 
     verify(bridgeService).signIn(isA(SignInBody.class));
     verify(userLocalStorage).saveUserSession(eq(session), isA(SignIn.class));
-    verify(appDatabase).loadUploadRequests();
+    verify(uploadHandler).uploadPendingFiles(bridgeService);
 
     assertTestSubscriberCompletion(testSubscriber);
   }
@@ -278,8 +278,8 @@ public class BridgeDataProviderTest {
     String scopeResult = dataProvider.getUserSharingScope(context);
 
     assertEquals(scope, scopeResult);
-    verify(session.getSharingScope());
-    verify(userLocalStorage.loadUserSession());
+    verify(session).getSharingScope();
+    verify(userLocalStorage).loadUserSession();
   }
 
   @Test
@@ -343,7 +343,7 @@ public class BridgeDataProviderTest {
   @Test
   public void testForgotPassword() throws IOException {
     Call<Message> call = setupCall(mock(Message.class));
-    when(authenticationApi.requestResetPassword(new Email().email("email"))).thenReturn(call);
+    when(authenticationApi.requestResetPassword(isA(Email.class))).thenReturn(call);
 
     Observable<DataResponse> dataResponseObservable = dataProvider.forgotPassword(context, "email");
 

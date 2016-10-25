@@ -18,7 +18,11 @@ import rx.Observable;
 public class ApiUtils {
   private ApiUtils() {}
 
-  public static <T> Observable<T> toObservable(Call<T> call) {
+  public static <T> Observable<Response<T>> toResponseObservable(Call<T> call) {
+    return Observable.fromCallable(()-> call.clone().execute());
+  }
+
+  public static <T> Observable<T> toBodyObservable(Call<T> call) {
     return Observable.fromCallable(() -> {
       // Since Call is a one-shot type, clone it for each new caller.
       Response<T> response = call.clone().execute();
