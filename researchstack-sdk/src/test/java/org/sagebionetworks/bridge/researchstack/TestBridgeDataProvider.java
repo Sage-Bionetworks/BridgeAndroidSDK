@@ -6,6 +6,7 @@ import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.sdk.rest.ApiClientProvider;
 
 public class TestBridgeDataProvider extends BridgeDataProvider {
   public static final String BASE_URL = "http://sagebase.org/test/url/";
@@ -18,10 +19,10 @@ public class TestBridgeDataProvider extends BridgeDataProvider {
   public final ResourcePathManager.Resource TASKS_AND_SCHEDULES;
 
   public TestBridgeDataProvider(ResourcePathManager.Resource publicKey,
-      ResourcePathManager.Resource tasksAndSchedules, BridgeService bridgeService,
+      ResourcePathManager.Resource tasksAndSchedules, ApiClientProvider apiClientProvider, BridgeService bridgeService,
       AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage,
       ConsentLocalStorage consentLocalStorage) {
-    super(BASE_URL, STUDY_ID, USER_AGENT, bridgeService, appPrefs, storageAccess, userLocalStorage,
+    super(BASE_URL, STUDY_ID, USER_AGENT, apiClientProvider, bridgeService, appPrefs, storageAccess, userLocalStorage,
         consentLocalStorage);
     this.PUBLIC_KEY_RES = publicKey;
     this.TASKS_AND_SCHEDULES = tasksAndSchedules;

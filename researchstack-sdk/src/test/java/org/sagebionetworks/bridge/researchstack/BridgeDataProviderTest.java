@@ -1,10 +1,13 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.file.EncryptionProvider;
@@ -17,18 +20,31 @@ import org.researchstack.skin.DataResponse;
 import org.researchstack.skin.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.User;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.sdk.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.sdk.rest.model.Email;
+import org.sagebionetworks.bridge.sdk.rest.model.Message;
+import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
+import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
 import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
 
+import java.io.IOException;
+
+import retrofit2.Call;
 import retrofit2.Response;
 import rx.Observable;
 import rx.observers.TestSubscriber;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +57,12 @@ public class BridgeDataProviderTest {
   private ResourcePathManager.Resource tasksAndSchedulesRes;
   private AppPrefs appPrefs;
   private DataProvider dataProvider;
+  @Mock
+  private ApiClientProvider apiClientProvider;
+  @Mock
+  private ForConsentedUsersApi forConsentedUsersApi;
+  @Mock
+  private AuthenticationApi authenticationApi;
   private BridgeService bridgeService;
   private StorageAccessWrapper storageAccess;
   private Context context;
@@ -53,6 +75,8 @@ public class BridgeDataProviderTest {
 
   @Before
   public void beforeTest() {
+    MockitoAnnotations.initMocks(this);
+
     publicKeyRes = mock(ResourcePathManager.Resource.class);
     tasksAndSchedulesRes = mock(ResourcePathManager.Resource.class);
     bridgeService = mock(BridgeService.class);
@@ -71,8 +95,11 @@ public class BridgeDataProviderTest {
     consentLocalStorage = mock(ConsentLocalStorage.class);
     userLocalStorage = mock(UserLocalStorage.class);
 
+    when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
+
     dataProvider =
-        new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, bridgeService, appPrefs,
+        new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
+            bridgeService, appPrefs,
             storageAccess, userLocalStorage, consentLocalStorage);
     context = mock(Context.class);
   }
@@ -82,35 +109,37 @@ public class BridgeDataProviderTest {
   public void testInitialize() {
     Observable<DataResponse> dataResponseObservable = dataProvider.initialize(context);
 
-    TestSubscriber<DataResponse> testSubscriber = new TestSubscriber<>();
-    dataResponseObservable.subscribe(testSubscriber);
-    testSubscriber.awaitTerminalEvent();
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
+        dataResponseObservable);
 
-    testSubscriber.assertNoErrors();
-    testSubscriber.assertCompleted();
-    testSubscriber.assertUnsubscribed();
-    testSubscriber.assertValueCount(1);
+    assertTestSubscriberCompletion(testSubscriber);
+  }
+
+  private <T> Call<T> setupCall(T body) throws IOException {
+    Call<T> call = mock(Call.class);
+    when(call.clone()).thenReturn(call);
+    when(call.execute()).thenReturn(Response.success(body));
+    return call;
   }
 
   @Test
-  public void testSignUp() {
+  public void testSignUp() throws IOException {
     when(bridgeService.signUp(isA(SignUpBody.class))).thenReturn(
         Observable.just(new BridgeMessageResponse()));
+
+    Call<Message> call = setupCall(mock(Message.class));
+    when(authenticationApi.signUp(isA(SignUp.class))).thenReturn(call);
 
     Observable<DataResponse> dataResponseObservable =
         dataProvider.signUp(context, "email", "username", "password");
 
-    TestSubscriber<DataResponse> testSubscriber = new TestSubscriber<>();
-    dataResponseObservable.subscribe(testSubscriber);
-    testSubscriber.awaitTerminalEvent();
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
+        dataResponseObservable);
 
-    verify(bridgeService).signUp(isA(SignUpBody.class));
+    verify(authenticationApi).signUp(isA(SignUp.class));
     verify(userLocalStorage).saveUser(isA(User.class));
 
-    testSubscriber.assertNoErrors();
-    testSubscriber.assertCompleted();
-    testSubscriber.assertUnsubscribed();
-    testSubscriber.assertValueCount(1);
+    assertTestSubscriberCompletion(testSubscriber);
   }
 
   @Test
@@ -124,18 +153,14 @@ public class BridgeDataProviderTest {
 
     Observable<DataResponse> dataResponseObservable =
         dataProvider.signIn(context, "email", "password");
-    TestSubscriber<DataResponse> testSubscriber = new TestSubscriber<>();
-    dataResponseObservable.subscribe(testSubscriber);
-    testSubscriber.awaitTerminalEvent();
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
+        dataResponseObservable);
 
     verify(bridgeService).signIn(isA(SignInBody.class));
-    verify(userLocalStorage).saveUserSession(eq(session));
+    verify(userLocalStorage).saveUserSession(eq(session), isA(SignIn.class));
     verify(appDatabase).loadUploadRequests();
 
-    testSubscriber.assertNoErrors();
-    testSubscriber.assertCompleted();
-    testSubscriber.assertUnsubscribed();
-    testSubscriber.assertValueCount(1);
+    assertTestSubscriberCompletion(testSubscriber);
   }
 
   @Test
@@ -145,41 +170,67 @@ public class BridgeDataProviderTest {
 
     Observable<DataResponse> dataResponseObservable = dataProvider.signOut(context);
 
-    TestSubscriber<DataResponse> testSubscriber = new TestSubscriber<>();
-    dataResponseObservable.subscribe(testSubscriber);
-    testSubscriber.awaitTerminalEvent();
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
+        dataResponseObservable);
 
     verify(bridgeService).signOut();
+    verify(userLocalStorage).clearUserSession();
+    verify(userLocalStorage).clearSignIn();
+    verify(userLocalStorage, never()).clearUser();
 
-    testSubscriber.assertNoErrors();
-    testSubscriber.assertCompleted();
-    testSubscriber.assertUnsubscribed();
-    testSubscriber.assertValueCount(1);
+    assertTestSubscriberCompletion(testSubscriber);
   }
 
-  @Ignore
   @Test
-  public void testResendEmailVerification() {
+  public void testResendEmailVerification() throws IOException {
+    Call<Message> call = setupCall(new Message());
+    when(authenticationApi.resendEmailVerification(isA(Email.class))).thenReturn(call);
+
     Observable<DataResponse> dataResponseObservable =
         dataProvider.resendEmailVerification(context, "email");
+
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
+        dataResponseObservable);
+
+    verify(authenticationApi).resendEmailVerification(isA(Email.class));
+
+    assertTestSubscriberCompletion(testSubscriber);
   }
 
-  @Ignore
+
+
+
   @Test
   public void testIsSignedUp() {
+    when(userLocalStorage.isSignedUp()).thenReturn(true);
+
     boolean isSignedUp = dataProvider.isSignedUp(context);
+
+    assertTrue(isSignedUp);
+    verify(userLocalStorage).isSignedUp();
   }
 
-  @Ignore
   @Test
   public void testIsSignedIn() {
+    when(userLocalStorage.isSignedIn()).thenReturn(true);
     boolean isSignedIn = dataProvider.isSignedIn(context);
+    assertTrue(isSignedIn);
+    verify(userLocalStorage).isSignedIn();
   }
 
-  @Ignore
   @Test
   public void testIsConsented() {
+    UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+    when(userSessionInfo.isConsented()).thenReturn(false);
+    when(userLocalStorage.loadUserSession()).thenReturn(userSessionInfo);
+    when(consentLocalStorage.hasConsent()).thenReturn(true);
+
     boolean isConsented = dataProvider.isConsented(context);
+
+    assertTrue(isConsented);
+    verify(userSessionInfo).isConsented();
+    verify(userLocalStorage).loadUserSession();
+    verify(consentLocalStorage).hasConsent();
   }
 
   @Ignore
@@ -202,24 +253,62 @@ public class BridgeDataProviderTest {
   public void testSaveConsent() {
     TaskResult consentResult = mock(TaskResult.class);
     dataProvider.saveConsent(context, consentResult);
+
   }
 
-  @Ignore
   @Test
   public void testGetUser() {
-    User user = dataProvider.getUser(context);
+    User user = mock(User.class);
+    when(userLocalStorage.loadUser()).thenReturn(user);
+
+    User userResult = dataProvider.getUser(context);
+
+    assertEquals(user, userResult);
+    verify(userLocalStorage).loadUser();
   }
 
-  @Ignore
   @Test
   public void testGetUserSharingScope() {
-    String scope = dataProvider.getUserSharingScope(context);
+    UserSessionInfo session = mock(UserSessionInfo.class);
+    String scope = "sharing-scope";
+    when(session.getSharingScope()).thenReturn(scope);
+    when(userLocalStorage.loadUserSession()).thenReturn(session);
+
+    String scopeResult = dataProvider.getUserSharingScope(context);
+
+    assertEquals(scope, scopeResult);
+    verify(session.getSharingScope());
+    verify(userLocalStorage.loadUserSession());
   }
 
-  @Ignore
   @Test
   public void testGetUserEmail() {
-    String email = dataProvider.getUserEmail(context);
+    String email = "email@example.com";
+    User user = mock(User.class);
+    when(user.getEmail()).thenReturn(email);
+    when(userLocalStorage.loadUser()).thenReturn(user);
+
+    String emailResult = dataProvider.getUserEmail(context);
+
+    assertEquals(email,emailResult);
+
+    verify(user).getEmail();
+    verify(userLocalStorage).loadUser();
+  }
+
+  @Test
+  public void testGetUserEmail_Null() {
+    String email = null;
+    User user = mock(User.class);
+    when(user.getEmail()).thenReturn(email);
+    when(userLocalStorage.loadUser()).thenReturn(user);
+
+    String emailResult = dataProvider.getUserEmail(context);
+
+    assertEquals(email,emailResult);
+
+    verify(user).getEmail();
+    verify(userLocalStorage).loadUser();
   }
 
   @Ignore
@@ -250,9 +339,33 @@ public class BridgeDataProviderTest {
     dataProvider.processInitialTaskResult(context, taskResult);
   }
 
-  @Ignore
   @Test
-  public void testForgotPassword() {
+  public void testForgotPassword() throws IOException {
+    Call<Message> call = setupCall(mock(Message.class));
+    when(authenticationApi.requestResetPassword(new Email().email("email"))).thenReturn(call);
+
     Observable<DataResponse> dataResponseObservable = dataProvider.forgotPassword(context, "email");
+
+    TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(dataResponseObservable);
+
+    verify(authenticationApi).requestResetPassword(isA(Email.class));
+
+    assertTestSubscriberCompletion(testSubscriber);
+  }
+
+  @NonNull
+  private <T> TestSubscriber<T> getTestSubscriber(@NonNull Observable<T> observable) {
+    TestSubscriber<T> testSubscriber = new TestSubscriber<>();
+    observable.subscribe(testSubscriber);
+    testSubscriber.awaitTerminalEvent();
+
+    return testSubscriber;
+  }
+
+  private void assertTestSubscriberCompletion(@NonNull TestSubscriber<DataResponse> testSubscriber) {
+    testSubscriber.assertNoErrors();
+    testSubscriber.assertCompleted();
+    testSubscriber.assertUnsubscribed();
+    testSubscriber.assertValueCount(1);
   }
 }
