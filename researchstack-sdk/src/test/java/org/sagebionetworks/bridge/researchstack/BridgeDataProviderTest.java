@@ -72,6 +72,10 @@ public class BridgeDataProviderTest {
   private BridgeEncryptedDatabase appDatabase;
   private ConsentLocalStorage consentLocalStorage;
   private UserLocalStorage userLocalStorage;
+  @Mock
+  private TaskHelper taskHelper;
+  @Mock
+  private UploadHandler uploadHandler;
 
   @Before
   public void beforeTest() {
@@ -99,8 +103,8 @@ public class BridgeDataProviderTest {
 
     dataProvider =
         new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
-            bridgeService, appPrefs,
-            storageAccess, userLocalStorage, consentLocalStorage);
+            bridgeService, appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
+            taskHelper, uploadHandler);
     context = mock(Context.class);
   }
 
@@ -197,9 +201,6 @@ public class BridgeDataProviderTest {
     assertTestSubscriberCompletion(testSubscriber);
   }
 
-
-
-
   @Test
   public void testIsSignedUp() {
     when(userLocalStorage.isSignedUp()).thenReturn(true);
@@ -290,7 +291,7 @@ public class BridgeDataProviderTest {
 
     String emailResult = dataProvider.getUserEmail(context);
 
-    assertEquals(email,emailResult);
+    assertEquals(email, emailResult);
 
     verify(user).getEmail();
     verify(userLocalStorage).loadUser();
@@ -305,7 +306,7 @@ public class BridgeDataProviderTest {
 
     String emailResult = dataProvider.getUserEmail(context);
 
-    assertEquals(email,emailResult);
+    assertEquals(email, emailResult);
 
     verify(user).getEmail();
     verify(userLocalStorage).loadUser();
@@ -362,7 +363,8 @@ public class BridgeDataProviderTest {
     return testSubscriber;
   }
 
-  private void assertTestSubscriberCompletion(@NonNull TestSubscriber<DataResponse> testSubscriber) {
+  private void assertTestSubscriberCompletion(
+      @NonNull TestSubscriber<DataResponse> testSubscriber) {
     testSubscriber.assertNoErrors();
     testSubscriber.assertCompleted();
     testSubscriber.assertUnsubscribed();

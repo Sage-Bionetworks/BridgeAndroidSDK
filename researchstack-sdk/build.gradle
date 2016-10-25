@@ -7,10 +7,6 @@ repositories {
   maven { url "https://jitpack.io" }
 }
 
-//configurations {
-//  all*.exclude module: 'joda-time', configuration: 'jar'
-//}
-
 // todo make pom include sage s3 repo for rest-client
 android {
   compileSdkVersion 24

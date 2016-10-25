@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <public name="osb_study_id" type="string"/>
+  <public name="osb_study_name" type="string"/>
+  <public name="osb_app_version" type="integer"/>
+  <public name="osb_base_url" type="string"/>
+</resources>

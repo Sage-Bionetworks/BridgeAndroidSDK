@@ -21,9 +21,9 @@ public class TestBridgeDataProvider extends BridgeDataProvider {
   public TestBridgeDataProvider(ResourcePathManager.Resource publicKey,
       ResourcePathManager.Resource tasksAndSchedules, ApiClientProvider apiClientProvider, BridgeService bridgeService,
       AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage,
-      ConsentLocalStorage consentLocalStorage) {
+      ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper, UploadHandler uploadHandler) {
     super(BASE_URL, STUDY_ID, USER_AGENT, apiClientProvider, bridgeService, appPrefs, storageAccess, userLocalStorage,
-        consentLocalStorage);
+        consentLocalStorage, taskHelper, uploadHandler);
     this.PUBLIC_KEY_RES = publicKey;
     this.TASKS_AND_SCHEDULES = tasksAndSchedules;
   }
@@ -31,15 +31,5 @@ public class TestBridgeDataProvider extends BridgeDataProvider {
   @Override
   public void processInitialTaskResult(Context context, TaskResult taskResult) {
     // handle result from initial task (save profile info to disk, upload to your server, etc)
-  }
-
-  @Override
-  protected ResourcePathManager.Resource getPublicKeyResId() {
-    return PUBLIC_KEY_RES;
-  }
-
-  @Override
-  protected ResourcePathManager.Resource getTasksAndSchedules() {
-    return TASKS_AND_SCHEDULES;
   }
 }
