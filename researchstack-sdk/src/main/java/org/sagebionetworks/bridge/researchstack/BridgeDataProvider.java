@@ -4,8 +4,10 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
+import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
@@ -15,23 +17,26 @@ import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.DataProvider;
 import org.researchstack.skin.DataResponse;
+import org.researchstack.skin.ResourceManager;
 import org.researchstack.skin.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.model.User;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.sdk.rest.ApiClientProvider;
-import org.sagebionetworks.bridge.sdk.rest.api.AuthenticationApi;
-import org.sagebionetworks.bridge.sdk.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.rest.model.Email;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
-import org.sagebionetworks.bridge.sdk.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
@@ -51,13 +56,13 @@ import rx.Observable;
 * a complete port of the Sage Bridge Java SDK for android: https://github.com/Sage-Bionetworks/BridgeJavaSDK
  */
 public abstract class BridgeDataProvider extends DataProvider {
+  private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
   private final String studyId;
   private final String userAgent;
   private final String baseUrl;
   private final ApiClientProvider apiClientProvider;
-  private final TaskHelper taskHelper;
-  private final UploadHandler uploadHandler;
+  private final ResourcePathManager.Resource publicKey;
 
   protected final Gson gson = new Gson();
   protected final BridgeHeaderInterceptor interceptor;
@@ -67,6 +72,8 @@ public abstract class BridgeDataProvider extends DataProvider {
   protected AppPrefs appPrefs;
   protected UserLocalStorage userLocalStorage;
   protected ConsentLocalStorage consentLocalStorage;
+  protected TaskHelper taskHelper;
+  protected UploadHandler uploadHandler;
 
   private final AuthenticationApi authenticationApi;
 
@@ -75,6 +82,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   //used by tests to mock service
   BridgeDataProvider(String baseUrl, String studyId, String userAgent,
+      ResourcePathManager.Resource publicKey,
       ApiClientProvider apiClientProvider, BridgeService service,
       AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage,
       ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper, UploadHandler uploadHandler) {
@@ -82,6 +90,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     this.baseUrl = baseUrl;
     this.studyId = studyId;
     this.userAgent = userAgent;
+    this.publicKey = publicKey;
     this.appPrefs = appPrefs;
     this.service = service;
     this.storageAccess = storageAccess;
@@ -96,20 +105,33 @@ public abstract class BridgeDataProvider extends DataProvider {
     updateBridgeService(null, null);
   }
 
-  //public BridgeDataProvider(String baseUrl, String studyId, String userAgent) {
-  //  this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
-  //  this.baseUrl = baseUrl;
-  //  this.studyId = studyId;
-  //  this.userAgent = userAgent;
-  //
-  //  this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent);
-  //  this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
-  //
-  //  updateBridgeService(null, null);
-  //}
+  /**
+   * @param baseUrl base URL of Bridge server
+   * @param studyId study identifier
+   * @param userAgent user agent, in format expected by Bridge
+   * @param publicKey relative path to x.509 certificate for Bridge uploads
+   */
+  public BridgeDataProvider(String baseUrl, String studyId, String userAgent,
+      ResourcePathManager.Resource publicKey) {
+    this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
+    this.baseUrl = baseUrl;
+    this.studyId = studyId;
+    this.userAgent = userAgent;
+    this.publicKey = publicKey;
+
+    this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent, "en-US");
+    this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+
+    this.storageAccess = new StorageAccessWrapper();
+    updateBridgeService(null, null);
+  }
 
   private void updateBridgeService(@Nullable String sessionToken, @Nullable SignIn signIn) {
-    this.forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
+    if (signIn == null) {
+      this.forConsentedUsersApi = null;
+    } else {
+      this.forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
+    }
     interceptor.setSessionToken(sessionToken);
 
     if (service != null) {
@@ -138,9 +160,15 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public Observable<DataResponse> initialize(Context context) {
+    logger.debug("Called initialize");
+
     appPrefs = AppPrefs.getInstance(context);
     consentLocalStorage = new ConsentLocalStorage(context, gson, storageAccess.getFileAccess());
     userLocalStorage = new UserLocalStorage(context, gson, storageAccess.getFileAccess());
+
+    this.uploadHandler = new UploadHandler(context, storageAccess, publicKey);
+    this.taskHelper = new TaskHelper(storageAccess, ResourceManager.getInstance(), appPrefs,
+        uploadHandler);
 
     return Observable.defer(() -> {
       UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
@@ -174,11 +202,13 @@ public abstract class BridgeDataProvider extends DataProvider {
    */
   @Override
   public boolean isConsented(Context context) {
+    logger.debug("Called isConsented");
     return userLocalStorage.loadUserSession().isConsented() || consentLocalStorage.hasConsent();
   }
 
   @Override
   public Observable<DataResponse> withdrawConsent(Context context, String reason) {
+    logger.debug("Called withdrawConsent");
     return service.withdrawConsent(studyId, new WithdrawalBody(reason))
         .compose(ObservableUtils.applyDefault())
         .doOnNext(response -> {
@@ -196,6 +226,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> signUp(Context context, String email, String username,
       String password) {
+    logger.debug("Called signUp");
     // we should pass in data groups, remove roles
     SignUp signUp = new SignUp().study(studyId).email(email).password(password);
     return signUp(signUp);
@@ -220,16 +251,20 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public Observable<DataResponse> signIn(Context context, String username, String password) {
+    logger.debug("Called signIn");
     SignIn signIn = new SignIn().study(studyId).email(username).password(password);
     SignInBody body = new SignInBody(studyId, username, password);
 
     // response 412 still has a response body, so catch all http errors here
     return service.signIn(body).doOnNext(response -> {
-
+      logger.debug("Received signIn response");
       UserSessionInfo userSessionInfo = null;
       if (response.code() == 200) {
+        logger.debug("signIn response 200");
         userSessionInfo = response.body();
+
       } else if (response.code() == 412) {
+        logger.debug("signIn response 412");
         try {
           String errorBody = response.errorBody().string();
           userSessionInfo = gson.fromJson(errorBody, UserSessionInfo.class);
@@ -237,6 +272,8 @@ public abstract class BridgeDataProvider extends DataProvider {
           throw new RuntimeException("Error deserializing server sign in response");
         }
       }
+
+      logger.debug("signIn userSessionInfo: " + userSessionInfo);
 
       if (userSessionInfo != null) {
         // if we are direct from signing in, we need to load the user profile object
@@ -249,11 +286,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     }).map(response -> {
       boolean success = response.isSuccessful() || response.code() == 412;
       return new DataResponse(success, response.message());
+    }).doOnError(e -> {
+      logger.error("signIn error", e);
     });
   }
 
   @Override
   public Observable<DataResponse> signOut(Context context) {
+    logger.debug("Called signOut");
     return service.signOut()
         .map(response -> new DataResponse(response.isSuccessful(), null))
         .doOnNext(response -> {
@@ -327,12 +367,14 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   @Nullable
   public User getUser(Context context) {
+    logger.debug("Called getUser");
     return userLocalStorage.loadUser();
   }
 
   @Override
   @Nullable
   public String getUserSharingScope(Context context) {
+    logger.debug("Called getUserSharingScope");
     UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
     return userLocalStorage == null ? null : userSessionInfo.getSharingScope();
   }
@@ -468,13 +510,17 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Response intercept(Chain chain) throws IOException {
       Request original = chain.request();
 
-      Request request = original.newBuilder()
-          .header("User-Agent", userAgent)
-          .header("Bridge-Session", sessionToken)
-          .method(original.method(), original.body())
+      Request.Builder builder = original.newBuilder()
+          .header("User-Agent", userAgent);
+      if (!Strings.isNullOrEmpty(sessionToken)) {
+        builder
+            .header("Bridge-Session", sessionToken);
+      }
+
+      builder.method(original.method(), original.body())
           .build();
 
-      return chain.proceed(request);
+      return chain.proceed(builder.build());
     }
   }
 }
