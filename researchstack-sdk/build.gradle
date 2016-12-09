@@ -10,7 +10,7 @@ repositories {
 // todo make pom include sage s3 repo for rest-client
 android {
   compileSdkVersion 24
-  buildToolsVersion '24.0.2'
+  buildToolsVersion '25.0.0'
 
   // allow inter-project inclusion of this library's debug build
   // publishNonDefault true
@@ -22,7 +22,7 @@ android {
     versionName "1.0"
     multiDexEnabled true
     // hack until subpopulation Guid is properly handled and not hardcoded
-    buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', studyId // default subpopulation
+    buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', "\"studyId\"" // default subpopulation
   }
   buildTypes {
     release {
