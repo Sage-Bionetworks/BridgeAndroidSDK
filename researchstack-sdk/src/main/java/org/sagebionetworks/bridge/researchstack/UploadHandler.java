@@ -4,6 +4,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.widget.Toast;
 
+import org.researchstack.skin.ResourceManager;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
@@ -28,18 +29,18 @@ import okhttp3.Response;
 import rx.Observable;
 import rx.schedulers.Schedulers;
 
-public abstract class UploadHandler {
+public class UploadHandler {
   private static final Logger logger = LoggerFactory.getLogger(UploadHandler.class);
 
   private final StorageAccessWrapper storageAccess;
   private final Context applicationContext;
-  private final BridgeResourceManager bridgeResourceManager;
+  private final ResourceManager.Resource publicKey;
 
   public UploadHandler(Context applicationContext,
-      StorageAccessWrapper storageAccess, BridgeResourceManager bridgeResourceManager) {
+      StorageAccessWrapper storageAccess, ResourceManager.Resource publicKey) {
     this.storageAccess = storageAccess;
     this.applicationContext = applicationContext.getApplicationContext();
-    this.bridgeResourceManager = bridgeResourceManager;
+    this.publicKey = publicKey;
   }
 
   public void uploadBridgeData(BridgeService bridgeService, Info info,
@@ -63,7 +64,7 @@ public abstract class UploadHandler {
       }
 
       UploadRequest request =
-          archive.finishAndEncrypt(applicationContext, bridgeResourceManager.getPublicKeyResId(),
+          archive.finishAndEncrypt(applicationContext, publicKey,
               getFilesDir(applicationContext));
 
       ((UploadQueue) storageAccess.getAppDatabase()).saveUploadRequest(

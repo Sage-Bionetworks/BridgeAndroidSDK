@@ -13,6 +13,7 @@ import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.utils.FormatHelper;
 import org.researchstack.skin.AppPrefs;
+import org.researchstack.skin.ResourceManager;
 import org.researchstack.skin.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
@@ -31,7 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class TaskHelper {
+public class TaskHelper {
   private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
   // these are used to get task/step guids without rereading the json files and iterating through
@@ -40,22 +41,22 @@ public abstract class TaskHelper {
   private final Map<String, String> loadedTaskCrons = new HashMap<String, String>();
 
   private final StorageAccessWrapper storageAccess;
-  private final BridgeResourceManager bridgeResourceManager;
+  private final ResourceManager resourceManager;
   private final AppPrefs appPrefs;
   private final UploadHandler uploadHandler;
 
   public TaskHelper(
-      StorageAccessWrapper storageAccess, BridgeResourceManager bridgeResourceManager,
+      StorageAccessWrapper storageAccess, ResourceManager resourceManager,
       AppPrefs appPrefs,
       UploadHandler uploadHandler) {
     this.storageAccess = storageAccess;
-    this.bridgeResourceManager = bridgeResourceManager;
+    this.resourceManager = resourceManager;
     this.appPrefs = appPrefs;
     this.uploadHandler = uploadHandler;
   }
 
   public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
-    SchedulesAndTasksModel schedulesAndTasksModel = bridgeResourceManager.getTasksAndSchedules()
+    SchedulesAndTasksModel schedulesAndTasksModel = resourceManager.getTasksAndSchedules()
         .create(context);
 
     AppDatabase db = storageAccess.getAppDatabase();
@@ -99,7 +100,7 @@ public abstract class TaskHelper {
   }
 
   TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
-    TaskModel taskModel = bridgeResourceManager.getTask(task.taskFileName).create(context);
+    TaskModel taskModel = resourceManager.getTask(task.taskFileName).create(context);
 
     // cache guid and createdOnDate
     loadedTaskGuids.put(taskModel.identifier, taskModel.guid);

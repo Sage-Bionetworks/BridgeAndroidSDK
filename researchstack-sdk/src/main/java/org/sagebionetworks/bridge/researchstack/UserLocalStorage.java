@@ -10,7 +10,7 @@ import com.google.gson.Gson;
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.StorageAccessException;
 import org.researchstack.skin.model.User;
-import org.sagebionetworks.bridge.sdk.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
