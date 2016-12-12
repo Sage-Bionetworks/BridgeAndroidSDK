@@ -56,12 +56,12 @@ public abstract class BridgeDataProvider extends DataProvider {
   private final String userAgent;
   private final String baseUrl;
   private final ApiClientProvider apiClientProvider;
-  private final TaskHelper taskHelper;
-  private final UploadHandler uploadHandler;
+  private TaskHelper taskHelper;
+  private UploadHandler uploadHandler;
 
   protected final Gson gson = new Gson();
   protected final BridgeHeaderInterceptor interceptor;
-  protected final StorageAccessWrapper storageAccess;
+  protected StorageAccessWrapper storageAccess;
 
   // set in initialize
   protected AppPrefs appPrefs;
@@ -96,17 +96,18 @@ public abstract class BridgeDataProvider extends DataProvider {
     updateBridgeService(null, null);
   }
 
-  //public BridgeDataProvider(String baseUrl, String studyId, String userAgent) {
-  //  this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
-  //  this.baseUrl = baseUrl;
-  //  this.studyId = studyId;
-  //  this.userAgent = userAgent;
-  //
-  //  this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent);
-  //  this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
-  //
-  //  updateBridgeService(null, null);
-  //}
+  public BridgeDataProvider(Context context, String baseUrl, String studyId, String userAgent) {
+    this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
+    this.baseUrl = baseUrl;
+    this.studyId = studyId;
+    this.userAgent = userAgent;
+
+    this.apiClientProvider = new ApiClientProvider(baseUrl, userAgent);
+    this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+
+    updateBridgeService(null, null);
+    initialize(context);
+  }
 
   private void updateBridgeService(@Nullable String sessionToken, @Nullable SignIn signIn) {
     this.forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
