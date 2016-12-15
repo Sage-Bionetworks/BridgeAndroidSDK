@@ -49,7 +49,7 @@ captures/
 .idea/dictionaries/*
 .idea/misc.xml
 .idea/modules.xml
-.iml
+*.iml
 
 # Keystore files
 *.jks
