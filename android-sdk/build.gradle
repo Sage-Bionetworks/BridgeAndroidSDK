@@ -47,4 +47,4 @@ dependencies {
   testCompile 'junit:junit:4.12'
 }
 
-apply from: "$rootDir/gradle/artifact-deploy.gradle"
+//apply from: "$rootDir/gradle/artifact-deploy.gradle"
