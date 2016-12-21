@@ -25,12 +25,11 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
 
 import java.io.IOException;
 
@@ -128,8 +127,6 @@ public class BridgeDataProviderTest {
 
   @Test
   public void testSignUp() throws IOException {
-    when(bridgeService.signUp(isA(SignUpBody.class))).thenReturn(
-        Observable.just(new BridgeMessageResponse()));
 
     Call<Message> call = setupCall(mock(Message.class));
     when(authenticationApi.signUp(isA(SignUp.class))).thenReturn(call);
@@ -147,12 +144,14 @@ public class BridgeDataProviderTest {
   }
 
   @Test
-  public void testSignIn() {
-    UserSessionInfo session = new UserSessionInfo();
+  public void testSignIn() throws IOException {
+    Call<UserSessionInfo> sessionCall = mock(Call.class);
+    UserSessionInfo session = mock(UserSessionInfo.class);
 
-    Observable<Response<UserSessionInfo>> bridgeResponse =
-        Observable.just(Response.success(session));
-    when(bridgeService.signIn(isA(SignInBody.class))).thenReturn(bridgeResponse);
+    when(sessionCall.clone()).thenReturn(sessionCall);
+    when(sessionCall.execute()).thenReturn(Response.success(session));
+
+    when(authenticationApi.signIn(isA(SignIn.class))).thenReturn(sessionCall);
     //when(appDatabase.loadUploadRequests()).thenReturn(Lists.newArrayList());
 
     Observable<DataResponse> dataResponseObservable =
@@ -160,7 +159,7 @@ public class BridgeDataProviderTest {
     TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
         dataResponseObservable);
 
-    verify(bridgeService).signIn(isA(SignInBody.class));
+    verify(authenticationApi).signIn(isA(SignIn.class));
     verify(userLocalStorage).saveUserSession(eq(session), isA(SignIn.class));
     verify(uploadHandler).uploadPendingFiles(bridgeService);
 
@@ -222,14 +221,14 @@ public class BridgeDataProviderTest {
   @Test
   public void testIsConsented() {
     UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
-    when(userSessionInfo.isConsented()).thenReturn(false);
+    when(userSessionInfo.getConsented()).thenReturn(false);
     when(userLocalStorage.loadUserSession()).thenReturn(userSessionInfo);
     when(consentLocalStorage.hasConsent()).thenReturn(true);
 
     boolean isConsented = dataProvider.isConsented(context);
 
     assertTrue(isConsented);
-    verify(userSessionInfo).isConsented();
+    verify(userSessionInfo).getConsented();
     verify(userLocalStorage).loadUserSession();
     verify(consentLocalStorage).hasConsent();
   }
@@ -271,8 +270,8 @@ public class BridgeDataProviderTest {
   @Test
   public void testGetUserSharingScope() {
     UserSessionInfo session = mock(UserSessionInfo.class);
-    String scope = "sharing-scope";
-    when(session.getSharingScope()).thenReturn(scope);
+    String scope = "SPONSORS_AND_PARTNERS";
+    when(session.getSharingScope()).thenReturn(SharingScope.valueOf(scope));
     when(userLocalStorage.loadUserSession()).thenReturn(session);
 
     String scopeResult = dataProvider.getUserSharingScope(context);

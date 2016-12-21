@@ -28,9 +28,10 @@ import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
@@ -186,7 +187,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   private void checkForTempConsentAndUpload() {
     // If we are signed in, not consented on the server, but consented locally, upload consent
-    if (isSignedIn() && !userLocalStorage.loadUserSession().isConsented()
+    if (isSignedIn() && !userLocalStorage.loadUserSession().getConsented()
         && consentLocalStorage.hasConsent()) {
       try {
         ConsentSignatureBody consent = consentLocalStorage.loadConsent();
@@ -203,7 +204,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public boolean isConsented(Context context) {
     logger.debug("Called isConsented");
-    return userLocalStorage.loadUserSession().isConsented() || consentLocalStorage.hasConsent();
+    return userLocalStorage.loadUserSession().getConsented() || consentLocalStorage.hasConsent();
   }
 
   @Override
@@ -256,18 +257,19 @@ public abstract class BridgeDataProvider extends DataProvider {
     SignInBody body = new SignInBody(studyId, username, password);
 
     // response 412 still has a response body, so catch all http errors here
-    return service.signIn(body).doOnNext(response -> {
+    return ApiUtils.toResponseObservable(authenticationApi.signIn(signIn)).doOnNext(response -> {
       logger.debug("Received signIn response");
       UserSessionInfo userSessionInfo = null;
       if (response.code() == 200) {
         logger.debug("signIn response 200");
+
         userSessionInfo = response.body();
 
       } else if (response.code() == 412) {
         logger.debug("signIn response 412");
         try {
           String errorBody = response.errorBody().string();
-          userSessionInfo = gson.fromJson(errorBody, UserSessionInfo.class);
+          userSessionInfo = gson.fromJson(errorBody,  UserSessionInfo.class);
         } catch (IOException e) {
           throw new RuntimeException("Error deserializing server sign in response");
         }
@@ -376,7 +378,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   public String getUserSharingScope(Context context) {
     logger.debug("Called getUserSharingScope");
     UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-    return userLocalStorage == null ? null : userSessionInfo.getSharingScope();
+    return userLocalStorage == null ? null : userSessionInfo.getSharingScope().name();
   }
 
   @Override
@@ -387,7 +389,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         .doOnNext(response -> {
           if (response.isSuccessful()) {
             UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-            userSessionInfo.setSharingScope(scope);
+            userSessionInfo.setSharingScope(SharingScope.valueOf(scope));
             userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
           } else {
             ApiUtils.handleError(context, response.code());

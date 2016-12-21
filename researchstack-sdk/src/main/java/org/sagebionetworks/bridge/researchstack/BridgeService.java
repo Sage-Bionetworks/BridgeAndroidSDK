@@ -25,25 +25,6 @@ import rx.Observable;
  * Created by liujoshua on 9/2/16.
  */
 public interface BridgeService {
-
-  /**
-   * @return One of the following responses <ul> <li><b>201</b> returns message that user has been
-   * signed up</li> <li><b>473</b> error - returns message that study is full</li> </ul>
-   */
-  @Headers("Content-Type: application/json")
-  @POST("v3/auth/signUp")
-  Observable<BridgeMessageResponse> signUp(@Body SignUpBody body);
-
-  /**
-   * @return One of the following responses <ul> <li><b>200</b> returns UserSessionInfo Object</li>
-   * <li><b>404</b> error - "Credentials incorrect or missing"</li> <li><b>412</b> error - "User
-   * has
-   * not consented to research"</li> </ul>
-   */
-  @Headers("Content-Type: application/json")
-  @POST("v3/auth/signIn")
-  Observable<Response<UserSessionInfo>> signIn(@Body SignInBody body);
-
   @Headers("Content-Type: application/json")
   @POST("v3/subpopulations/{subpopulationGuid}/consents/signature")
   Observable<Response<BridgeMessageResponse>> consentSignature(
