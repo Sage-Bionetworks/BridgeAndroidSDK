@@ -2,13 +2,9 @@ package org.sagebionetworks.bridge.researchstack;
 
 import org.researchstack.skin.DataResponse;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
-import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
 import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
-import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.EmailBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
 import org.sagebionetworks.bridge.sdk.restmm.model.UploadValidationStatus;
 import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
@@ -25,11 +21,6 @@ import rx.Observable;
  * Created by liujoshua on 9/2/16.
  */
 public interface BridgeService {
-  @Headers("Content-Type: application/json")
-  @POST("v3/subpopulations/{subpopulationGuid}/consents/signature")
-  Observable<Response<BridgeMessageResponse>> consentSignature(
-      @Path("subpopulationGuid") String subpopulationGuid, @Body ConsentSignatureBody body);
-
   /**
    * @return Response code <b>200</b> w/ message explaining instructions on how the user should
    * proceed

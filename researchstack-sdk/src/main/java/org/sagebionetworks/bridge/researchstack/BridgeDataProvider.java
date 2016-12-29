@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
+import org.joda.time.LocalDate;
 import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
@@ -27,20 +28,18 @@ import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
 import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Date;
 
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -190,7 +189,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     if (isSignedIn() && !userLocalStorage.loadUserSession().getConsented()
         && consentLocalStorage.hasConsent()) {
       try {
-        ConsentSignatureBody consent = consentLocalStorage.loadConsent();
+        ConsentSignature consent = consentLocalStorage.loadConsent();
         uploadConsent(BuildConfig.STUDY_SUBPOPULATION_GUID, consent);
       } catch (Exception e) {
         throw new RuntimeException("Error loading consent", e);
@@ -254,7 +253,6 @@ public abstract class BridgeDataProvider extends DataProvider {
   public Observable<DataResponse> signIn(Context context, String username, String password) {
     logger.debug("Called signIn");
     SignIn signIn = new SignIn().study(studyId).email(username).password(password);
-    SignInBody body = new SignInBody(studyId, username, password);
 
     // response 412 still has a response body, so catch all http errors here
     return ApiUtils.toResponseObservable(authenticationApi.signIn(signIn)).doOnNext(response -> {
@@ -329,20 +327,22 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public void saveConsent(Context context, TaskResult consentResult) {
-    ConsentSignatureBody signature = createConsentSignatureBody(consentResult);
+    ConsentSignature signature = createConsentSignatureBody(consentResult);
     consentLocalStorage.saveConsent(signature);
 
     User user = userLocalStorage.loadUser();
     if (user == null) {
       user = new User();
     }
-    user.setName(signature.name);
-    user.setBirthDate(signature.birthdate);
+    user.setName(signature.getName());
+    LocalDate birthdate = signature.getBirthdate();
+
+    user.setBirthDate(birthdate.toString());
     userLocalStorage.saveUser(user);
   }
 
   @NonNull
-  protected ConsentSignatureBody createConsentSignatureBody(TaskResult consentResult) {
+  protected ConsentSignature createConsentSignatureBody(TaskResult consentResult) {
     StepResult<StepResult> formResult =
         (StepResult<StepResult>) consentResult.getStepResult(ConsentTask.ID_FORM);
 
@@ -362,8 +362,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     // Save Consent Information
     // User is not signed in yet, so we need to save consent info to disk for later upload
-    return new ConsentSignatureBody(studyId, fullName, new Date(birthdateInMillis), base64Image,
-        "image/png", sharingScope);
+    return new ConsentSignature().name(fullName).birthdate(new LocalDate(birthdateInMillis)).imageData(base64Image).imageMimeType("image/png").scope(SharingScope.valueOf(sharingScope));
   }
 
   @Override
@@ -408,9 +407,10 @@ public abstract class BridgeDataProvider extends DataProvider {
   }
 
   private void uploadConsent(String subpopulationGuid,
-      ConsentSignatureBody consent) {
-    service.consentSignature(subpopulationGuid, consent)
-        .compose(ObservableUtils.applyDefault())
+      ConsentSignature consent) {
+
+    ApiUtils.toResponseObservable(forConsentedUsersApi.createConsentSignature(subpopulationGuid,consent)).
+            compose(ObservableUtils.applyDefault())
         .subscribe(response -> {
           if (response.code() == 201 || response.code() == 409) // success or already consented
           {
@@ -447,6 +447,9 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
+    // TODO: integrate with bridge
+    // forConsentedUsersApi.getSchedules();
+    // forConsentedUsersApi.getScheduledActivities();
 
     return taskHelper.loadTasksAndSchedules(context);
   }
