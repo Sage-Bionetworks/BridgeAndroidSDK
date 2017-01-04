@@ -61,7 +61,6 @@ public class BridgeDataProviderTest {
   private ForConsentedUsersApi forConsentedUsersApi;
   @Mock
   private AuthenticationApi authenticationApi;
-  private BridgeService bridgeService;
   private StorageAccessWrapper storageAccess;
   private Context context;
   private PinCodeConfig pinCodeConfig;
@@ -81,7 +80,6 @@ public class BridgeDataProviderTest {
 
     publicKeyRes = mock(ResourcePathManager.Resource.class);
     tasksAndSchedulesRes = mock(ResourcePathManager.Resource.class);
-    bridgeService = mock(BridgeService.class);
     appPrefs = mock(AppPrefs.class);
 
     pinCodeConfig = mock(PinCodeConfig.class);
@@ -101,7 +99,7 @@ public class BridgeDataProviderTest {
 
     dataProvider =
         new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
-            bridgeService, appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
+            appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
             taskHelper, uploadHandler);
     context = mock(Context.class);
   }
@@ -160,7 +158,7 @@ public class BridgeDataProviderTest {
 
     verify(authenticationApi).signIn(isA(SignIn.class));
     verify(userLocalStorage).saveUserSession(eq(session), isA(SignIn.class));
-    verify(uploadHandler).uploadPendingFiles(bridgeService);
+    verify(uploadHandler).uploadPendingFiles(forConsentedUsersApi);
 
     assertTestSubscriberCompletion(testSubscriber);
   }

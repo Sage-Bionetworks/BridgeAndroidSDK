@@ -42,13 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import okhttp3.Interceptor;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 
 /*
@@ -77,13 +72,12 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   private final AuthenticationApi authenticationApi;
 
-  private BridgeService service;
   private ForConsentedUsersApi forConsentedUsersApi;
 
   //used by tests to mock service
   BridgeDataProvider(String baseUrl, String studyId, String userAgent,
       ResourcePathManager.Resource publicKey,
-      ApiClientProvider apiClientProvider, BridgeService service,
+      ApiClientProvider apiClientProvider,
       AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage,
       ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper, UploadHandler uploadHandler) {
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
@@ -92,7 +86,6 @@ public abstract class BridgeDataProvider extends DataProvider {
     this.userAgent = userAgent;
     this.publicKey = publicKey;
     this.appPrefs = appPrefs;
-    this.service = service;
     this.storageAccess = storageAccess;
     this.userLocalStorage = userLocalStorage;
     this.consentLocalStorage = consentLocalStorage;
@@ -133,29 +126,6 @@ public abstract class BridgeDataProvider extends DataProvider {
       this.forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
     }
     interceptor.setSessionToken(sessionToken);
-
-    if (service != null) {
-      return;
-    }
-
-    OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().addInterceptor(interceptor);
-
-    if (BuildConfig.DEBUG) {
-      HttpLoggingInterceptor loggingInterceptor =
-          new HttpLoggingInterceptor(message -> LogExt.i(getClass(), message));
-      loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-      clientBuilder.addInterceptor(loggingInterceptor);
-    }
-
-    OkHttpClient client = clientBuilder.build();
-
-    Retrofit retrofit = new Retrofit.Builder().addCallAdapterFactory(
-        RxJavaCallAdapterFactory.create())
-        .addConverterFactory(GsonConverterFactory.create())
-        .baseUrl(baseUrl)
-        .client(client)
-        .build();
-    service = retrofit.create(BridgeService.class);
   }
 
   @Override
@@ -179,7 +149,7 @@ public abstract class BridgeDataProvider extends DataProvider {
       // will crash if the user hasn't created a pincode yet, need to fix needsAuth()
       if (storageAccess.hasPinCode(context)) {
         checkForTempConsentAndUpload();
-        uploadHandler.uploadPendingFiles(service);
+        uploadHandler.uploadPendingFiles(forConsentedUsersApi);
       }
     });
   }
@@ -282,7 +252,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         userLocalStorage.saveUserSession(userSessionInfo, signIn);
         updateBridgeService(userSessionInfo.getSessionToken(), signIn);
         checkForTempConsentAndUpload();
-        uploadHandler.uploadPendingFiles(service);
+        uploadHandler.uploadPendingFiles(forConsentedUsersApi);
       }
     }).map(response -> {
       boolean success = response.isSuccessful() || response.code() == 412;
@@ -474,7 +444,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public void uploadTaskResult(Context context, TaskResult taskResult) {
     // Update/Create TaskNotificationService
-    taskHelper.uploadTaskResult(context, service, taskResult);
+    taskHelper.uploadTaskResult(context, forConsentedUsersApi, taskResult);
   }
 
   // these stink, I should be able to query the DB and find these
@@ -490,11 +460,11 @@ public abstract class BridgeDataProvider extends DataProvider {
     // There is an issue here, being that this will loop through the upload requests and upload
     // a zip async. The service cannot handle more than two async calls so any other requested
     // async calls fail due to SockTimeoutException
-    uploadHandler.uploadPendingFiles(service);
+    uploadHandler.uploadPendingFiles(forConsentedUsersApi);
   }
 
   protected void uploadFile(UploadRequest request) {
-    uploadHandler.uploadFile(service, request);
+    uploadHandler.uploadFile(forConsentedUsersApi, request);
   }
 
   private static class BridgeHeaderInterceptor implements Interceptor {
