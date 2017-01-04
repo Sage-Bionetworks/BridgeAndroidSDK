@@ -166,16 +166,25 @@ public class BridgeDataProviderTest {
   }
 
   @Test
-  public void testSignOut() {
-    Observable<Response> bridgeResponse = Observable.just(Response.success(null));
-    when(bridgeService.signOut()).thenReturn(bridgeResponse);
+  public void testSignOut() throws IOException {
+    Message message = mock(Message.class);
+    when(message.getMessage()).thenReturn("message");
+
+    Call<Message> bridgeResponse = mock(Call.class);
+    when(bridgeResponse.clone()).thenReturn(bridgeResponse);
+    when(bridgeResponse.execute()).thenReturn(Response.success(message));
+
+
+    when(authenticationApi.signOut()).thenReturn(bridgeResponse);
 
     Observable<DataResponse> dataResponseObservable = dataProvider.signOut(context);
 
     TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
         dataResponseObservable);
 
-    verify(bridgeService).signOut();
+    testSubscriber.assertValue(new DataResponse(true, "message"));
+    verify(message).getMessage();
+    verify(authenticationApi).signOut();
     verify(userLocalStorage).clearUserSession();
     verify(userLocalStorage).clearSignIn();
     verify(userLocalStorage, never()).clearUser();

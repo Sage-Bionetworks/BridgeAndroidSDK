@@ -33,9 +33,9 @@ import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.restmm.model.SharingOptionBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.WithdrawalBody;
+import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -209,7 +209,8 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> withdrawConsent(Context context, String reason) {
     logger.debug("Called withdrawConsent");
-    return service.withdrawConsent(studyId, new WithdrawalBody(reason))
+    //TODO: allow withdrawal from specific subpopulation
+    return ApiUtils.toResponseObservable(forConsentedUsersApi.withdrawAllConsents(new Withdrawal().reason(reason)))
         .compose(ObservableUtils.applyDefault())
         .doOnNext(response -> {
           if (response.isSuccessful()) {
@@ -294,8 +295,8 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> signOut(Context context) {
     logger.debug("Called signOut");
-    return service.signOut()
-        .map(response -> new DataResponse(response.isSuccessful(), null))
+    return ApiUtils.toResponseObservable(authenticationApi.signOut())
+        .map(response -> new DataResponse(response.isSuccessful(), response.body().getMessage()))
         .doOnNext(response -> {
           userLocalStorage.clearUserSession();
           userLocalStorage.clearSignIn();
@@ -382,22 +383,24 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public void setUserSharingScope(Context context, String scope) {
-    // Update scope on server
-    service.dataSharing(new SharingOptionBody(scope))
-        .compose(ObservableUtils.applyDefault())
-        .doOnNext(response -> {
-          if (response.isSuccessful()) {
-            UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-            userSessionInfo.setSharingScope(SharingScope.valueOf(scope));
-            userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
-          } else {
-            ApiUtils.handleError(context, response.code());
-          }
-        })
-        .subscribe(response -> LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
-            response.message()), error -> {
-          LogExt.e(getClass(), error.getMessage());
-        });
+    StudyParticipant participant = new StudyParticipant();
+    participant.setSharingScope(SharingScope.valueOf(scope));
+
+    ApiUtils.toResponseObservable(forConsentedUsersApi.updateUsersParticipantRecord(participant))
+    .compose(ObservableUtils.applyDefault())
+    .doOnNext(response -> {
+      if (response.isSuccessful()) {
+        UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
+        userSessionInfo.setSharingScope(SharingScope.valueOf(scope));
+        userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
+      } else {
+        ApiUtils.handleError(context, response.code());
+      }
+    })
+    .subscribe(response -> LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
+        response.message()), error -> {
+      LogExt.e(getClass(), error.getMessage());
+    });
   }
 
   @Override
