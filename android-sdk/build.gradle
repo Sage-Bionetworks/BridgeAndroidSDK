@@ -48,5 +48,5 @@ dependencies {
   testCompile 'org.slf4j:slf4j-simple:1.7.21'
   testCompile 'junit:junit:4.12'
 }
-
+// TODO: fix path when included as submodule
 //apply from: "$rootDir/gradle/artifact-deploy.gradle"
