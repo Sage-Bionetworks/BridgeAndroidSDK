@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.researchstack.backbone.ResourcePathManager;
@@ -39,6 +40,7 @@ import rx.observers.TestSubscriber;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -96,6 +98,7 @@ public class BridgeDataProviderTest {
     userLocalStorage = mock(UserLocalStorage.class);
 
     when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
+    when(apiClientProvider.getClient(Matchers.same(ForConsentedUsersApi.class), any(SignIn.class))).thenReturn(forConsentedUsersApi);
 
     dataProvider =
         new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
