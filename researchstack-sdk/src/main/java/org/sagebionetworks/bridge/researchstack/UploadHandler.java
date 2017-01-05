@@ -10,8 +10,10 @@ import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.sdk.restmm.model.UploadSession;
-import org.sagebionetworks.bridge.sdk.restmm.model.UploadValidationStatus;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+
+import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,9 +45,9 @@ public class UploadHandler {
     this.publicKey = publicKey;
   }
 
-  public void uploadBridgeData(BridgeService bridgeService, Info info,
+  public void uploadBridgeData(ForConsentedUsersApi forConsentedUsersApi, Info info,
       BridgeDataInput... dataFiles) {
-    uploadBridgeData(bridgeService, info, Arrays.asList(dataFiles));
+    uploadBridgeData(forConsentedUsersApi, info, Arrays.asList(dataFiles));
   }
 
   // figure out what directory to save files in and where to put this method
@@ -53,7 +55,7 @@ public class UploadHandler {
     return new File(context.getFilesDir() + "/upload_request/");
   }
 
-  public void uploadBridgeData(BridgeService bridgeService, Info info,
+  public void uploadBridgeData(ForConsentedUsersApi bridforConsentedUsersApieService, Info info,
       List<BridgeDataInput> dataFiles) {
     try {
       BridgeDataArchive archive = new BridgeDataArchive(info);
@@ -69,13 +71,13 @@ public class UploadHandler {
 
       ((UploadQueue) storageAccess.getAppDatabase()).saveUploadRequest(
           request);
-      uploadPendingFiles(bridgeService);
+      uploadPendingFiles(bridforConsentedUsersApieService);
     } catch (IOException e) {
       throw new RuntimeException("Error encrypting initial task data", e);
     }
   }
 
-  public void uploadPendingFiles(BridgeService bridgeService) {
+  public void uploadPendingFiles(ForConsentedUsersApi forConsentedUsersApi) {
     List<UploadRequest> uploadRequests =
         ((UploadQueue) storageAccess.getAppDatabase()).loadUploadRequests();
 
@@ -86,17 +88,24 @@ public class UploadHandler {
       if (uploadRequest.bridgeId == null) {
         logger.debug(
             "Starting upload for request: " + uploadRequest.name);
-        uploadFile(bridgeService, uploadRequest);
+        uploadFile(forConsentedUsersApi, uploadRequest);
       } else {
         logger.debug(
             "Bridge ID found, confirming upload for: " + uploadRequest.name);
-        confirmUpload(bridgeService, uploadRequest);
+        confirmUpload(forConsentedUsersApi, uploadRequest);
       }
     }
   }
 
-  protected void uploadFile(BridgeService bridgeService, UploadRequest request) {
-    bridgeService.requestUploadSession(request).flatMap(response -> {
+  protected void uploadFile(ForConsentedUsersApi forConsentedUsersApi, UploadRequest request) {
+    org.sagebionetworks.bridge.rest.model.UploadRequest uploadRequest = new org.sagebionetworks.bridge.rest.model.UploadRequest();
+    uploadRequest.name(request.name)
+            .contentLength(request.contentLength)
+            .contentMd5(request.contentMd5)
+            .contentType(request.contentType);
+
+    ApiUtils.toResponseObservable(forConsentedUsersApi.requestUploadSession(uploadRequest))
+    .flatMap(response -> {
       if (response.isSuccessful()) {
         return uploadToS3(request, response.body());
       } else {
@@ -109,7 +118,7 @@ public class UploadHandler {
       // Updating request entry with Bridge ID for saving on success
       request.bridgeId = id;
 
-      return bridgeService.uploadComplete(id);
+      return ApiUtils.toResponseObservable(forConsentedUsersApi.completeUploadSession(id));
     }).subscribeOn(Schedulers.io()).subscribe(completeResponse -> {
       if (completeResponse.isSuccessful()) {
         logger.debug("Notified bridge of s3 upload, need to confirm");
@@ -134,7 +143,7 @@ public class UploadHandler {
       logger.debug("Uploading to S3");
       RequestBody body = RequestBody.create(MediaType.parse(request.contentType),
           new File(getFilesDir(applicationContext), request.name));
-      Request awsRequest = new Request.Builder().url(uploadSession.url)
+      Request awsRequest = new Request.Builder().url(uploadSession.getUrl())
           .put(body)
           .header("Content-MD5", request.contentMd5)
           .build();
@@ -145,7 +154,7 @@ public class UploadHandler {
 
         if (response.isSuccessful()) {
           logger.debug("Successful s3 upload");
-          subscriber.onNext(uploadSession.id);
+          subscriber.onNext(uploadSession.getId());
         } else {
           ApiUtils.handleError(applicationContext, response.code());
           throw new RuntimeException("Response unsuccessful, code: " + response.code());
@@ -156,9 +165,8 @@ public class UploadHandler {
     });
   }
 
-  private void confirmUpload(BridgeService bridgeService, UploadRequest request) {
-    bridgeService
-        .uploadStatus(request.bridgeId)
+  private void confirmUpload(ForConsentedUsersApi forConsentedUsersApi, UploadRequest request) {
+    ApiUtils.toResponseObservable(forConsentedUsersApi.getUploadStatus(request.bridgeId))
         .subscribeOn(Schedulers.io())
         .subscribe(response -> {
           if (response.isSuccessful()) {
