@@ -3,64 +3,64 @@ apply plugin: 'me.tatarka.retrolambda'
 apply plugin: 'com.neenbedankt.android-apt' // must come after retrolambda
 
 repositories {
-  // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
-  maven { url "https://jitpack.io" }
+    // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
+    maven { url "https://jitpack.io" }
 }
 
 // todo make pom include sage s3 repo for rest-client
 android {
-  compileSdkVersion 24
-  buildToolsVersion '25.0.0'
+    compileSdkVersion 24
+    buildToolsVersion '25.0.0'
 
-  // allow inter-project inclusion of this library's debug build
-  // publishNonDefault true
+    // allow inter-project inclusion of this library's debug build
+    // publishNonDefault true
 
-  defaultConfig {
-    minSdkVersion 16
-    targetSdkVersion 24
-    versionCode 1
-    versionName "1.0"
-    multiDexEnabled true
-    // hack until subpopulation Guid is properly handled and not hardcoded
-    // add a field studyId="your-study-name" to your app's gradle.properties
-    buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', studyId // default subpopulation
-  }
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+        multiDexEnabled true
+        // hack until subpopulation Guid is properly handled and not hardcoded
+        // add a field studyId="your-study-name" to your app's gradle.properties
+        buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', studyId // default subpopulation
     }
-  }
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
-  }
-  lintOptions {
-    abortOnError false
-  }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lintOptions {
+        abortOnError false
+    }
 
-  resourcePrefix 'osb_'
+    resourcePrefix 'osb_'
 }
 
 dependencies {
-  compile fileTree(include: ['*.jar'], dir: 'libs')
-  compile 'org.researchstack:skin:1.1.1', {
-    exclude group: 'joda-time', module: 'joda-time'
-  }
-  compile project(":android-sdk")
-  compile 'com.squareup.retrofit2:retrofit:2.1.0'
-  compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
-  compile 'com.android.support:appcompat-v7:24.2.1' //23.3.0 crashes on AppCompatButton's onClick
-  compile 'net.zetetic:android-database-sqlcipher:3.3.1-2@aar'
-  apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
-  compile 'com.android.support:multidex:1.0.1'
-  compile 'com.madgag.spongycastle:core:1.54.0.0'
-  compile 'com.madgag.spongycastle:prov:1.54.0.0'
-  compile 'com.madgag.spongycastle:pkix:1.54.0.0'
-  testCompile 'junit:junit:4.12'
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile 'org.researchstack:skin:1.1.1', {
+        exclude group: 'joda-time', module: 'joda-time'
+    }
+    compile project(":android-sdk")
+    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
+    compile 'com.android.support:appcompat-v7:24.2.1' //23.3.0 crashes on AppCompatButton's onClick
+    compile 'net.zetetic:android-database-sqlcipher:3.3.1-2@aar'
+    apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
+    compile 'com.android.support:multidex:1.0.1'
+    compile 'com.madgag.spongycastle:core:1.54.0.0'
+    compile 'com.madgag.spongycastle:prov:1.54.0.0'
+    compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+    testCompile 'junit:junit:4.12'
 //  testCompile 'org.slf4j:slf4j-simple:1.7.21'
-  testCompile 'org.robolectric:robolectric:3.0'
-  testCompile 'org.mockito:mockito-core:1.10.19'
+    testCompile 'org.robolectric:robolectric:3.0'
+    testCompile 'org.mockito:mockito-core:1.10.19'
 }
 // TODO: fix path when included as submodule
 //apply from: "$rootDir/gradle/artifact-deploy.gradle"

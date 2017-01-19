@@ -1,52 +1,52 @@
 apply plugin: 'com.android.library'
 
 android {
-  compileSdkVersion 24
-  buildToolsVersion "25.0.0"
+    compileSdkVersion 24
+    buildToolsVersion "25.0.0"
 
-  // allow inter-project inclusion of this library's debug build
-  // publishNonDefault true
+    // allow inter-project inclusion of this library's debug build
+    // publishNonDefault true
 
-  defaultConfig {
-    minSdkVersion 16
-    targetSdkVersion 24
-    versionCode 1
-    versionName "1.0"
-  }
-
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
     }
-  }
 
-  packagingOptions {
-    // joda-time workaround https://github.com/dlew/joda-time-android#troubleshooting
-    exclude 'META-INF/LICENSE'
-    exclude 'META-INF/NOTICE'
-  }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
 
-  lintOptions {
-    abortOnError false
-  }
+    packagingOptions {
+        // joda-time workaround https://github.com/dlew/joda-time-android#troubleshooting
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+    }
 
-  resourcePrefix 'osb_'
+    lintOptions {
+        abortOnError false
+    }
+
+    resourcePrefix 'osb_'
 }
 
 dependencies {
-  compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(dir: 'libs', include: ['*.jar'])
 
-  compile 'net.danlew:android.joda:2.9.4.2'
-  compile 'com.android.support:appcompat-v7:24.2.1'
-  compile 'org.sagebionetworks.bridge:rest-client:0.12.15', {
-    exclude group: 'joda-time', module: 'joda-time'
-  }
-  compile 'com.github.tony19:logback-android-classic:1.1.1-6', {
-    exclude group: 'com.google.android', module: 'android'
-  }
-  testCompile 'org.slf4j:slf4j-simple:1.7.21'
-  testCompile 'junit:junit:4.12'
+    compile 'net.danlew:android.joda:2.9.4.2'
+    compile 'com.android.support:appcompat-v7:24.2.1'
+    compile 'org.sagebionetworks.bridge:rest-client:0.12.15', {
+        exclude group: 'joda-time', module: 'joda-time'
+    }
+    compile 'com.github.tony19:logback-android-classic:1.1.1-6', {
+        exclude group: 'com.google.android', module: 'android'
+    }
+    testCompile 'org.slf4j:slf4j-simple:1.7.21'
+    testCompile 'junit:junit:4.12'
 }
 // TODO: fix path when included as submodule
 //apply from: "$rootDir/gradle/artifact-deploy.gradle"
