@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.researchstack.backbone.ResourcePathManager;
@@ -25,12 +26,10 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.sdk.restmm.UserSessionInfo;
-import org.sagebionetworks.bridge.sdk.restmm.model.BridgeMessageResponse;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignInBody;
-import org.sagebionetworks.bridge.sdk.restmm.model.SignUpBody;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
 
@@ -41,6 +40,7 @@ import rx.observers.TestSubscriber;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -63,7 +63,6 @@ public class BridgeDataProviderTest {
   private ForConsentedUsersApi forConsentedUsersApi;
   @Mock
   private AuthenticationApi authenticationApi;
-  private BridgeService bridgeService;
   private StorageAccessWrapper storageAccess;
   private Context context;
   private PinCodeConfig pinCodeConfig;
@@ -83,7 +82,6 @@ public class BridgeDataProviderTest {
 
     publicKeyRes = mock(ResourcePathManager.Resource.class);
     tasksAndSchedulesRes = mock(ResourcePathManager.Resource.class);
-    bridgeService = mock(BridgeService.class);
     appPrefs = mock(AppPrefs.class);
 
     pinCodeConfig = mock(PinCodeConfig.class);
@@ -100,10 +98,11 @@ public class BridgeDataProviderTest {
     userLocalStorage = mock(UserLocalStorage.class);
 
     when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
+    when(apiClientProvider.getClient(Matchers.same(ForConsentedUsersApi.class), any(SignIn.class))).thenReturn(forConsentedUsersApi);
 
     dataProvider =
         new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
-            bridgeService, appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
+            appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
             taskHelper, uploadHandler);
     context = mock(Context.class);
   }
@@ -128,8 +127,6 @@ public class BridgeDataProviderTest {
 
   @Test
   public void testSignUp() throws IOException {
-    when(bridgeService.signUp(isA(SignUpBody.class))).thenReturn(
-        Observable.just(new BridgeMessageResponse()));
 
     Call<Message> call = setupCall(mock(Message.class));
     when(authenticationApi.signUp(isA(SignUp.class))).thenReturn(call);
@@ -147,12 +144,14 @@ public class BridgeDataProviderTest {
   }
 
   @Test
-  public void testSignIn() {
-    UserSessionInfo session = new UserSessionInfo();
+  public void testSignIn() throws IOException {
+    Call<UserSessionInfo> sessionCall = mock(Call.class);
+    UserSessionInfo session = mock(UserSessionInfo.class);
 
-    Observable<Response<UserSessionInfo>> bridgeResponse =
-        Observable.just(Response.success(session));
-    when(bridgeService.signIn(isA(SignInBody.class))).thenReturn(bridgeResponse);
+    when(sessionCall.clone()).thenReturn(sessionCall);
+    when(sessionCall.execute()).thenReturn(Response.success(session));
+
+    when(authenticationApi.signIn(isA(SignIn.class))).thenReturn(sessionCall);
     //when(appDatabase.loadUploadRequests()).thenReturn(Lists.newArrayList());
 
     Observable<DataResponse> dataResponseObservable =
@@ -160,24 +159,33 @@ public class BridgeDataProviderTest {
     TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
         dataResponseObservable);
 
-    verify(bridgeService).signIn(isA(SignInBody.class));
+    verify(authenticationApi).signIn(isA(SignIn.class));
     verify(userLocalStorage).saveUserSession(eq(session), isA(SignIn.class));
-    verify(uploadHandler).uploadPendingFiles(bridgeService);
+    verify(uploadHandler).uploadPendingFiles(forConsentedUsersApi);
 
     assertTestSubscriberCompletion(testSubscriber);
   }
 
   @Test
-  public void testSignOut() {
-    Observable<Response> bridgeResponse = Observable.just(Response.success(null));
-    when(bridgeService.signOut()).thenReturn(bridgeResponse);
+  public void testSignOut() throws IOException {
+    Message message = mock(Message.class);
+    when(message.getMessage()).thenReturn("message");
+
+    Call<Message> bridgeResponse = mock(Call.class);
+    when(bridgeResponse.clone()).thenReturn(bridgeResponse);
+    when(bridgeResponse.execute()).thenReturn(Response.success(message));
+
+
+    when(authenticationApi.signOut()).thenReturn(bridgeResponse);
 
     Observable<DataResponse> dataResponseObservable = dataProvider.signOut(context);
 
     TestSubscriber<DataResponse> testSubscriber = getTestSubscriber(
         dataResponseObservable);
-
-    verify(bridgeService).signOut();
+    //TODO: uncomment after DataResponse's equal/hashCode implementations are released
+    //testSubscriber.assertValue(new DataResponse(true, "message"));
+    verify(message).getMessage();
+    verify(authenticationApi).signOut();
     verify(userLocalStorage).clearUserSession();
     verify(userLocalStorage).clearSignIn();
     verify(userLocalStorage, never()).clearUser();
@@ -222,14 +230,14 @@ public class BridgeDataProviderTest {
   @Test
   public void testIsConsented() {
     UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
-    when(userSessionInfo.isConsented()).thenReturn(false);
+    when(userSessionInfo.getConsented()).thenReturn(false);
     when(userLocalStorage.loadUserSession()).thenReturn(userSessionInfo);
     when(consentLocalStorage.hasConsent()).thenReturn(true);
 
     boolean isConsented = dataProvider.isConsented();
 
     assertTrue(isConsented);
-    verify(userSessionInfo).isConsented();
+    verify(userSessionInfo).getConsented();
     verify(userLocalStorage).loadUserSession();
     verify(consentLocalStorage).hasConsent();
   }
@@ -271,8 +279,8 @@ public class BridgeDataProviderTest {
   @Test
   public void testGetUserSharingScope() {
     UserSessionInfo session = mock(UserSessionInfo.class);
-    String scope = "sharing-scope";
-    when(session.getSharingScope()).thenReturn(scope);
+    String scope = "SPONSORS_AND_PARTNERS";
+    when(session.getSharingScope()).thenReturn(SharingScope.valueOf(scope));
     when(userLocalStorage.loadUserSession()).thenReturn(session);
 
     String scopeResult = dataProvider.getUserSharingScope(context);

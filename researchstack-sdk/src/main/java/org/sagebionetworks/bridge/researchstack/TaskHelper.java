@@ -22,6 +22,7 @@ import org.researchstack.skin.task.SmartSurveyTask;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +121,7 @@ public class TaskHelper {
     return smartSurveyTask;
   }
 
-  public void uploadTaskResult(Context context, BridgeService bridgeService,
+  public void uploadTaskResult(Context context, ForConsentedUsersApi forConsentedUsersApi,
       TaskResult taskResult) {
     // Update/Create TaskNotificationService
     if (appPrefs.isTaskReminderEnabled()) {
@@ -145,7 +146,7 @@ public class TaskHelper {
           FormatHelper.DEFAULT_FORMAT.format(stepResult.getEndDate())));
     }
 
-    uploadHandler.uploadBridgeData(bridgeService,
+    uploadHandler.uploadBridgeData(forConsentedUsersApi,
         new Info(context, getGuid(taskResult.getIdentifier()),
             getCreatedOnDate(taskResult.getIdentifier())), files);
   }

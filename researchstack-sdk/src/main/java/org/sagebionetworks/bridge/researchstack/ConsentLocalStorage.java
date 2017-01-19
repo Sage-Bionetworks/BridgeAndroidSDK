@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 
 /**
  * Created by liujoshua on 9/12/16.
@@ -31,13 +32,13 @@ public class ConsentLocalStorage {
     return fileAccess.dataExists(applicationContext, TEMP_CONSENT_JSON_FILE_NAME);
   }
 
-  public void saveConsent(ConsentSignatureBody consent) {
+  public void saveConsent(ConsentSignature consent) {
     writeJsonString(gson.toJson(consent), TEMP_CONSENT_JSON_FILE_NAME);
   }
 
-  public ConsentSignatureBody loadConsent() {
+  public ConsentSignature loadConsent() {
     String consentJson = loadJsonString(applicationContext, TEMP_CONSENT_JSON_FILE_NAME);
-    return gson.fromJson(consentJson, ConsentSignatureBody.class);
+    return gson.fromJson(consentJson, ConsentSignature.class);
   }
 
   private void writeJsonString(String userSessionJson, String userSessionPath) {

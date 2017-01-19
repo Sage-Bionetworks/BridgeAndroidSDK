@@ -20,10 +20,10 @@ public class TestBridgeDataProvider extends BridgeDataProvider {
 
   public TestBridgeDataProvider(ResourcePathManager.Resource publicKey,
       ResourcePathManager.Resource tasksAndSchedules, ApiClientProvider apiClientProvider,
-      BridgeService bridgeService, AppPrefs appPrefs, StorageAccessWrapper storageAccess,
+      AppPrefs appPrefs, StorageAccessWrapper storageAccess,
       UserLocalStorage userLocalStorage, ConsentLocalStorage consentLocalStorage,
       TaskHelper taskHelper, UploadHandler uploadHandler) {
-    super(BASE_URL, STUDY_ID, USER_AGENT, publicKey, apiClientProvider, bridgeService, appPrefs,
+    super(BASE_URL, STUDY_ID, USER_AGENT, publicKey, apiClientProvider, appPrefs,
         storageAccess, userLocalStorage, consentLocalStorage, taskHelper, uploadHandler);
     this.PUBLIC_KEY_RES = publicKey;
     this.TASKS_AND_SCHEDULES = tasksAndSchedules;
