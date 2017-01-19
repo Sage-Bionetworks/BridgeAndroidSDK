@@ -5,7 +5,7 @@ import android.content.Context;
 import com.google.gson.Gson;
 
 import org.researchstack.backbone.storage.file.FileAccess;
-import org.sagebionetworks.bridge.sdk.restmm.model.ConsentSignatureBody;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 
 /**
  * Created by liujoshua on 9/12/16.

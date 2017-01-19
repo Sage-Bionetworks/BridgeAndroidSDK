@@ -15,10 +15,10 @@ import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.DataProvider;
-import org.researchstack.skin.DataResponse;
-import org.researchstack.skin.model.SchedulesAndTasksModel;
-import org.researchstack.skin.model.User;
+import org.researchstack.backbone.DataProvider;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.User;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
@@ -226,7 +226,7 @@ public class BridgeDataProviderTest {
     when(userLocalStorage.loadUserSession()).thenReturn(userSessionInfo);
     when(consentLocalStorage.hasConsent()).thenReturn(true);
 
-    boolean isConsented = dataProvider.isConsented(context);
+    boolean isConsented = dataProvider.isConsented();
 
     assertTrue(isConsented);
     verify(userSessionInfo).isConsented();

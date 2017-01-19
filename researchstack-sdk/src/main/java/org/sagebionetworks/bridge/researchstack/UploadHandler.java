@@ -4,7 +4,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.widget.Toast;
 
-import org.researchstack.skin.ResourceManager;
+import org.researchstack.backbone.ResourceManager;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
