@@ -4,8 +4,10 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.fatboyindustrial.gsonjodatime.Converters;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.ResourcePathManager;
@@ -26,8 +28,10 @@ import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -46,6 +50,7 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
+import rx.functions.Action1;
 
 /*
 * This is a very simple implementation that hits only part of the Sage Bridge REST API
@@ -60,7 +65,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   private final ApiClientProvider apiClientProvider;
   private final ResourcePathManager.Resource publicKey;
 
-  protected final Gson gson = new Gson();
+  protected final Gson gson = RestUtils.GSON;
   protected final BridgeHeaderInterceptor interceptor;
   protected final StorageAccessWrapper storageAccess;
 
@@ -229,46 +234,37 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> signIn(Context context, String username, String password) {
     logger.debug("Called signIn");
-    SignIn signIn = new SignIn().study(studyId).email(username).password(password);
+    final SignIn signIn = new SignIn().study(studyId).email(username).password(password);
 
     // response 412 still has a response body, so catch all http errors here
     return ApiUtils.toResponseObservable(authenticationApi.signIn(signIn)).doOnNext(response -> {
-      logger.debug("Received signIn response");
-      UserSessionInfo userSessionInfo = null;
-      if (response.code() == 200) {
-        logger.debug("signIn response 200");
-
-        userSessionInfo = response.body();
-
-      } else if (response.code() == 412) {
-        logger.debug("signIn response 412");
-        try {
-          String errorBody = response.errorBody().string();
-          userSessionInfo = gson.fromJson(errorBody,  UserSessionInfo.class);
-        } catch (IOException e) {
-          throw new RuntimeException("Error deserializing server sign in response");
-        }
-      }
-
-      logger.debug("signIn userSessionInfo: " + userSessionInfo);
-
-      if (userSessionInfo != null) {
-        // if we are direct from signing in, we need to load the user profile object
-        // from the server. that wouldn't work right now
-        userLocalStorage.saveUserSession(userSessionInfo, signIn);
-        updateBridgeService(userSessionInfo.getSessionToken(), signIn);
-
-        // We should not be coupling logic like this within the concrete implementation of DataProvider
-        // The EmailVerificationStepLayout now controls uploading the Consent Doc after Sign in
-        // checkForTempConsentAndUpload();
-        uploadHandler.uploadPendingFiles(forConsentedUsersApi);
-      }
+      UserSessionInfo userSessionInfo = response.body();
+      processSignInResponse(signIn, userSessionInfo);
     }).map(response -> {
       boolean success = response.isSuccessful() || response.code() == 412;
       return new DataResponse(success, response.message());
-    }).doOnError(e -> {
-      logger.error("signIn error", e);
+    }).doOnError(throwable -> {
+      if (throwable instanceof ConsentRequiredException) {
+        UserSessionInfo userSessionInfo = ((ConsentRequiredException) throwable).getSession();
+        processSignInResponse(signIn, userSessionInfo);
+      }
     });
+  }
+
+  protected void processSignInResponse(SignIn signIn, UserSessionInfo userSessionInfo) {
+    logger.debug("Received signIn response");
+    logger.debug("signIn userSessionInfo: " + userSessionInfo);
+
+    if (userSessionInfo != null) {
+      // if we are direct from signing in, we need to load the user profile object
+      // from the server. that wouldn't work right now
+      userLocalStorage.saveUserSession(userSessionInfo, signIn);
+      updateBridgeService(userSessionInfo.getSessionToken(), signIn);
+
+      // TODO: seems like we would want to wait until the consent is successfully uploaded?
+      checkForTempConsentAndUpload();
+      uploadHandler.uploadPendingFiles(forConsentedUsersApi);
+    }
   }
 
   @Override
@@ -374,7 +370,13 @@ public abstract class BridgeDataProvider extends DataProvider {
     signature.setBirthdate(LocalDate.fromDateFields(consentSignatureBody.birthdate));
     signature.setImageData(consentSignatureBody.imageData);
     signature.setImageMimeType(consentSignatureBody.imageMimeType);
-    signature.setScope(SharingScope.valueOf(consentSignatureBody.scope));
+    SharingScope sharingScope = SharingScope.NO_SHARING;
+    for (SharingScope scope : SharingScope.values()) {
+      if (scope.toString().equals(consentSignatureBody.scope)) {
+        sharingScope = scope;
+      }
+    }
+    signature.setScope(sharingScope);
     return signature;
   }
 
