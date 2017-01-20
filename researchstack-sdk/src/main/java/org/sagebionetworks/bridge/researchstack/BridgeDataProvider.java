@@ -4,10 +4,8 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.fatboyindustrial.gsonjodatime.Converters;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.ResourcePathManager;
@@ -50,7 +48,6 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
-import rx.functions.Action1;
 
 /*
 * This is a very simple implementation that hits only part of the Sage Bridge REST API
@@ -329,6 +326,9 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public ConsentSignatureBody loadLocalConsent(Context context) {
     if (consentLocalStorage == null) {
+      return null;
+    }
+    if (!consentLocalStorage.hasConsent()) {
       return null;
     }
     ConsentSignature bridgeSignature = consentLocalStorage.loadConsent();
