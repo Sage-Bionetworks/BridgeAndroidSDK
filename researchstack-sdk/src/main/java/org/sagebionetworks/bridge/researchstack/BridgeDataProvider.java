@@ -319,7 +319,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   }
 
   @Override
-  public void saveLocalConsent(Context context, TaskResult consentResult) {
+  public void saveConsent(Context context, TaskResult consentResult) {
     saveLocalConsent(context, createConsentSignatureBody(consentResult));
   }
 
@@ -341,11 +341,6 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public void saveLocalConsent(Context context, ConsentSignatureBody signatureBody) {
     ConsentSignature signature = createConsentSignature(signatureBody);
-    saveLocalConsent(context, signature);
-  }
-
-  public void saveConsent(Context context, TaskResult consentResult) {
-    ConsentSignature signature = createConsentSignatureBody(consentResult);
     saveLocalConsent(context, signature);
   }
 
