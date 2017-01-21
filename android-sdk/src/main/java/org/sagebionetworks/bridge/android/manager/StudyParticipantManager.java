@@ -18,6 +18,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 public class StudyParticipantManager {
+    @NonNull
     private final AuthManager authManager;
 
     public StudyParticipantManager(@NonNull AuthManager authManager) {

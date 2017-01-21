@@ -36,7 +36,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class AuthManager {
     private static final Logger logger = LoggerFactory.getLogger(AuthManager.class);
 
+    @NonNull
     private final AuthManagerDelegateProtocol authManagerDelegateProtocol;
+    @NonNull
     private final BridgeConfig config;
     private final AuthenticationApi authenticationApi;
     private ApiClientProvider apiClientProvider;

@@ -142,7 +142,7 @@ public abstract class BridgeDataProvider2 extends DataProvider {
      */
     @Override
     @Deprecated
-    public Observable<DataResponse> signIn(Context context, String username, String password) {
+    public Observable<DataResponse> signIn(Context context, @NonNull String username, @NonNull String password) {
         return signIn(username, password).andThen(SUCCESS_DATA_RESPONSE);
     }
 
@@ -169,7 +169,7 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
     @Override
     @Deprecated
-    public Observable<DataResponse> resendEmailVerification(Context context, String email) {
+    public Observable<DataResponse> resendEmailVerification(Context context, @NonNull String email) {
         return resendEmailVerification(email).andThen(SUCCESS_DATA_RESPONSE);
     }
 
@@ -183,7 +183,7 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
     @Override
     @Deprecated
-    public Observable<DataResponse> forgotPassword(Context context, String email) {
+    public Observable<DataResponse> forgotPassword(Context context, @NonNull String email) {
         return forgotPassword(email).andThen(SUCCESS_DATA_RESPONSE);
     }
 

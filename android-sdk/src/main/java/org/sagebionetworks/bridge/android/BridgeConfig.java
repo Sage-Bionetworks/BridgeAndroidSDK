@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Build;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
 import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
@@ -136,7 +137,7 @@ public class BridgeConfig {
     }
 
     @NonNull
-    String capitalize(String s) {
+    String capitalize(@Nullable String s) {
         if (s == null || s.length() == 0) {
             return "";
         }

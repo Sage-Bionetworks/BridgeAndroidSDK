@@ -14,6 +14,8 @@ import retrofit2.Response;
 import retrofit2.adapter.rxjava.HttpException;
 import rx.Observable;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * Created by liujoshua on 10/24/16.
  */
@@ -25,11 +27,13 @@ public class ApiUtils {
     private ApiUtils() {
     }
 
-    public static <T> Observable<Response<T>> toResponseObservable(Call<T> call) {
+    @NonNull
+    public static <T> Observable<Response<T>> toResponseObservable(@NonNull Call<T> call) {
         return Observable.fromCallable(() -> call.clone().execute());
     }
 
-    public static <T> Observable<T> toBodyObservable(Call<T> call) {
+    @NonNull
+    public static <T> Observable<T> toBodyObservable(@NonNull Call<T> call) {
 
         return Observable.fromCallable(() -> {
             // Since Call is a one-shot type, clone it for each new caller.
@@ -43,7 +47,9 @@ public class ApiUtils {
         // .compose(ObservableUtils.applyDefault());
     }
 
-    public static void handleError(Context context, int responseCode) {
+    public static void handleError(@NonNull Context context, int responseCode) {
+        checkNotNull(context);
+
         String intentAction = null;
 
         switch (responseCode) {

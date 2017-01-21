@@ -24,8 +24,11 @@ class DefaultAuthManagerDelegateProtocol implements AuthManager.AuthManagerDeleg
     }
 
     // TODO: store these in a secure, persisted manner
+    @Nullable
     private UserSessionInfo userSessionInfo;
+    @Nullable
     private String email;
+    @Nullable
     private String password;
 
     @Nullable
@@ -46,9 +49,9 @@ class DefaultAuthManagerDelegateProtocol implements AuthManager.AuthManagerDeleg
     @Nullable
     @Override
     public String getEmail() {
-        logger.info("getEmail called, found: " + this.getEmail());
+        logger.info("getEmail called, found: " + email);
 
-        return this.email;
+        return email;
     }
 
     @Override
