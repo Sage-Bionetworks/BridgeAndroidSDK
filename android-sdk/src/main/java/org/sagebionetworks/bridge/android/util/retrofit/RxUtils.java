@@ -3,10 +3,7 @@ package org.sagebionetworks.bridge.android.util.retrofit;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
-import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-
 import retrofit2.Call;
-import rx.Completable;
 import rx.Observable;
 import rx.Single;
 
@@ -21,7 +18,7 @@ public class RxUtils {
     public static <T> Single<T> toBodySingle(@NonNull Call<T> call) {
         checkNotNull(call);
 
-        return Observable.create(new BodyOnSubscribe(new CallOnSubscribe<>(call))).toSingle();
+        return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call))).toSingle();
     }
 
 }
