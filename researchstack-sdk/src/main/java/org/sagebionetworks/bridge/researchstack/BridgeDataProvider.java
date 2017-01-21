@@ -108,6 +108,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   }
 
   /**
+   * @param bridgeManagerProvider bridge manager
    * @param baseUrl base URL of Bridge server
    * @param studyId study identifier
    * @param userAgent user agent, in format expected by Bridge

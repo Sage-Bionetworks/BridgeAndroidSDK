@@ -135,14 +135,18 @@ public abstract class BridgeDataProvider2 extends DataProvider {
                         .sharingScope(SharingScope.valueOf(scope)));
     }
 
+
+
     /**
-     * May invoke {@link Observer#onError(Throwable)} with ConsentRequiredException, to indicate
-     *
      * @see super#signIn(Context, String, String)
+     * 
+     * May invoke {@link Observer#onError(Throwable)} with ConsentRequiredException, to indicate
+     * consent is required
      */
     @Override
     @Deprecated
-    public Observable<DataResponse> signIn(Context context, @NonNull String username, @NonNull String password) {
+    public Observable<DataResponse> signIn(Context context, @NonNull String username, @NonNull
+            String password) {
         return signIn(username, password).andThen(SUCCESS_DATA_RESPONSE);
     }
 
@@ -169,7 +173,8 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
     @Override
     @Deprecated
-    public Observable<DataResponse> resendEmailVerification(Context context, @NonNull String email) {
+    public Observable<DataResponse> resendEmailVerification(Context context, @NonNull String
+            email) {
         return resendEmailVerification(email).andThen(SUCCESS_DATA_RESPONSE);
     }
 
