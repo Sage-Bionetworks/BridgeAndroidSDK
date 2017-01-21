@@ -315,6 +315,9 @@ public class AuthManager {
     private SignIn getSignInFromStore() {
         String email = authManagerDelegateProtocol.getEmail();
         String password = authManagerDelegateProtocol.getPassword();
+
+        //TODO: determine if it makes more sense to handle this differently (perhaps having
+        // invalid signIn would propagate exceptions in a way that's easier to handle)
         checkState(email != null, "email cannot be null");
         checkState(password != null, "password cannot be null");
 
