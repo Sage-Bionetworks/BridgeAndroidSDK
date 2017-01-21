@@ -28,6 +28,7 @@ import rx.Single;
 import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by jyliu on 1/19/2017.
@@ -93,6 +94,9 @@ public class AuthManager {
      * sign-up time: firstName, lastName, sharingScope, externalId (if used), dataGroups,
      * notifyByEmail, and any custom attributes you've defined for the attributes field.
      *
+     * @param email    participant's email
+     * @param password participant's password
+     * @return notifies of completion or error
      * @see #signUp(SignUp)
      */
     @NonNull
@@ -119,6 +123,7 @@ public class AuthManager {
      *               To prevent accidental improper settings, study will be set to the studyId
      *               provided in the Bridge, consent will be set to false, and account status
      *               will be cleared.
+     * @return notifies of completion or error
      */
     @NonNull
     public Completable signUp(@NonNull final SignUp signUp) {
@@ -148,6 +153,7 @@ public class AuthManager {
 
     /**
      * @param email participant's email address
+     * @return notifies of completion or error
      */
     @NonNull
     public Completable resendEmailVerification(@NonNull final String email) {
@@ -202,6 +208,8 @@ public class AuthManager {
 
     /**
      * On success, clears the participant's email, password and session from storage
+     *
+     * @return notifies of completion or error
      */
     @NonNull
     public Completable signOut() {
@@ -220,6 +228,7 @@ public class AuthManager {
      * An email will be sent if an account is registered with the configured study.
      *
      * @param email participant's email address
+     * @return notifies of completion or error
      */
     @NonNull
     public Completable requestPasswordResetForEmail(@NonNull String email) {
@@ -234,6 +243,7 @@ public class AuthManager {
      *
      * @param password   new password to use
      * @param resetToken one-time use password reset token, normally emailed to a user's account
+     * @return notifies of completion or error
      */
     @NonNull
     public Completable resetPasswordToNewPassword(@NonNull final String password, @NonNull
@@ -271,11 +281,14 @@ public class AuthManager {
         if (proxiedForConsentedUsersApi != null) {
             return proxiedForConsentedUsersApi;
         }
-        ForConsentedUsersApi api = apiClientProvider.getClient(ForConsentedUsersApi.class,
-                                                               getSignInFromStore());
+
         proxiedForConsentedUsersApi = new ProxiedForConsentedUsersApi(this);
 
         return proxiedForConsentedUsersApi;
+    }
+
+    ForConsentedUsersApi getRawApi() {
+        return apiClientProvider.getClient(ForConsentedUsersApi.class, getSignInFromStore());
     }
 
     /**
@@ -300,10 +313,15 @@ public class AuthManager {
     }
 
     private SignIn getSignInFromStore() {
+        String email = authManagerDelegateProtocol.getEmail();
+        String password = authManagerDelegateProtocol.getPassword();
+        checkState(email != null, "email cannot be null");
+        checkState(password != null, "password cannot be null");
+
         return new SignIn()
                 .study(config.getStudyId())
-                .email(authManagerDelegateProtocol.getEmail())
-                .password(authManagerDelegateProtocol.getPassword());
+                .email(email)
+                .password(password);
     }
 
     class AuthManagerComponentCallback implements ComponentCallbacks {

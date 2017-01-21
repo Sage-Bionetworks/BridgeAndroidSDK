@@ -40,131 +40,135 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
 
     @Override
     public Call<UploadSession> completeUploadSession(@Path("uploadId") String s) {
-        return authManager.getApi().completeUploadSession(s);
+        return getRawApi().completeUploadSession(s);
     }
 
     @Override
     public Call<Message> createConsentSignature(@Path("subpopulationGuid") String s, @Body
             ConsentSignature consentSignature) {
-        return authManager.getApi().createConsentSignature(s, consentSignature);
+        return getRawApi().createConsentSignature(s, consentSignature);
     }
 
     @Override
     public Call<Message> createNotificationRegistration(@Body NotificationRegistration
                                                                 notificationRegistration) {
-        return authManager.getApi().createNotificationRegistration(notificationRegistration);
+        return getRawApi().createNotificationRegistration(notificationRegistration);
     }
 
     @Override
     public Call<Message> deleteNotificationRegistration(@Path("guid") String s) {
-        return authManager.getApi().deleteNotificationRegistration(s);
+        return getRawApi().deleteNotificationRegistration(s);
     }
 
     @Override
     public Call<Message> emailConsentAgreement(@Path("subpopulationGuid") String s) {
-        return authManager.getApi().emailConsentAgreement(s);
+        return getRawApi().emailConsentAgreement(s);
     }
 
     @Override
     public Call<Message> emailDataToUser(@Query("startDate") LocalDate localDate, @Query
             ("endDate") LocalDate localDate1) {
-        return authManager.getApi().emailDataToUser(localDate, localDate1);
+        return getRawApi().emailDataToUser(localDate, localDate1);
     }
 
     @Override
     public Call<ConsentSignature> getConsentSignature(@Path("subpopulationGuid") String s) {
-        return authManager.getApi().getConsentSignature(s);
+        return getRawApi().getConsentSignature(s);
     }
 
     @Override
     public Call<NotificationRegistration> getNotificationRegistration(@Path("guid") String s) {
-        return authManager.getApi().getNotificationRegistration(s);
+        return getRawApi().getNotificationRegistration(s);
     }
 
     @Override
     public Call<NotificationRegistrationList> getNotificationRegistrations() {
-        return authManager.getApi().getNotificationRegistrations();
+        return getRawApi().getNotificationRegistrations();
     }
 
     @Override
     public Call<ReportDataList> getParticipantReportRecords(@Path("identifier") String s, @Query
             ("startDate") LocalDate localDate, @Query("endDate") LocalDate localDate1) {
-        return authManager.getApi().getParticipantReportRecords(s, localDate, localDate1);
+        return getRawApi().getParticipantReportRecords(s, localDate, localDate1);
     }
 
     @Override
     public Call<Survey> getPublishedSurveyVersion(@Path("surveyGuid") String s) {
-        return authManager.getApi().getPublishedSurveyVersion(s);
+        return getRawApi().getPublishedSurveyVersion(s);
     }
 
     @Override
     public Call<ReportIndexList> getReportIndices(@Query("type") String s) {
-        return authManager.getApi().getReportIndices(s);
+        return getRawApi().getReportIndices(s);
     }
 
     @Override
     public Call<ScheduledActivityList> getScheduledActivities(@Query("offset") String s, @Query
             ("daysAhead") Integer integer, @Query("minimumPerSchedule") Integer integer1) {
-        return authManager.getApi().getScheduledActivities(s, integer, integer1);
+        return getRawApi().getScheduledActivities(s, integer, integer1);
     }
 
     @Override
     public Call<ScheduleList> getSchedules() {
-        return authManager.getApi().getSchedules();
+        return getRawApi().getSchedules();
     }
 
     @Override
     public Call<ReportDataList> getStudyReportRecords(@Path("identifier") String s, @Query
             ("startDate") LocalDate localDate, @Query("endDate") LocalDate localDate1) {
-        return authManager.getApi().getStudyReportRecords(s, localDate, localDate1);
+        return getRawApi().getStudyReportRecords(s, localDate, localDate1);
     }
 
     @Override
     public Call<Survey> getSurvey(@Path("surveyGuid") String s, @Path("createdOn") DateTime
             dateTime) {
-        return authManager.getApi().getSurvey(s, dateTime);
+        return getRawApi().getSurvey(s, dateTime);
     }
 
     @Override
     public Call<UploadValidationStatus> getUploadStatus(@Path("uploadId") String s) {
-        return authManager.getApi().getUploadStatus(s);
+        return getRawApi().getUploadStatus(s);
     }
 
     @Override
     public Call<StudyParticipant> getUsersParticipantRecord() {
-        return authManager.getApi().getUsersParticipantRecord();
+        return getRawApi().getUsersParticipantRecord();
     }
 
     @Override
     public Call<UploadSession> requestUploadSession(@Body UploadRequest uploadRequest) {
-        return authManager.getApi().requestUploadSession(uploadRequest);
+        return getRawApi().requestUploadSession(uploadRequest);
     }
 
     @Override
     public Call<Message> updateNotificationRegistration(@Path("guid") String s, @Body
             NotificationRegistration notificationRegistration) {
-        return authManager.getApi().updateNotificationRegistration(s, notificationRegistration);
+        return getRawApi().updateNotificationRegistration(s, notificationRegistration);
     }
 
     @Override
     public Call<Message> updateScheduledActivities(@Body List<ScheduledActivity> list) {
-        return authManager.getApi().updateScheduledActivities(list);
+        return getRawApi().updateScheduledActivities(list);
     }
 
     @Override
     public Call<UserSessionInfo> updateUsersParticipantRecord(@Body StudyParticipant
                                                                       studyParticipant) {
-        return authManager.getApi().updateUsersParticipantRecord(studyParticipant);
+        return getRawApi().updateUsersParticipantRecord(studyParticipant);
     }
 
     @Override
     public Call<Message> withdrawAllConsents(@Body Withdrawal withdrawal) {
-        return authManager.getApi().withdrawAllConsents(withdrawal);
+        return getRawApi().withdrawAllConsents(withdrawal);
     }
 
     @Override
     public Call<Message> withdrawConsentFromSubpopulation(@Path("subpopulationGuid") String s,
                                                           @Body Withdrawal withdrawal) {
-        return authManager.getApi().withdrawConsentFromSubpopulation(s, withdrawal);
+        return getRawApi().withdrawConsentFromSubpopulation(s, withdrawal);
+    }
+
+    private ForConsentedUsersApi getRawApi() {
+        return authManager.getRawApi();
     }
 }

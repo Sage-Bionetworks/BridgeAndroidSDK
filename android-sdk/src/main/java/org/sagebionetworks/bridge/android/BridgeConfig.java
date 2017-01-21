@@ -23,8 +23,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Used to configure settings for Bridge.
  * <p>
  * To provide your own settings, either override this class or modify these files:
- * <li>./assets/study_public_key.pem</li>
- * <li>./res/values/bridge-config.xml</li>
+ * <ul>
+ *     <li>./assets/study_public_key.pem</li>
+ *     <li>./res/values/bridge-config.xml</li>
+ * </ul>
  */
 @AnyThread
 public class BridgeConfig {
