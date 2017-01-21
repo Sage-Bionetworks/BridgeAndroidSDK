@@ -1,15 +1,16 @@
 apply plugin: 'com.android.library'
 
 android {
-  compileSdkVersion 24
-  buildToolsVersion "25.0.0"
+  compileSdkVersion 25
+  buildToolsVersion "25.0.2"
 
   // allow inter-project inclusion of this library's debug build
+    // doesn't play well with deployment scripts
   // publishNonDefault true
 
   defaultConfig {
     minSdkVersion 16
-    targetSdkVersion 24
+    targetSdkVersion 25
     versionCode 1
     versionName "1.0"
   }
@@ -37,9 +38,16 @@ android {
 dependencies {
   compile fileTree(dir: 'libs', include: ['*.jar'])
 
+  compile 'com.madgag.spongycastle:core:1.54.0.0'
+  compile 'com.madgag.spongycastle:prov:1.54.0.0'
+  compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+
   compile 'net.danlew:android.joda:2.9.4.2'
-  compile 'com.android.support:appcompat-v7:24.2.1'
-  compile 'org.sagebionetworks.bridge:rest-client:0.12.15', {
+  compile 'com.squareup.retrofit2:retrofit:2.1.0'
+  compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
+  compile 'com.android.support:appcompat-v7:25.1.0'
+  compile 'com.android.support:support-annotations:25.1.0'
+  compile 'org.sagebionetworks.bridge:rest-client:0.12.22', {
     exclude group: 'joda-time', module: 'joda-time'
   }
   compile 'com.github.tony19:logback-android-classic:1.1.1-6', {
