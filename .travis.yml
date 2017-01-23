@@ -3,7 +3,7 @@ language: android
 # Required to run retrolambda
 jdk:
     - oraclejdk8
-  
+
 android:
   components:
     - platform-tools
@@ -11,11 +11,12 @@ android:
     - build-tools-25.0.2
     - android-25
     - extra-android-m2repository
-    - extra-google-m2repository  
+    - extra-google-m2repository
 script:
     - ./gradlew clean build
-deploy:
-    provider: script
-    script: ./gradlew bintrayUpload
-    on:
-        branch: master  
+#TODO: reenable artifact deployment
+#deploy:
+#    provider: script
+#    script: ./gradlew bintrayUpload
+#    on:
+#        branch: master

@@ -138,8 +138,8 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
 
     /**
-     * @see super#signIn(Context, String, String)
-     * 
+     * @see DataProvider#signIn(Context, String, String)
+     *
      * May invoke {@link Observer#onError(Throwable)} with ConsentRequiredException, to indicate
      * consent is required
      */
