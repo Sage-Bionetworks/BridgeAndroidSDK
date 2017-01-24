@@ -2,6 +2,7 @@
 if [[ $TRAVIS_BRANCH != 'master' ]]; then
   git clone -b develop https://github.com/ResearchStack/ResearchStack.git
   pushd ResearchStack
+  cp ../local.properties .
   ./gradlew install
   popd
 fi
