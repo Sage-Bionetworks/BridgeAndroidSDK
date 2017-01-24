@@ -44,7 +44,7 @@ android {
 
 dependencies {
   compile fileTree(include: ['*.jar'], dir: 'libs')
-  compile 'org.researchstack:skin:1.1.1', {
+  compile 'org.researchstack:skin:2.0.0-SNAPSHOT', {
     exclude group: 'joda-time', module: 'joda-time'
   }
   compile project(":android-sdk")
