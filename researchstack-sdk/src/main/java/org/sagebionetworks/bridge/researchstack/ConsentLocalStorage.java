@@ -5,6 +5,7 @@ import android.content.Context;
 import com.google.gson.Gson;
 
 import org.researchstack.backbone.storage.file.FileAccess;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 
 /**
