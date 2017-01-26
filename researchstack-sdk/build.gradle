@@ -51,7 +51,7 @@ dependencies {
   compile 'com.squareup.retrofit2:retrofit:2.1.0'
   compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
   compile 'com.android.support:appcompat-v7:24.2.1' //23.3.0 crashes on AppCompatButton's onClick
-  compile 'net.zetetic:android-database-sqlcipher:3.3.1-2@aar'
+  compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
   apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
   compile 'com.android.support:multidex:1.0.1'
   compile 'com.madgag.spongycastle:core:1.54.0.0'
