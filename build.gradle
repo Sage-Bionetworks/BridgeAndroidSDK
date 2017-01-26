@@ -33,32 +33,38 @@ buildscript {
 
 subprojects {
   afterEvaluate { project ->
-    task sourcesJar(type: Jar) {
-      from android.sourceSets.main.java.srcDirs
-      classifier = 'sources'
-    }
 
-    task javadoc(type: Javadoc) {
-      source = android.sourceSets.main.java.srcDirs
-      classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-      classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
-      classpath += configurations.compile
-      // Exclude generated files
-      exclude '**/BuildConfig.java'
-      exclude '**/R.java'
-    }
+    // These two projects are JARed and DOCed using their own build.gradle files
+    if (!project.projectDir.absolutePath.contains("backbone") && !project.projectDir.absolutePath.contains("skin")) {
 
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-      classifier = 'javadoc'
-      from javadoc.destinationDir
-    }
-    artifacts {
-      archives javadocJar
-      archives sourcesJar
-    }
+      task sourcesJar(type: Jar) {
+        from android.sourceSets.main.java.srcDirs
+        classifier = 'sources'
+      }
 
-    task findConventions << {
-      println project.getConvention()
+      task javadoc(type: Javadoc) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
+        classpath += configurations.compile
+        // Exclude generated files
+        exclude '**/BuildConfig.java'
+        exclude '**/R.java'
+      }
+
+      task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+      }
+      artifacts {
+        archives javadocJar
+        archives sourcesJar
+      }
+
+      task findConventions << {
+        println project.getConvention()
+      }
+
     }
   }
 
@@ -67,4 +73,3 @@ subprojects {
 task clean(type: Delete) {
   delete rootProject.buildDir
 }
-
