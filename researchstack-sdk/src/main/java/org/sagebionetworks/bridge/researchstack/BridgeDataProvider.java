@@ -16,23 +16,26 @@ import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.DataProvider;
-import org.researchstack.skin.DataResponse;
-import org.researchstack.skin.ResourceManager;
-import org.researchstack.skin.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.DataProvider;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
-import org.researchstack.skin.model.User;
+import org.researchstack.backbone.model.User;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
@@ -59,7 +62,7 @@ public abstract class BridgeDataProvider extends DataProvider {
   private final ApiClientProvider apiClientProvider;
   private final ResourcePathManager.Resource publicKey;
 
-  protected final Gson gson = new Gson();
+  protected final Gson gson = RestUtils.GSON;
   protected final BridgeHeaderInterceptor interceptor;
   protected final StorageAccessWrapper storageAccess;
 
@@ -154,6 +157,11 @@ public abstract class BridgeDataProvider extends DataProvider {
     });
   }
 
+  @Override
+  public String getStudyId() {
+    return studyId;
+  }
+
   private void checkForTempConsentAndUpload() {
     // If we are signed in, not consented on the server, but consented locally, upload consent
     if (isSignedIn() && !userLocalStorage.loadUserSession().getConsented()
@@ -171,7 +179,7 @@ public abstract class BridgeDataProvider extends DataProvider {
    * @return true if we are consented
    */
   @Override
-  public boolean isConsented(Context context) {
+  public boolean isConsented() {
     logger.debug("Called isConsented");
     return userLocalStorage.loadUserSession().getConsented() || consentLocalStorage.hasConsent();
   }
@@ -223,43 +231,37 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Override
   public Observable<DataResponse> signIn(Context context, String username, String password) {
     logger.debug("Called signIn");
-    SignIn signIn = new SignIn().study(studyId).email(username).password(password);
+    final SignIn signIn = new SignIn().study(studyId).email(username).password(password);
 
     // response 412 still has a response body, so catch all http errors here
     return ApiUtils.toResponseObservable(authenticationApi.signIn(signIn)).doOnNext(response -> {
-      logger.debug("Received signIn response");
-      UserSessionInfo userSessionInfo = null;
-      if (response.code() == 200) {
-        logger.debug("signIn response 200");
-
-        userSessionInfo = response.body();
-
-      } else if (response.code() == 412) {
-        logger.debug("signIn response 412");
-        try {
-          String errorBody = response.errorBody().string();
-          userSessionInfo = gson.fromJson(errorBody,  UserSessionInfo.class);
-        } catch (IOException e) {
-          throw new RuntimeException("Error deserializing server sign in response");
-        }
-      }
-
-      logger.debug("signIn userSessionInfo: " + userSessionInfo);
-
-      if (userSessionInfo != null) {
-        // if we are direct from signing in, we need to load the user profile object
-        // from the server. that wouldn't work right now
-        userLocalStorage.saveUserSession(userSessionInfo, signIn);
-        updateBridgeService(userSessionInfo.getSessionToken(), signIn);
-        checkForTempConsentAndUpload();
-        uploadHandler.uploadPendingFiles(forConsentedUsersApi);
-      }
+      UserSessionInfo userSessionInfo = response.body();
+      processSignInResponse(signIn, userSessionInfo);
     }).map(response -> {
       boolean success = response.isSuccessful() || response.code() == 412;
       return new DataResponse(success, response.message());
-    }).doOnError(e -> {
-      logger.error("signIn error", e);
+    }).doOnError(throwable -> {
+      if (throwable instanceof ConsentRequiredException) {
+        UserSessionInfo userSessionInfo = ((ConsentRequiredException) throwable).getSession();
+        processSignInResponse(signIn, userSessionInfo);
+      }
     });
+  }
+
+  protected void processSignInResponse(SignIn signIn, UserSessionInfo userSessionInfo) {
+    logger.debug("Received signIn response");
+    logger.debug("signIn userSessionInfo: " + userSessionInfo);
+
+    if (userSessionInfo != null) {
+      // if we are direct from signing in, we need to load the user profile object
+      // from the server. that wouldn't work right now
+      userLocalStorage.saveUserSession(userSessionInfo, signIn);
+      updateBridgeService(userSessionInfo.getSessionToken(), signIn);
+
+      // TODO: seems like we would want to wait until the consent is successfully uploaded?
+      checkForTempConsentAndUpload();
+      uploadHandler.uploadPendingFiles(forConsentedUsersApi);
+    }
   }
 
   @Override
@@ -281,13 +283,33 @@ public abstract class BridgeDataProvider extends DataProvider {
         .map(response -> new DataResponse(true, null));
   }
 
+  /**
+   * Called to verify the user's email address
+   * Behind the scenes this calls signIn with securely stored username and password
+   *
+   * @param context android context
+   * @return Observable of the result of the method, with {@link DataResponse#isSuccess()}
+   * returning true if verifyEmail was successful
+   */
+  public Observable<DataResponse> verifyEmail(Context context, String password) {
+    User user = getUser(context);
+    final String email = user.getEmail();
+    return signIn(context, email, password);
+  }
+
   @Override
   public boolean isSignedUp(Context context) {
+    if (userLocalStorage == null) {
+      return false;
+    }
     return userLocalStorage.isSignedUp();
   }
 
   public boolean isSignedIn() {
-    return userLocalStorage.isSignedIn();
+    if (userLocalStorage != null) {
+      return userLocalStorage.isSignedIn();
+    }
+    return false;
   }
 
   @Deprecated
@@ -298,18 +320,59 @@ public abstract class BridgeDataProvider extends DataProvider {
 
   @Override
   public void saveConsent(Context context, TaskResult consentResult) {
-    ConsentSignature signature = createConsentSignatureBody(consentResult);
+    saveLocalConsent(context, createConsentSignatureBody(consentResult));
+  }
+
+  @Override
+  public ConsentSignatureBody loadLocalConsent(Context context) {
+    if (consentLocalStorage == null) {
+      return null;
+    }
+    if (!consentLocalStorage.hasConsent()) {
+      return null;
+    }
+    ConsentSignature bridgeSignature = consentLocalStorage.loadConsent();
+    ConsentSignatureBody backboneSignature = new ConsentSignatureBody(
+            getStudyId(), bridgeSignature.getName(), bridgeSignature.getBirthdate().toDate(),
+            bridgeSignature.getImageData(), bridgeSignature.getImageMimeType(), bridgeSignature.getScope().toString());
+    return backboneSignature;
+  }
+
+  @Override
+  public void saveLocalConsent(Context context, ConsentSignatureBody signatureBody) {
+    ConsentSignature signature = createConsentSignature(signatureBody);
+    saveLocalConsent(context, signature);
+  }
+
+  protected void saveLocalConsent(Context context, ConsentSignature signature) {
     consentLocalStorage.saveConsent(signature);
 
     User user = userLocalStorage.loadUser();
     if (user == null) {
       user = new User();
     }
+
     user.setName(signature.getName());
     LocalDate birthdate = signature.getBirthdate();
+    user.setBirthDate(birthdate.toDate());
 
-    user.setBirthDate(birthdate.toString());
     userLocalStorage.saveUser(user);
+  }
+
+  protected ConsentSignature createConsentSignature(ConsentSignatureBody consentSignatureBody) {
+    ConsentSignature signature = new ConsentSignature();
+    signature.setName(consentSignatureBody.name);
+    signature.setBirthdate(LocalDate.fromDateFields(consentSignatureBody.birthdate));
+    signature.setImageData(consentSignatureBody.imageData);
+    signature.setImageMimeType(consentSignatureBody.imageMimeType);
+    SharingScope sharingScope = SharingScope.NO_SHARING;
+    for (SharingScope scope : SharingScope.values()) {
+      if (scope.toString().equals(consentSignatureBody.scope)) {
+        sharingScope = scope;
+      }
+    }
+    signature.setScope(sharingScope);
+    return signature;
   }
 
   @NonNull
@@ -340,7 +403,17 @@ public abstract class BridgeDataProvider extends DataProvider {
   @Nullable
   public User getUser(Context context) {
     logger.debug("Called getUser");
+    if (userLocalStorage == null) {
+      return null;
+    }
     return userLocalStorage.loadUser();
+  }
+
+  @Override
+  @Nullable
+  public void setUser(Context context, User user) {
+    logger.debug("Called getUser");
+    userLocalStorage.saveUser(user);
   }
 
   @Override
@@ -379,30 +452,35 @@ public abstract class BridgeDataProvider extends DataProvider {
         createConsentSignatureBody(consentResult));
   }
 
-  private void uploadConsent(String subpopulationGuid,
-      ConsentSignature consent) {
+  @Override
+  public Observable<DataResponse> uploadConsent(Context context, ConsentSignatureBody signature) {
+    return uploadConsent(BuildConfig.STUDY_SUBPOPULATION_GUID, createConsentSignature(signature));
+  }
 
-    ApiUtils.toResponseObservable(forConsentedUsersApi.createConsentSignature(subpopulationGuid,consent)).
+  private Observable<DataResponse> uploadConsent(String subpopulationGuid, ConsentSignature consent) {
+
+    return ApiUtils.toResponseObservable(forConsentedUsersApi.createConsentSignature(subpopulationGuid,consent)).
             compose(ObservableUtils.applyDefault())
-        .subscribe(response -> {
-          if (response.code() == 201 || response.code() == 409) // success or already consented
-          {
-            UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-            userSessionInfo.setConsented(true);
-            userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
+            .doOnNext(response -> {
+              if (response.code() == 201 || response.code() == 409) // success or already consented
+              {
+                UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
+                userSessionInfo.setConsented(true);
+                userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
 
-            LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
-                response.message());
-
-            if (consentLocalStorage.hasConsent()) {
-              consentLocalStorage.deleteConsent();
-            }
-          } else {
-            throw new RuntimeException(
-                "Error uploading consent, code: " + response.code() + " message: " +
+                LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
                     response.message());
-          }
-        });
+
+                if (consentLocalStorage.hasConsent()) {
+                  consentLocalStorage.deleteConsent();
+                }
+              } else {
+                throw new RuntimeException(
+                    "Error uploading consent, code: " + response.code() + " message: " +
+                        response.message());
+              }
+            })
+            .map(response -> new DataResponse(response.isSuccessful() || response.code() == 409, response.message()));
   }
 
   @Override
