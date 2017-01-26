@@ -1,0 +1,3 @@
+[submodule "ResearchStack"]
+	path = ResearchStack
+	url = https://github.com/ResearchStack/ResearchStack.git
