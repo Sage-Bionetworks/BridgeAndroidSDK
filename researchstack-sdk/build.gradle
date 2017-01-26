@@ -13,7 +13,7 @@ android {
   buildToolsVersion '25.0.0'
 
   // allow inter-project inclusion of this library's debug build
-  // publishNonDefault true
+  publishNonDefault true
 
   defaultConfig {
     minSdkVersion 16
@@ -30,7 +30,10 @@ android {
       minifyEnabled false
       proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
+    // Used for compiling in RS source code, see dependencies below
+    sourceRelease { initWith release }
   }
+
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_1_8
     targetCompatibility JavaVersion.VERSION_1_8
@@ -44,9 +47,12 @@ android {
 
 dependencies {
   compile fileTree(include: ['*.jar'], dir: 'libs')
-  compile 'org.researchstack:skin:1.1.1', {
-    exclude group: 'joda-time', module: 'joda-time'
-  }
+
+  // Most apps will just need to compile in the most recent external ResearchStack(RS)
+  releaseCompile 'org.researchstack:skin:1.1.1', { exclude group: 'joda-time', module: 'joda-time' }
+  // Some projects, like mPower, will need to compile in RS's source
+  sourceReleaseCompile project(':skin'), { exclude group: 'joda-time', module: 'joda-time' }
+
   compile project(":android-sdk")
   compile 'com.squareup.retrofit2:retrofit:2.1.0'
   compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
