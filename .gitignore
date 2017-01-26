@@ -57,6 +57,9 @@ tasks.xml
 # We do all project config in gradle, so don't need anything in .idea
 .idea/*
 
+# We do want code style to keep team in sync
+!.idea/codeStyleSettings.xml
+
 # CDT-specific
 */.cproject
 
