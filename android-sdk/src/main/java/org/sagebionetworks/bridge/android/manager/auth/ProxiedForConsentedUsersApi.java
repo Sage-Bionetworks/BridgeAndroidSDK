@@ -4,6 +4,7 @@ import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.GuidHolder;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.NotificationRegistration;
 import org.sagebionetworks.bridge.rest.model.NotificationRegistrationList;
@@ -50,7 +51,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     }
 
     @Override
-    public Call<Message> createNotificationRegistration(@Body NotificationRegistration
+    public Call<GuidHolder> createNotificationRegistration(@Body NotificationRegistration
                                                                 notificationRegistration) {
         return getRawApi().createNotificationRegistration(notificationRegistration);
     }
@@ -141,7 +142,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     }
 
     @Override
-    public Call<Message> updateNotificationRegistration(@Path("guid") String s, @Body
+    public Call<GuidHolder> updateNotificationRegistration(@Path("guid") String s, @Body
             NotificationRegistration notificationRegistration) {
         return getRawApi().updateNotificationRegistration(s, notificationRegistration);
     }

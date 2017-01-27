@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.util.Log;
 
 import org.apache.commons.lang3.StringUtils;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -13,8 +15,6 @@ import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.utils.FormatHelper;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
 import org.researchstack.skin.schedule.ScheduleHelper;

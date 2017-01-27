@@ -5,9 +5,9 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import org.researchstack.skin.DataProvider;
-import org.researchstack.skin.DataResponse;
-import org.researchstack.skin.model.User;
+import org.researchstack.backbone.DataProvider;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.model.User;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.auth.AuthManager;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -17,6 +17,7 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import rx.Completable;
 import rx.Observable;
 import rx.Observer;
+import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -156,7 +157,12 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         checkNotNull(password);
 
         return bridgeManagerProvider.getAuthManager()
-                .signIn(email, password).toCompletable();
+                .signIn(email, password).toCompletable().doOnCompleted(new Action0() {
+                    @Override
+                    public void call() {
+                        // TODO: upload pending files
+                    }
+                });
     }
 
     @Override

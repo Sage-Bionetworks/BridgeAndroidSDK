@@ -6,7 +6,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 
 import org.researchstack.backbone.DataProvider;
-import org.researchstack.skin.DataResponse;
+import org.researchstack.backbone.DataResponse;
 import org.sagebionetworks.bridge.rest.model.Message;
 
 import retrofit2.Call;

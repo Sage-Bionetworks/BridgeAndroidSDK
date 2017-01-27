@@ -12,7 +12,7 @@ import ch.qos.logback.classic.Logger;
 /**
  * Base class for a Bridge Application.
  */
-public abstract class BridgeApplication extends Application {
+public class BridgeApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();

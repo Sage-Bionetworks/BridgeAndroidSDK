@@ -9,7 +9,11 @@ import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
 import org.joda.time.LocalDate;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.ResourcePathManager;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
@@ -17,12 +21,10 @@ import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.backbone.DataProvider;
-import org.researchstack.backbone.DataResponse;
-import org.researchstack.backbone.ResourceManager;
+
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
-import org.researchstack.backbone.model.User;
+
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
@@ -149,7 +151,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
     this.uploadHandler = new UploadHandler(context, storageAccess, publicKey);
     this.taskHelper = new TaskHelper(storageAccess, ResourceManager.getInstance(), appPrefs,
-        uploadHandler);
+                                     uploadHandler);
 
     return Observable.defer(() -> {
       UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
@@ -279,6 +281,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     LocalDate birthdate = signature.getBirthdate();
     user.setBirthDate(birthdate.toDate());
 
+    user.setBirthDate(birthdate.toDate());
     userLocalStorage.saveUser(user);
   }
 

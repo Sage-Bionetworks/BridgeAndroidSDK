@@ -14,24 +14,20 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.NotAuthenticatedException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
-import org.sagebionetworks.bridge.rest.model.PasswordReset;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
 import rx.Completable;
 import rx.Single;
 import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
- * Created by jyliu on 1/19/2017.
+ * Manages Bridge authentication state for an application.
  */
 @AnyThread
 public class AuthManager {
@@ -56,9 +52,9 @@ public class AuthManager {
 
         this.config = config;
         this.authManagerDelegateProtocol = authManagerDelegateProtocol;
-        this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
-
         initApiClientProvider();
+
+        this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
         config.getApplicationContext()
                 .registerComponentCallbacks(new AuthManagerComponentCallback());
     }
@@ -104,6 +100,8 @@ public class AuthManager {
         checkNotNull(email);
         checkNotNull(password);
 
+        logger.debug("signUp called with email: " + email);
+
         SignUp participantSignUp = new SignUp()
                 .study(config.getStudyId())
                 .email(email)
@@ -130,6 +128,8 @@ public class AuthManager {
         checkNotNull(signUp);
         checkNotNull(signUp.getEmail());
         checkNotNull(signUp.getPassword());
+
+        logger.debug("signUp called with signUp: " + signUp);
 
         signUp.study(config.getStudyId())
                 .consent(false)
@@ -159,6 +159,8 @@ public class AuthManager {
     public Completable resendEmailVerification(@NonNull final String email) {
         checkNotNull(email);
 
+        logger.debug("resendEmailVerification called with email: " + email);
+
         return RxUtils.toBodySingle(
                 authenticationApi.resendEmailVerification(
                         new Email()
@@ -181,6 +183,8 @@ public class AuthManager {
             password) {
         checkNotNull(email);
         checkNotNull(password);
+
+        logger.debug("signIn called with email: " + email);
 
         SignIn signIn = new SignIn()
                 .study(config.getStudyId())
@@ -213,6 +217,8 @@ public class AuthManager {
      */
     @NonNull
     public Completable signOut() {
+        logger.debug("signOut called");
+
         return RxUtils.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(new Action1<Message>() {
                     @Override
@@ -234,35 +240,10 @@ public class AuthManager {
     public Completable requestPasswordResetForEmail(@NonNull String email) {
         checkNotNull(email);
 
+        logger.debug("requestPasswordResetForEmail called with email: " + email);
+
         return RxUtils.toBodySingle(authenticationApi.requestResetPassword(new Email().study
                 (config.getStudyId()).email(email))).toCompletable();
-    }
-
-    /**
-     * On success, the participant's new password will be stored.
-     *
-     * @param password   new password to use
-     * @param resetToken one-time use password reset token, normally emailed to a user's account
-     * @return notifies of completion or error
-     */
-    @NonNull
-    public Completable resetPasswordToNewPassword(@NonNull final String password, @NonNull
-            String resetToken) {
-        checkNotNull(password);
-        checkNotNull(resetToken);
-
-        return RxUtils.toBodySingle(
-                authenticationApi.resetPassword(
-                        new PasswordReset()
-                                .password(password)
-                                .sptoken(resetToken)
-                ))
-                .doOnSuccess(new Action1<Message>() {
-                    @Override
-                    public void call(Message message) {
-                        authManagerDelegateProtocol.setPassword(password);
-                    }
-                }).toCompletable();
     }
 
     @NonNull
@@ -278,6 +259,8 @@ public class AuthManager {
      */
     @NonNull
     public ForConsentedUsersApi getApi() {
+        logger.debug("getApi called");
+
         if (proxiedForConsentedUsersApi != null) {
             return proxiedForConsentedUsersApi;
         }
@@ -298,28 +281,24 @@ public class AuthManager {
      */
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
+        logger.debug("getUserSessionInfo called");
 
-        try {
-            UserSessionInfo session = apiClientProvider.getUserSessionInfo(getSignInFromStore());
-            if (session != null) {
-                authManagerDelegateProtocol.setUserSessionInfo(session);
-                return session;
-            }
-        } catch (IOException e) {
-            logger.warn("Error getting fresh session", e);
-            // don't need to remove session from local store here, only on logout type actions
+        // TODO: a way to distinguish if session is null because we haven't signed on, or if it
+        // was invalidated
+        UserSessionInfo session = apiClientProvider.getUserSessionInfoProvider()
+                .retrieveCachedSession(getSignInFromStore());
+
+        if (session != null) {
+            authManagerDelegateProtocol.setUserSessionInfo(session);
+            return session;
         }
+
         return authManagerDelegateProtocol.getUserSessionInfo();
     }
 
     private SignIn getSignInFromStore() {
         String email = authManagerDelegateProtocol.getEmail();
         String password = authManagerDelegateProtocol.getPassword();
-
-        //TODO: determine if it makes more sense to handle this differently (perhaps having
-        // invalid signIn would propagate exceptions in a way that's easier to handle)
-        checkState(email != null, "email cannot be null");
-        checkState(password != null, "password cannot be null");
 
         return new SignIn()
                 .study(config.getStudyId())
