@@ -29,14 +29,14 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 /**
- * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from AuthManager
+ * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from AuthenticationManager
  * to make the call.
  */
 class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
-    private final AuthManager authManager;
+    private final AuthenticationManager authenticationManager;
 
-    ProxiedForConsentedUsersApi(AuthManager authManager) {
-        this.authManager = authManager;
+    ProxiedForConsentedUsersApi(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
     }
 
     @Override
@@ -170,6 +170,6 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     }
 
     private ForConsentedUsersApi getRawApi() {
-        return authManager.getRawApi();
+        return authenticationManager.getRawApi();
     }
 }

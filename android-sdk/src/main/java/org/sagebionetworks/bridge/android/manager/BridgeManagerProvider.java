@@ -5,7 +5,7 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.auth.AuthManager;
+import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -28,7 +28,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final BridgeConfig config;
     @NonNull
-    private final AuthManager authManager;
+    private final AuthenticationManager authenticationManager;
     @NonNull
     private final StudyParticipantManager studyParticipantManager;
 
@@ -36,13 +36,13 @@ public class BridgeManagerProvider {
         checkNotNull(config);
 
         this.config = config;
-        this.authManager = new AuthManager(config);
-        this.studyParticipantManager = new StudyParticipantManager(authManager);
+        this.authenticationManager = new AuthenticationManager(config);
+        this.studyParticipantManager = new StudyParticipantManager(authenticationManager);
     }
 
     @NonNull
-    public AuthManager getAuthManager() {
-        return this.authManager;
+    public AuthenticationManager getAuthenticationManager() {
+        return this.authenticationManager;
     }
 
     @NonNull

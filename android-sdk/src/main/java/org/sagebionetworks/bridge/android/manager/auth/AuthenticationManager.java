@@ -13,7 +13,6 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.NotAuthenticatedException;
 import org.sagebionetworks.bridge.rest.model.Email;
-import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -22,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import rx.Completable;
 import rx.Single;
-import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -30,28 +28,28 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Manages Bridge authentication state for an application.
  */
 @AnyThread
-public class AuthManager {
-    private static final Logger logger = LoggerFactory.getLogger(AuthManager.class);
+public class AuthenticationManager {
+    private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
     @NonNull
-    private final AuthManagerDelegateProtocol authManagerDelegateProtocol;
+    private final DAO dao;
     @NonNull
     private final BridgeConfig config;
     private final AuthenticationApi authenticationApi;
     private ApiClientProvider apiClientProvider;
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
-    public AuthManager(@NonNull BridgeConfig config) {
-        this(config, new DefaultAuthManagerDelegateProtocol(config.getApplicationContext()));
+    public AuthenticationManager(@NonNull BridgeConfig config) {
+        this(config, new InMemoryDAO(config.getApplicationContext()));
     }
 
-    public AuthManager(@NonNull BridgeConfig config, @NonNull
-            AuthManagerDelegateProtocol authManagerDelegateProtocol) {
+    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull
+            DAO dao) {
         checkNotNull(config);
-        checkNotNull(authManagerDelegateProtocol);
+        checkNotNull(dao);
 
         this.config = config;
-        this.authManagerDelegateProtocol = authManagerDelegateProtocol;
+        this.dao = dao;
         initApiClientProvider();
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
@@ -66,7 +64,7 @@ public class AuthManager {
     }
 
     @AnyThread
-    public interface AuthManagerDelegateProtocol {
+    public interface DAO {
 
         @Nullable
         UserSessionInfo getUserSessionInfo();
@@ -136,18 +134,12 @@ public class AuthManager {
                 .status(null);
 
         return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
-                .doOnSuccess(new Action1<Message>() {
-                    @Override
-                    public void call(Message message) {
-                        authManagerDelegateProtocol.setEmail(signUp.getEmail());
-                        authManagerDelegateProtocol.setPassword(signUp.getPassword());
-                    }
-                }).doOnError(new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        authManagerDelegateProtocol.setEmail(null);
-                        authManagerDelegateProtocol.setPassword(null);
-                    }
+                .doOnSuccess(message -> {
+                    dao.setEmail(signUp.getEmail());
+                    dao.setPassword(signUp.getPassword());
+                }).doOnError(throwable -> {
+                    dao.setEmail(null);
+                    dao.setPassword(null);
                 }).toCompletable();
     }
 
@@ -193,19 +185,13 @@ public class AuthManager {
 
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
-                .doOnSuccess(new Action1<UserSessionInfo>() {
-                    @Override
-                    public void call(UserSessionInfo userSessionInfo) {
-                        authManagerDelegateProtocol.setEmail(email);
-                        authManagerDelegateProtocol.setPassword(password);
-                        authManagerDelegateProtocol.setUserSessionInfo(userSessionInfo);
-                    }
-                }).doOnError(new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        if (throwable instanceof NotAuthenticatedException) {
-                            authManagerDelegateProtocol.setPassword(null);
-                        }
+                .doOnSuccess(userSessionInfo -> {
+                    dao.setEmail(email);
+                    dao.setPassword(password);
+                    dao.setUserSessionInfo(userSessionInfo);
+                }).doOnError(throwable -> {
+                    if (throwable instanceof NotAuthenticatedException) {
+                        dao.setPassword(null);
                     }
                 });
     }
@@ -220,13 +206,10 @@ public class AuthManager {
         logger.debug("signOut called");
 
         return RxUtils.toBodySingle(authenticationApi.signOut())
-                .doOnSuccess(new Action1<Message>() {
-                    @Override
-                    public void call(Message message) {
-                        authManagerDelegateProtocol.setEmail(null);
-                        authManagerDelegateProtocol.setPassword(null);
-                        authManagerDelegateProtocol.setUserSessionInfo(null);
-                    }
+                .doOnSuccess(message -> {
+                    dao.setEmail(null);
+                    dao.setPassword(null);
+                    dao.setUserSessionInfo(null);
                 }).toCompletable();
     }
 
@@ -247,15 +230,15 @@ public class AuthManager {
     }
 
     @NonNull
-    public AuthManagerDelegateProtocol getAuthManagerDelegateProtocol() {
-        return authManagerDelegateProtocol;
+    public DAO getDao() {
+        return dao;
     }
 
     /**
      * Get access to bridge API for currently authenticated client.
      *
      * @return API returns access to bridge that always uses the credentials currently held by
-     * AuthManager
+     * AuthenticationManager
      */
     @NonNull
     public ForConsentedUsersApi getApi() {
@@ -289,16 +272,16 @@ public class AuthManager {
                 .retrieveCachedSession(getSignInFromStore());
 
         if (session != null) {
-            authManagerDelegateProtocol.setUserSessionInfo(session);
+            dao.setUserSessionInfo(session);
             return session;
         }
 
-        return authManagerDelegateProtocol.getUserSessionInfo();
+        return dao.getUserSessionInfo();
     }
 
     private SignIn getSignInFromStore() {
-        String email = authManagerDelegateProtocol.getEmail();
-        String password = authManagerDelegateProtocol.getPassword();
+        String email = dao.getEmail();
+        String password = dao.getPassword();
 
         return new SignIn()
                 .study(config.getStudyId())

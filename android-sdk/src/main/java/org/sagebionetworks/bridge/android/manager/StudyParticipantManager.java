@@ -3,7 +3,7 @@ package org.sagebionetworks.bridge.android.manager;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
-import org.sagebionetworks.bridge.android.manager.auth.AuthManager;
+import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -19,24 +19,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @AnyThread
 public class StudyParticipantManager {
     @NonNull
-    private final AuthManager authManager;
+    private final AuthenticationManager authenticationManager;
 
-    public StudyParticipantManager(@NonNull AuthManager authManager) {
-        checkNotNull(authManager);
+    public StudyParticipantManager(@NonNull AuthenticationManager authenticationManager) {
+        checkNotNull(authenticationManager);
 
-        this.authManager = authManager;
+        this.authenticationManager = authenticationManager;
     }
 
     @NonNull
     public Completable updateParticipant(@NonNull StudyParticipant studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return RxUtils.toBodySingle(authManager.getApi()
+        return RxUtils.toBodySingle(authenticationManager.getApi()
                                             .updateUsersParticipantRecord(studyParticipant))
                 .doOnSuccess(new Action1<UserSessionInfo>() {
                     @Override
                     public void call(UserSessionInfo userSessionInfo) {
-                        authManager.getAuthManagerDelegateProtocol()
+                        authenticationManager.getDao()
                                 .setUserSessionInfo(userSessionInfo);
                     }
                 })

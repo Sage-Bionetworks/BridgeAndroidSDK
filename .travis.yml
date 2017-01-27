@@ -12,6 +12,9 @@ android:
     - android-25
     - extra-android-m2repository
     - extra-google-m2repository
+    # RS components
+    - build-tools-23.0.2
+    - android-23
 script:
     - ./gradlew clean build
 #TODO: reenable artifact deployment

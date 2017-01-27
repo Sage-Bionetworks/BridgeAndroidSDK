@@ -1,4 +1,7 @@
+apply plugin: 'project-report'
+
 allprojects {
+  buildDir = "C:/tmp/${rootProject.name}/${project.name}"
   version = '0.0.12'
   group = 'org.sagebionetworks.bridge'
 

@@ -7,9 +7,13 @@ import android.support.annotation.Nullable;
 
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.model.ConsentSignatureBody;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
+import org.researchstack.backbone.result.TaskResult;
+import org.researchstack.backbone.task.Task;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.auth.AuthManager;
+import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -26,7 +30,7 @@ import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RES
  * Created by jyliu on 1/20/2017.
  */
 @AnyThread
-public abstract class BridgeDataProvider2 extends DataProvider {
+public class BridgeDataProvider2 extends DataProvider {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     public BridgeDataProvider2(BridgeManagerProvider bridgeManagerProvider) {
@@ -54,7 +58,7 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return bridgeManagerProvider.getAuthManager()
+        return bridgeManagerProvider.getAuthenticationManager()
                 .signUp(email, password)
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
@@ -66,8 +70,8 @@ public abstract class BridgeDataProvider2 extends DataProvider {
     }
 
     public boolean isSignedUp() {
-        return bridgeManagerProvider.getAuthManager()
-                .getAuthManagerDelegateProtocol()
+        return bridgeManagerProvider.getAuthenticationManager()
+                .getDao()
                 .getEmail() != null;
     }
 
@@ -78,14 +82,19 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         return getUser();
     }
 
+    @Override
+    public void setUser(Context context, User user) {
+        throw new UnsupportedOperationException();
+    }
+
     @Nullable
     public User getUser() {
-        AuthManager.AuthManagerDelegateProtocol authManagerDelegateProtocol =
-                bridgeManagerProvider.getAuthManager()
-                        .getAuthManagerDelegateProtocol();
+        AuthenticationManager.DAO DAO =
+                bridgeManagerProvider.getAuthenticationManager()
+                        .getDao();
 
         User user = new User();
-        user.setEmail(authManagerDelegateProtocol.getEmail());
+        user.setEmail(DAO.getEmail());
         //TODO: populate user's name and birthdate
         return user;
     }
@@ -95,8 +104,43 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         return isSignedIn();
     }
 
+    @Override
+    public boolean isConsented() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Observable<DataResponse> withdrawConsent(Context context, String reason) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void uploadConsent(Context context, TaskResult consentResult) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Observable<DataResponse> uploadConsent(Context context, ConsentSignatureBody signature) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ConsentSignatureBody loadLocalConsent(Context context) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void saveConsent(Context context, TaskResult consentResult) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void saveLocalConsent(Context context, ConsentSignatureBody consentSignatureBody) {
+        throw new UnsupportedOperationException();
+    }
+
     public boolean isSignedIn() {
-        UserSessionInfo session = bridgeManagerProvider.getAuthManager().getUserSessionInfo();
+        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
         return session != null && session.getAuthenticated();
     }
 
@@ -109,8 +153,8 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
     @Nullable
     public String getUserSharingScope() {
-        UserSessionInfo session = bridgeManagerProvider.getAuthManager()
-                .getAuthManagerDelegateProtocol()
+        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager()
+                .getDao()
                 .getUserSessionInfo();
         if (session == null) {
             return null;
@@ -124,15 +168,40 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         setUserSharingScope(scope).await();
     }
 
+    @Override
+    public String getUserEmail(Context context) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void uploadTaskResult(Context context, TaskResult taskResult) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void processInitialTaskResult(Context context, TaskResult taskResult) {
+        throw new UnsupportedOperationException();
+    }
+
     @NonNull
     public Completable setUserSharingScope(@Nullable String scope) {
-        AuthManager.AuthManagerDelegateProtocol authManagerDelegateProtocol =
-                bridgeManagerProvider.getAuthManager()
-                        .getAuthManagerDelegateProtocol();
+        AuthenticationManager.DAO DAO =
+                bridgeManagerProvider.getAuthenticationManager()
+                        .getDao();
 
         return bridgeManagerProvider.getStudyParticipantManager()
                 .updateParticipant((StudyParticipant) new StudyParticipant()
-                        .email(authManagerDelegateProtocol.getEmail())
+                        .email(DAO.getEmail())
                         .sharingScope(SharingScope.valueOf(scope)));
     }
 
@@ -156,12 +225,10 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return bridgeManagerProvider.getAuthManager()
-                .signIn(email, password).toCompletable().doOnCompleted(new Action0() {
-                    @Override
-                    public void call() {
-                        // TODO: upload pending files
-                    }
+        return bridgeManagerProvider.getAuthenticationManager()
+                .signIn(email, password)
+                .toCompletable().doOnCompleted((Action0) () -> {
+                    // TODO: upload pending files
                 });
     }
 
@@ -173,7 +240,7 @@ public abstract class BridgeDataProvider2 extends DataProvider {
 
     @NonNull
     public Completable signOut() {
-        return bridgeManagerProvider.getAuthManager()
+        return bridgeManagerProvider.getAuthenticationManager()
                 .signOut();
     }
 
@@ -184,11 +251,16 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         return resendEmailVerification(email).andThen(SUCCESS_DATA_RESPONSE);
     }
 
+    @Override
+    public Observable<DataResponse> verifyEmail(Context context, String password) {
+        throw new UnsupportedOperationException();
+    }
+
     @NonNull
     public Completable resendEmailVerification(@NonNull String email) {
         checkNotNull(email);
 
-        return bridgeManagerProvider.getAuthManager()
+        return bridgeManagerProvider.getAuthenticationManager()
                 .resendEmailVerification(email);
     }
 
@@ -198,11 +270,16 @@ public abstract class BridgeDataProvider2 extends DataProvider {
         return forgotPassword(email).andThen(SUCCESS_DATA_RESPONSE);
     }
 
+    @Override
+    public String getStudyId() {
+        throw new UnsupportedOperationException();
+    }
+
     @NonNull
     public Completable forgotPassword(@NonNull String email) {
         checkNotNull(email);
 
-        return bridgeManagerProvider.getAuthManager()
+        return bridgeManagerProvider.getAuthenticationManager()
                 .requestPasswordResetForEmail(email);
     }
 }

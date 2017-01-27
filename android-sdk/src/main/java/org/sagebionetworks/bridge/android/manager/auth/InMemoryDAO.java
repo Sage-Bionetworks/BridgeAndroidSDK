@@ -15,15 +15,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Created by jyliu on 1/20/2017.
  */
 @AnyThread
-class DefaultAuthManagerDelegateProtocol implements AuthManager.AuthManagerDelegateProtocol {
+class InMemoryDAO implements AuthenticationManager.DAO {
     private static final Logger logger = LoggerFactory.getLogger
-            (DefaultAuthManagerDelegateProtocol.class);
+            (InMemoryDAO.class);
 
-    public DefaultAuthManagerDelegateProtocol(@NonNull Context context) {
+    public InMemoryDAO(@NonNull Context context) {
         checkNotNull(context);
     }
 
-    // TODO: store these in a secure, persisted manner
     @Nullable
     private UserSessionInfo userSessionInfo;
     @Nullable

@@ -1,7 +1,6 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
-import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -12,6 +11,7 @@ import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.ResourcePathManager;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.StepResult;
@@ -21,10 +21,7 @@ import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-
-import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
-
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
@@ -38,7 +35,7 @@ import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.researchstack.backbone.model.ConsentSignatureBody;
+import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
@@ -56,8 +53,6 @@ import rx.Observable;
 * This is a very simple implementation that hits only part of the Sage Bridge REST API
 * a complete port of the Sage Bridge Java SDK for android: https://github.com/Sage-Bionetworks/BridgeJavaSDK
  */
-@AnyThread
-@Deprecated
 public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
@@ -82,16 +77,15 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
   private ForConsentedUsersApi forConsentedUsersApi;
 
-    //used by tests to mock service
-    BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String studyId,
+  //used by tests to mock service
+  BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String studyId,
                      String userAgent, ResourcePathManager.Resource publicKey, ApiClientProvider
                              apiClientProvider, AppPrefs appPrefs, StorageAccessWrapper
                              storageAccess, UserLocalStorage userLocalStorage,
                      ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper,
                      UploadHandler uploadHandler) {
-      super(bridgeManagerProvider);
+    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
-
     this.baseUrl = baseUrl;
     this.studyId = studyId;
     this.userAgent = userAgent;
@@ -110,15 +104,15 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   }
 
   /**
-   * @param bridgeManagerProvider bridge manager
+   * @param bridgeManagerProvider manager provider
    * @param baseUrl base URL of Bridge server
    * @param studyId study identifier
    * @param userAgent user agent, in format expected by Bridge
    * @param publicKey relative path to x.509 certificate for Bridge uploads
    */
-    public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String
+  public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String
           studyId, String userAgent, ResourcePathManager.Resource publicKey) {
-      super(bridgeManagerProvider);
+    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
     this.baseUrl = baseUrl;
     this.studyId = studyId;
@@ -151,7 +145,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
     this.uploadHandler = new UploadHandler(context, storageAccess, publicKey);
     this.taskHelper = new TaskHelper(storageAccess, ResourceManager.getInstance(), appPrefs,
-                                     uploadHandler);
+        uploadHandler);
 
     return Observable.defer(() -> {
       UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
@@ -213,10 +207,55 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   }
 
   @Override
+  public Observable<DataResponse> signUp(Context context, String email, String username,
+      String password) {
+    logger.debug("Called signUp");
+    // we should pass in data groups, remove roles
+    SignUp signUp = new SignUp().study(studyId).email(email).password(password);
+    return signUp(signUp);
+  }
+
+  public Observable<DataResponse> signUp(SignUp signUp) {
+    // saving email to user object should exist elsewhere.
+    // Save email to user object.
+    User user = userLocalStorage.loadUser();
+    if (user == null) {
+      user = new User();
+    }
+    user.setEmail(signUp.getEmail());
+    userLocalStorage.saveUser(user);
+
+    return ApiUtils.toBodyObservable(authenticationApi.signUp(signUp)).map(message -> {
+      DataResponse response = new DataResponse();
+      response.setSuccess(true);
+      return response;
     });
+  }
+
+  @Override
+  public Observable<DataResponse> signIn(Context context, String username, String password) {
+    logger.debug("Called signIn");
+    final SignIn signIn = new SignIn().study(studyId).email(username).password(password);
+
+    // response 412 still has a response body, so catch all http errors here
+    return ApiUtils.toResponseObservable(authenticationApi.signIn(signIn)).doOnNext(response -> {
+      UserSessionInfo userSessionInfo = response.body();
+      processSignInResponse(signIn, userSessionInfo);
+    }).map(response -> {
+      boolean success = response.isSuccessful() || response.code() == 412;
+      return new DataResponse(success, response.message());
+    }).doOnError(throwable -> {
+      if (throwable instanceof ConsentRequiredException) {
+        UserSessionInfo userSessionInfo = ((ConsentRequiredException) throwable).getSession();
+        processSignInResponse(signIn, userSessionInfo);
+      }
+    });
+  }
+
   protected void processSignInResponse(SignIn signIn, UserSessionInfo userSessionInfo) {
     logger.debug("Received signIn response");
     logger.debug("signIn userSessionInfo: " + userSessionInfo);
+
     if (userSessionInfo != null) {
       // if we are direct from signing in, we need to load the user profile object
       // from the server. that wouldn't work right now
@@ -224,6 +263,30 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
       updateBridgeService(userSessionInfo.getSessionToken(), signIn);
 
       // TODO: seems like we would want to wait until the consent is successfully uploaded?
+      checkForTempConsentAndUpload();
+      uploadHandler.uploadPendingFiles(forConsentedUsersApi);
+    }
+  }
+
+  @Override
+  public Observable<DataResponse> signOut(Context context) {
+    logger.debug("Called signOut");
+    return ApiUtils.toResponseObservable(authenticationApi.signOut())
+        .map(response -> new DataResponse(response.isSuccessful(), response.body().getMessage()))
+        .doOnNext(response -> {
+          userLocalStorage.clearUserSession();
+          userLocalStorage.clearSignIn();
+          // we aren't clearing the user, so we still know their email and that they've signed up
+        });
+  }
+
+  @Override
+  public Observable<DataResponse> resendEmailVerification(Context context, String email) {
+    return ApiUtils.toBodyObservable(
+        authenticationApi.resendEmailVerification(new Email().study(studyId).email(email)))
+        .map(response -> new DataResponse(true, null));
+  }
+
   /**
    * Called to verify the user's email address
    * Behind the scenes this calls signIn with securely stored username and password
@@ -238,12 +301,28 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     return signIn(context, email, password);
   }
 
+  @Override
+  public boolean isSignedUp(Context context) {
     if (userLocalStorage == null) {
       return false;
     }
+    return userLocalStorage.isSignedUp();
+  }
+
+  public boolean isSignedIn() {
     if (userLocalStorage != null) {
+      return userLocalStorage.isSignedIn();
+    }
     return false;
   }
+
+  @Deprecated
+  @Override
+  public boolean isSignedIn(Context context) {
+    return isSignedIn();
+  }
+
+  @Override
   public void saveConsent(Context context, TaskResult consentResult) {
     saveLocalConsent(context, createConsentSignatureBody(consentResult));
   }
@@ -281,7 +360,6 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     LocalDate birthdate = signature.getBirthdate();
     user.setBirthDate(birthdate.toDate());
 
-    user.setBirthDate(birthdate.toDate());
     userLocalStorage.saveUser(user);
   }
 
@@ -328,14 +406,15 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   @Override
   @Nullable
   public User getUser(Context context) {
-      User user = super.getUser(context);
-      User user2 = userLocalStorage.loadUser();
+    logger.debug("Called getUser");
+    if (userLocalStorage == null) {
+      return null;
+    }
+    return userLocalStorage.loadUser();
+  }
 
-      if ((user != null && user.equals(user2)) || user != user2) {
-          logger.warn("Not equal. user: + " + user.toString() + ", user2: " + user2.toString());
-      }
-
-      return user2;
+  @Override
+  @Nullable
   public void setUser(Context context, User user) {
     logger.debug("Called getUser");
     userLocalStorage.saveUser(user);
@@ -343,8 +422,11 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
   @Override
   @Nullable
+  public String getUserSharingScope(Context context) {
+    logger.debug("Called getUserSharingScope");
+    UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
+    return userLocalStorage == null ? null : userSessionInfo.getSharingScope().name();
   }
-
 
   @Override
   public void setUserSharingScope(Context context, String scope) {
