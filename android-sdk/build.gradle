@@ -49,4 +49,4 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 // TODO: fix path when included as submodule
-//apply from: "$rootDir/gradle/artifact-deploy.gradle"
+apply from: "$rootDir/gradle/artifact-deploy.gradle"
