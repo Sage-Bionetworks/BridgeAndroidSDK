@@ -9,5 +9,5 @@ import org.researchstack.skin.ResourceManager;
 
 public abstract class BridgeResourceManager extends ResourceManager {
 
-  protected abstract ResourcePathManager.Resource getPublicKeyResId();
+    protected abstract ResourcePathManager.Resource getPublicKeyResId();
 }
