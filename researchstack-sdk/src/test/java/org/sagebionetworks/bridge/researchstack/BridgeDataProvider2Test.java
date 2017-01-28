@@ -95,9 +95,9 @@ public class BridgeDataProvider2Test {
         when(authenticationDAO.getUserSessionInfo()).thenReturn(session);
         //TODO: deprecate and remove
 
-        String scopeResult = dataProvider.getUserSharingScope();
+        SharingScope scopeResult = dataProvider.getUserSharingScope();
 
-        assertEquals("sponsors_and_partners", scopeResult);
+        assertEquals(SharingScope.SPONSORS_AND_PARTNERS, scopeResult);
         verify(authenticationDAO).getUserSessionInfo();
         verify(session, atLeastOnce()).getSharingScope();
     }

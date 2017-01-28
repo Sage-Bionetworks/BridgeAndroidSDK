@@ -140,7 +140,8 @@ public class BridgeDataProvider2 extends DataProvider {
     }
 
     public boolean isSignedIn() {
-        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
+        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager()
+                .getUserSessionInfo();
         return session != null && session.getAuthenticated();
     }
 
@@ -148,18 +149,19 @@ public class BridgeDataProvider2 extends DataProvider {
     @Nullable
     @Deprecated
     public String getUserSharingScope(Context context) {
-        return getUserSharingScope();
+        SharingScope scope = getUserSharingScope();
+        return scope != null ? scope.toString() : null;
     }
 
     @Nullable
-    public String getUserSharingScope() {
+    public SharingScope getUserSharingScope() {
         UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager()
                 .getDao()
                 .getUserSessionInfo();
         if (session == null) {
             return null;
         }
-        return session.getSharingScope() != null ? session.getSharingScope().toString() : null;
+        return session.getSharingScope();
     }
 
     @Override
@@ -205,11 +207,9 @@ public class BridgeDataProvider2 extends DataProvider {
                         .sharingScope(SharingScope.valueOf(scope)));
     }
 
-
-
     /**
      * @see DataProvider#signIn(Context, String, String)
-     *
+     * <p>
      * May invoke {@link Observer#onError(Throwable)} with ConsentRequiredException, to indicate
      * consent is required
      */
