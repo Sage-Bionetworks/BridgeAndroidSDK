@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-  compileSdkVersion 24
+  compileSdkVersion 25
   buildToolsVersion "25.0.0"
 
   // allow inter-project inclusion of this library's debug build
@@ -9,7 +9,7 @@ android {
 
   defaultConfig {
     minSdkVersion 16
-    targetSdkVersion 24
+    targetSdkVersion 25
     versionCode 1
     versionName "1.0"
   }
@@ -38,7 +38,7 @@ dependencies {
   compile fileTree(dir: 'libs', include: ['*.jar'])
 
   compile 'net.danlew:android.joda:2.9.4.2'
-  compile 'com.android.support:appcompat-v7:24.2.1'
+  compile 'com.android.support:appcompat-v7:25.1.0'
   compile 'org.sagebionetworks.bridge:rest-client:0.12.15', {
     exclude group: 'joda-time', module: 'joda-time'
   }
