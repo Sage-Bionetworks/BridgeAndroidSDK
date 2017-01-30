@@ -10,16 +10,17 @@ android:
     - tools
     - build-tools-25.0.2
     - android-25
+
+    # RS components
+    - build-tools-23.02
+    - android-23
     - extra-android-m2repository
     - extra-google-m2repository
-    # RS components
-    - build-tools-23.0.2
-    - android-23
+before_script: .travis/setup.sh
 script:
     - ./gradlew clean build
-#TODO: reenable artifact deployment
-#deploy:
-#    provider: script
-#    script: ./gradlew bintrayUpload
-#    on:
-#        branch: master
+deploy:
+    provider: script
+    script: ./gradlew bintrayUpload
+    on:
+        branch: master
