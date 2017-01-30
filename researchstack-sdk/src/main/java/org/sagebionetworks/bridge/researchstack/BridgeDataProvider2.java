@@ -30,11 +30,13 @@ import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RES
  * Created by jyliu on 1/20/2017.
  */
 @AnyThread
-public class BridgeDataProvider2 extends DataProvider {
+public class BridgeDataProvider2 extends DataProvider, implements DataProvider2 {
     private final BridgeManagerProvider bridgeManagerProvider;
+    private final AuthenticationManager authenticationManager;
 
     public BridgeDataProvider2(BridgeManagerProvider bridgeManagerProvider) {
         this.bridgeManagerProvider = bridgeManagerProvider;
+        this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
     }
 
     @Override
@@ -58,7 +60,7 @@ public class BridgeDataProvider2 extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .signUp(email, password)
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
@@ -70,7 +72,7 @@ public class BridgeDataProvider2 extends DataProvider {
     }
 
     public boolean isSignedUp() {
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .getDao()
                 .getEmail() != null;
     }
@@ -89,12 +91,9 @@ public class BridgeDataProvider2 extends DataProvider {
 
     @Nullable
     public User getUser() {
-        AuthenticationManager.DAO DAO =
-                bridgeManagerProvider.getAuthenticationManager()
-                        .getDao();
-
         User user = new User();
-        user.setEmail(DAO.getEmail());
+        user.setEmail(authenticationManager.getDao().getEmail());
+
         //TODO: populate user's name and birthdate
         return user;
     }
@@ -140,7 +139,7 @@ public class BridgeDataProvider2 extends DataProvider {
     }
 
     public boolean isSignedIn() {
-        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager()
+        UserSessionInfo session = authenticationManager
                 .getUserSessionInfo();
         return session != null && session.getAuthenticated();
     }
@@ -155,7 +154,7 @@ public class BridgeDataProvider2 extends DataProvider {
 
     @Nullable
     public SharingScope getUserSharingScope() {
-        UserSessionInfo session = bridgeManagerProvider.getAuthenticationManager()
+        UserSessionInfo session = authenticationManager
                 .getDao()
                 .getUserSessionInfo();
         if (session == null) {
@@ -198,7 +197,7 @@ public class BridgeDataProvider2 extends DataProvider {
     @NonNull
     public Completable setUserSharingScope(@Nullable String scope) {
         AuthenticationManager.DAO DAO =
-                bridgeManagerProvider.getAuthenticationManager()
+                authenticationManager
                         .getDao();
 
         return bridgeManagerProvider.getStudyParticipantManager()
@@ -225,7 +224,7 @@ public class BridgeDataProvider2 extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .signIn(email, password)
                 .toCompletable().doOnCompleted((Action0) () -> {
                     // TODO: upload pending files
@@ -240,7 +239,7 @@ public class BridgeDataProvider2 extends DataProvider {
 
     @NonNull
     public Completable signOut() {
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .signOut();
     }
 
@@ -260,7 +259,7 @@ public class BridgeDataProvider2 extends DataProvider {
     public Completable resendEmailVerification(@NonNull String email) {
         checkNotNull(email);
 
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .resendEmailVerification(email);
     }
 
@@ -279,7 +278,7 @@ public class BridgeDataProvider2 extends DataProvider {
     public Completable forgotPassword(@NonNull String email) {
         checkNotNull(email);
 
-        return bridgeManagerProvider.getAuthenticationManager()
+        return authenticationManager
                 .requestPasswordResetForEmail(email);
     }
 }
