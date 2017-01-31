@@ -9,7 +9,7 @@ android {
     // doesn't play well with deployment scripts
   // publishNonDefault true
 
-  defaultConfig {h
+  defaultConfig {
     minSdkVersion 16
     targetSdkVersion 25
     versionCode 1
