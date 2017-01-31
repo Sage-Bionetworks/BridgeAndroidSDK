@@ -25,28 +25,34 @@ public class BridgeManagerProvider {
         return instance;
     }
 
-    @NonNull
-    private final BridgeConfig config;
-    @NonNull
-    private final AuthenticationManager authenticationManager;
-    @NonNull
-    private final StudyParticipantManager studyParticipantManager;
-
     private BridgeManagerProvider(@NonNull BridgeConfig config) {
         checkNotNull(config);
 
         this.config = config;
         this.authenticationManager = new AuthenticationManager(config);
         this.studyParticipantManager = new StudyParticipantManager(authenticationManager);
+        this.consentManager = new ConsentManager(this.authenticationManager.getApi());
     }
 
     @NonNull
+    private final BridgeConfig config;
+    @NonNull
+    private final AuthenticationManager authenticationManager;
+    @NonNull
+    private final StudyParticipantManager studyParticipantManager;
+    @NonNull
+    private final ConsentManager consentManager;
+
+    @NonNull
     public AuthenticationManager getAuthenticationManager() {
-        return this.authenticationManager;
+        return authenticationManager;
     }
 
     @NonNull
     public StudyParticipantManager getStudyParticipantManager() {
         return studyParticipantManager;
     }
+
+    @NonNull
+    public ConsentManager getConsentManager() { return consentManager; }
 }
