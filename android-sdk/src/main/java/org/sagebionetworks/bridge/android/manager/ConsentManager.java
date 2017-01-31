@@ -49,7 +49,7 @@ public class ConsentManager {
     @NonNull
     public Completable emailConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
-        
+
         return RxUtils.toBodySingle(forConsentedUsersApi.emailConsentAgreement(subpopulationGuid))
                 .toCompletable();
     }
