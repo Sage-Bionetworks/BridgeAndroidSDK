@@ -30,7 +30,7 @@ import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RES
  * Created by jyliu on 1/20/2017.
  */
 @AnyThread
-public class BridgeDataProvider2 extends DataProvider, implements DataProvider2 {
+public class BridgeDataProvider2 extends DataProvider {
     private final BridgeManagerProvider bridgeManagerProvider;
     private final AuthenticationManager authenticationManager;
 
