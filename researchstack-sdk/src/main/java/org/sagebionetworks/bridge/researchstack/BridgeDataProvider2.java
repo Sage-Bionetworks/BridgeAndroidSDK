@@ -21,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import rx.Completable;
 import rx.Observable;
 import rx.Observer;
+import rx.Single;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -166,7 +167,7 @@ public class BridgeDataProvider2 extends DataProvider {
     @Override
     @Deprecated
     public void setUserSharingScope(Context context, String scope) {
-        setUserSharingScope(scope).await();
+        setUserSharingScope(scope).toCompletable().await();
     }
 
     @Override
@@ -195,7 +196,7 @@ public class BridgeDataProvider2 extends DataProvider {
     }
 
     @NonNull
-    public Completable setUserSharingScope(@Nullable String scope) {
+    public Single<UserSessionInfo> setUserSharingScope(@Nullable String scope) {
         AuthenticationManager.DAO DAO =
                 authenticationManager
                         .getDao();
