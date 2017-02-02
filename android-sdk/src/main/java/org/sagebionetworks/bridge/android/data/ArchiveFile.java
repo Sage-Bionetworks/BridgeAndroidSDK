@@ -11,13 +11,13 @@ public interface ArchiveFile {
     /**
      * @return name of file
      */
-    String getFileName();
+    String getFilename();
 
     /**
      * @return timestamp representing when file's data was measured and written, if data was
      * measured over a range, timestamp should represent the end of the measured range
      */
-    DateTime endDate();
+    DateTime getEndDate();
 
     /**
      * @return measured data

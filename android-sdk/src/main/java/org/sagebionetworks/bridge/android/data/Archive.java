@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.rest.RestUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -33,15 +34,19 @@ public class Archive {
         ZipOutputStream zos = new ZipOutputStream(os);
 
         for (ArchiveFile dataFile : dataFiles) {
-            ZipEntry entry = new ZipEntry(dataFile.getFileName());
+            ZipEntry entry = new ZipEntry(dataFile.getFilename());
 
             zos.putNextEntry(entry);
             zos.write(dataFile.getByteSource().read());
+            zos.closeEntry();
         }
+
+
+        ZipEntry infoFileEntry = new ZipEntry(ARCHIVE_INFO_FILE_NAME);
+        zos.putNextEntry(infoFileEntry);
+        zos.write(RestUtils.GSON.toJson(archiveInfo).getBytes());
         zos.closeEntry();
-
-        //TODO: write info.json
-
+        zos.close();
         return zos;
     }
 
@@ -71,7 +76,7 @@ public class Archive {
 
             archiveInfo.files = Lists.newArrayList();
             for (ArchiveFile file : files) {
-                archiveInfo.files.add(new ArchiveInfo.FileInfo(file.getFileName(), file.endDate()));
+                archiveInfo.files.add(new ArchiveInfo.FileInfo(file.getFilename(), file.getEndDate()));
             }
 
             return new Archive(files, archiveInfo);

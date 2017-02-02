@@ -71,6 +71,8 @@ dependencies {
 
   // logging to console, workaround for configuring logback
   testCompile 'org.slf4j:slf4j-simple:1.7.21'
+  // avoid needing to setup timezone provider for unit tests
+  testCompile 'joda-time:joda-time:2.9.4'
 
   testCompile 'junit:junit:4.12'
   testCompile 'org.robolectric:robolectric:3.2.2'
