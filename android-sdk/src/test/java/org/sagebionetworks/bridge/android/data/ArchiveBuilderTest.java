@@ -10,8 +10,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,7 +29,6 @@ import static org.mockito.Mockito.when;
  * Created by jyliu on 1/30/2017.
  */
 public class ArchiveBuilderTest {
-    private static final Logger LOG = LoggerFactory.getLogger(ArchiveBuilderTest.class);
     private static final String APP_VERSION_NAME = "version 1.0, build 9";
     private static final String DEVICE_NAME = "device";
 
@@ -82,12 +79,10 @@ public class ArchiveBuilderTest {
         try {
             while (zipEntry != null) {
                 String fileName = zipEntry.getName();
-                LOG.info("filename: " + fileName);
 
                 ByteArrayOutputStream fileBytes = new ByteArrayOutputStream();
                 int len = 0;
                 while ((len = zis.read(buffer)) > 0) {
-                    LOG.info("length: " + len);
                     fileBytes.write(buffer, 0, len);
                 }
 
