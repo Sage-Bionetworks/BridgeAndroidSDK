@@ -3,6 +3,8 @@
   <public name="osb_study_id" type="string"/>
   <public name="osb_study_name" type="string"/>
   <public name="osb_app_version" type="integer"/>
+  <public name="osb_app_version_name" type="string"/>
   <public name="osb_base_url" type="string"/>
+
   <public name="app_name" type="string" tools:ignore="ResourceName" />
 </resources>

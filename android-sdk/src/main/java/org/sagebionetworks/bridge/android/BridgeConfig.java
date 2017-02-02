@@ -98,6 +98,11 @@ public class BridgeConfig {
     }
 
     @NonNull
+    public String getAppVersionName() {
+        return applicationContext.getResources().getString(R.string.osb_app_version_name);
+    }
+
+    @NonNull
     public X509Certificate getPublicKey() throws IOException, CertificateException {
         CertificateFactory factory = new CertificateFactory();
 
@@ -120,7 +125,7 @@ public class BridgeConfig {
     }
 
     @NonNull
-    String getDeviceName() {
+    public String getDeviceName() {
         String manufacturer = Build.MANUFACTURER;
         if (TextUtils.isEmpty(manufacturer)) {
             manufacturer = "Unknown";
