@@ -20,6 +20,7 @@ import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
@@ -75,6 +76,8 @@ public class BridgeDataProviderTest {
   private TaskHelper taskHelper;
   @Mock
   private UploadHandler uploadHandler;
+  @Mock
+  BridgeManagerProvider bridgeManagerProvider;
 
   @Before
   public void beforeTest() {
@@ -101,7 +104,7 @@ public class BridgeDataProviderTest {
     when(apiClientProvider.getClient(Matchers.same(ForConsentedUsersApi.class), any(SignIn.class))).thenReturn(forConsentedUsersApi);
 
     dataProvider =
-        new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
+        new TestBridgeDataProvider(bridgeManagerProvider, publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
             appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
             taskHelper, uploadHandler);
     context = mock(Context.class);

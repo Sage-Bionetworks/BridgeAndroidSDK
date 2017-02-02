@@ -10,7 +10,7 @@ repositories {
 // todo make pom include sage s3 repo for rest-client
 android {
   compileSdkVersion 25
-  buildToolsVersion '25.0.0'
+  buildToolsVersion '25.0.2'
 
   // allow inter-project inclusion of this library's debug build
   // publishNonDefault true
@@ -52,18 +52,12 @@ dependencies {
   compile 'com.android.support:appcompat-v7:25.1.0'
   compile 'com.android.support:multidex:1.0.1'
 
-  compile 'com.squareup.retrofit2:retrofit:2.1.0'
-  compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
-
   compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
   apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 
-  compile 'com.madgag.spongycastle:core:1.54.0.0'
-  compile 'com.madgag.spongycastle:prov:1.54.0.0'
-  compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+
 
   testCompile 'junit:junit:4.12'
-//  testCompile 'org.slf4j:slf4j-simple:1.7.21'
   testCompile 'org.robolectric:robolectric:3.0'
   testCompile 'org.mockito:mockito-core:1.10.19'
 }

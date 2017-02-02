@@ -8,7 +8,12 @@ import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
 import org.joda.time.LocalDate;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.ResourcePathManager;
+import org.researchstack.backbone.model.ConsentSignatureBody;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
@@ -16,13 +21,9 @@ import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.backbone.DataProvider;
-import org.researchstack.backbone.DataResponse;
-import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.skin.model.TaskModel;
-import org.researchstack.backbone.model.User;
 import org.researchstack.skin.task.ConsentTask;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
@@ -35,7 +36,6 @@ import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.bridge.rest.model.Withdrawal;
@@ -53,7 +53,7 @@ import rx.Observable;
 * This is a very simple implementation that hits only part of the Sage Bridge REST API
 * a complete port of the Sage Bridge Java SDK for android: https://github.com/Sage-Bionetworks/BridgeJavaSDK
  */
-public abstract class BridgeDataProvider extends DataProvider {
+public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
   private final String studyId;
@@ -78,11 +78,13 @@ public abstract class BridgeDataProvider extends DataProvider {
   private ForConsentedUsersApi forConsentedUsersApi;
 
   //used by tests to mock service
-  BridgeDataProvider(String baseUrl, String studyId, String userAgent,
-      ResourcePathManager.Resource publicKey,
-      ApiClientProvider apiClientProvider,
-      AppPrefs appPrefs, StorageAccessWrapper storageAccess, UserLocalStorage userLocalStorage,
-      ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper, UploadHandler uploadHandler) {
+  BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String studyId,
+                     String userAgent, ResourcePathManager.Resource publicKey, ApiClientProvider
+                             apiClientProvider, AppPrefs appPrefs, StorageAccessWrapper
+                             storageAccess, UserLocalStorage userLocalStorage,
+                     ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper,
+                     UploadHandler uploadHandler) {
+    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
     this.baseUrl = baseUrl;
     this.studyId = studyId;
@@ -102,13 +104,15 @@ public abstract class BridgeDataProvider extends DataProvider {
   }
 
   /**
+   * @param bridgeManagerProvider manager provider
    * @param baseUrl base URL of Bridge server
    * @param studyId study identifier
    * @param userAgent user agent, in format expected by Bridge
    * @param publicKey relative path to x.509 certificate for Bridge uploads
    */
-  public BridgeDataProvider(String baseUrl, String studyId, String userAgent,
-      ResourcePathManager.Resource publicKey) {
+  public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String
+          studyId, String userAgent, ResourcePathManager.Resource publicKey) {
+    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
     this.baseUrl = baseUrl;
     this.studyId = studyId;

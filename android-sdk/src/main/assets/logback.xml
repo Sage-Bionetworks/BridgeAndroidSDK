@@ -1,13 +1,23 @@
-<configuration>
-  <!-- Create a logcat appender -->
-  <appender name="logcat" class="ch.qos.logback.classic.android.LogcatAppender">
-    <encoder>
-      <pattern>%msg</pattern>
-    </encoder>
-  </appender>
+<configuration debug="true">
 
-  <!-- Write INFO (and higher-level) messages to the log file -->
-  <root level="VERBOSE">
-    <appender-ref ref="logcat" />
-  </root>
+    <!-- Create a logcat appender -->
+    <appender name="logcat" class="ch.qos.logback.classic.android.LogcatAppender">
+        <encoder>
+            <pattern>%msg</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%-4relative [%thread] %-5level %logger{35} - %msg %n</pattern>
+        </encoder>
+    </appender>
+
+    <root name="org.sagebionetworks" level="DEBUG" />
+
+    <root level="INFO">
+        <appender-ref ref="logcat" />
+    </root>
 </configuration>
