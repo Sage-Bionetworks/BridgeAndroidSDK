@@ -5,6 +5,7 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.model.ConsentSignatureBody;
@@ -12,8 +13,11 @@ import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
+import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -33,11 +37,18 @@ import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RES
 @AnyThread
 public class BridgeDataProvider2 extends DataProvider {
     private final BridgeManagerProvider bridgeManagerProvider;
+    private final BridgeConfig bridgeConfig;
     private final AuthenticationManager authenticationManager;
+    private final ConsentManager consentManager;
 
-    public BridgeDataProvider2(BridgeManagerProvider bridgeManagerProvider) {
-        this.bridgeManagerProvider = bridgeManagerProvider;
+
+    public BridgeDataProvider2() {
+        this.bridgeManagerProvider = BridgeManagerProvider.getInstance();
+
+        // convenience accessors
+        this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.consentManager = bridgeManagerProvider.getConsentManager();
     }
 
     @Override
@@ -109,9 +120,24 @@ public class BridgeDataProvider2 extends DataProvider {
         throw new UnsupportedOperationException();
     }
 
+    @NonNull
+    public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
+        return consentManager.withdrawConsent(subpopulationGuid, reason);
+    }
+
     @Override
+    @Deprecated
     public Observable<DataResponse> withdrawConsent(Context context, String reason) {
-        throw new UnsupportedOperationException();
+        return consentManager.withdrawConsent(bridgeConfig.getStudyId(), reason)
+                .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @NonNull
+    public Completable giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
+                                   @NonNull LocalDate birthdate,
+                                   @NonNull String base64Image, @NonNull String imageMimeType,
+                                   @Nullable SharingScope sharingScope) {
+        return consentManager.giveConsent(subpopulationGuid, name, birthdate, base64Image, imageMimeType, sharingScope);
     }
 
     @Override
@@ -124,6 +150,9 @@ public class BridgeDataProvider2 extends DataProvider {
         throw new UnsupportedOperationException();
     }
 
+    public ConsentSignature retrieveConsent(String subpopulationGuid) {
+        return consentManager.getConsentSignature(subpopulationGuid).toBlocking().value();
+    }
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
         throw new UnsupportedOperationException();

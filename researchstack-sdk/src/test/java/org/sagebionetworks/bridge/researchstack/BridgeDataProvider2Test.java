@@ -46,6 +46,7 @@ public class BridgeDataProvider2Test {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
+        BridgeManagerProvider.init(bridgeManagerProvider);
         when(authenticationManager.getDao()).thenReturn(authenticationDAO);
 
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
@@ -53,7 +54,7 @@ public class BridgeDataProvider2Test {
                 (studyParticipantManager);
 
         dataProvider =
-                new BridgeDataProvider2(bridgeManagerProvider);
+                new BridgeDataProvider2();
 
     }
 
