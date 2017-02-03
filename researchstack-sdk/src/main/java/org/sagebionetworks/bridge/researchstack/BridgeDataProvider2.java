@@ -121,6 +121,11 @@ public class BridgeDataProvider2 extends DataProvider {
     }
 
     @NonNull
+    public Completable withdrawAllConsents(@Nullable String reason) {
+        return consentManager.withdrawAll(reason);
+    }
+
+    @NonNull
     public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
         return consentManager.withdrawConsent(subpopulationGuid, reason);
     }
