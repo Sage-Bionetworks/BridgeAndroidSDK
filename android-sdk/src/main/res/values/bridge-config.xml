@@ -4,8 +4,6 @@
   <string name="osb_base_url">https://webservices.sagebridge.org/</string>
   <string name="osb_study_id">sample-study</string>
   <string name="osb_study_name">SampleStudy</string>
-  <integer name="osb_app_version">1</integer>
-  <string name="osb_app_version_name">version 1.0.2, build 1</string>
 
   <!--private-->
   <integer name="osb_android_sdk_version">1</integer>

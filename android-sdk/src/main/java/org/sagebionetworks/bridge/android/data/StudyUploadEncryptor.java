@@ -12,7 +12,6 @@ import org.spongycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
 import org.spongycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
 import org.spongycastle.operator.OutputEncryptor;
 
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.cert.CertificateEncodingException;
@@ -26,12 +25,14 @@ import static com.google.common.base.Preconditions.checkState;
 public class StudyUploadEncryptor {
     private static final Logger LOG = LoggerFactory.getLogger(StudyUploadEncryptor.class);
 
+    private static final String JCE_PROVIDER = "SC"; // SpongyCastle
+
     private final Supplier<JceKeyTransRecipientInfoGenerator> recipientInfoGeneratorSupplier;
 
     public StudyUploadEncryptor(X509Certificate publicKey) {
         this.recipientInfoGeneratorSupplier = Suppliers.memoize(() -> {
             try {
-                return new JceKeyTransRecipientInfoGenerator(publicKey).setProvider("SC");
+                return new JceKeyTransRecipientInfoGenerator(publicKey).setProvider(JCE_PROVIDER);
             } catch (CertificateEncodingException e) {
                 LOG.error("Unable to create recipient archiveInfo generator from public key", e);
             }
@@ -55,7 +56,7 @@ public class StudyUploadEncryptor {
 
         // Generate encrypted input stream in AES-256-CBC format, output is DER, not S/MIME or PEM
         OutputEncryptor encryptor =
-                new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC).setProvider("SC")
+                new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC).setProvider(JCE_PROVIDER)
                         .build();
 
         return gen.open(stream, encryptor);
