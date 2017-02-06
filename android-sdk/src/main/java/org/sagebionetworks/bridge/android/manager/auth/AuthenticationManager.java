@@ -15,6 +15,7 @@ import org.sagebionetworks.bridge.rest.exceptions.NotAuthenticatedException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ public class AuthenticationManager {
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
     public AuthenticationManager(@NonNull BridgeConfig config) {
-        this(config, new InMemoryDAO(config.getApplicationContext()));
+        this(config, new PlaintextSharedPreferencesDAO(config.getApplicationContext()));
     }
 
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull
@@ -59,8 +60,8 @@ public class AuthenticationManager {
 
     private void initApiClientProvider() {
         this.apiClientProvider = new ApiClientProvider(config.getBaseUrl(),
-                                                       config.getUserAgent(),
-                                                       config.getAcceptLanguage());
+                config.getUserAgent(),
+                config.getAcceptLanguage());
     }
 
     @AnyThread
@@ -258,9 +259,9 @@ public class AuthenticationManager {
     }
 
     /**
-     * Get latest session, may cause a sign in or retrieve from local store if needed.
+     * Get latest session local store if needed.
      *
-     * @return session bridge session
+     * @return Bridge session
      */
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
@@ -277,6 +278,19 @@ public class AuthenticationManager {
         }
 
         return dao.getUserSessionInfo();
+    }
+
+    /**
+     * Call Bridge to get session. Cached session is updated as a side-effect.
+     *
+     * @return Bridge session
+     */
+    @NonNull
+    public Single<UserSessionInfo> getLatestUserSessionInfo() {
+        // no-op call to the participant update API, we'll get a recomputed session
+        // session interceptor will update itself with the session in the response
+        return RxUtils.toBodySingle(
+                getApi().updateUsersParticipantRecord(new StudyParticipant()));
     }
 
     private SignIn getSignInFromStore() {

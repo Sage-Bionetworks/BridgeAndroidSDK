@@ -78,13 +78,12 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   private ForConsentedUsersApi forConsentedUsersApi;
 
   //used by tests to mock service
-  BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String studyId,
+  BridgeDataProvider(String baseUrl, String studyId,
                      String userAgent, ResourcePathManager.Resource publicKey, ApiClientProvider
                              apiClientProvider, AppPrefs appPrefs, StorageAccessWrapper
                              storageAccess, UserLocalStorage userLocalStorage,
                      ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper,
                      UploadHandler uploadHandler) {
-    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
     this.baseUrl = baseUrl;
     this.studyId = studyId;
@@ -104,15 +103,13 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
   }
 
   /**
-   * @param bridgeManagerProvider manager provider
    * @param baseUrl base URL of Bridge server
    * @param studyId study identifier
    * @param userAgent user agent, in format expected by Bridge
    * @param publicKey relative path to x.509 certificate for Bridge uploads
    */
-  public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, String baseUrl, String
+  public BridgeDataProvider(String baseUrl, String
           studyId, String userAgent, ResourcePathManager.Resource publicKey) {
-    super(bridgeManagerProvider);
     this.interceptor = new BridgeHeaderInterceptor(userAgent, null);
     this.baseUrl = baseUrl;
     this.studyId = studyId;

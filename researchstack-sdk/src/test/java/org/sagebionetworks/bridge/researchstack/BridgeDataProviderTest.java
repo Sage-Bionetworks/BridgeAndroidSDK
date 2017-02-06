@@ -104,7 +104,7 @@ public class BridgeDataProviderTest {
     when(apiClientProvider.getClient(Matchers.same(ForConsentedUsersApi.class), any(SignIn.class))).thenReturn(forConsentedUsersApi);
 
     dataProvider =
-        new TestBridgeDataProvider(bridgeManagerProvider, publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
+        new TestBridgeDataProvider(publicKeyRes, tasksAndSchedulesRes, apiClientProvider,
             appPrefs, storageAccess, userLocalStorage, consentLocalStorage,
             taskHelper, uploadHandler);
     context = mock(Context.class);
