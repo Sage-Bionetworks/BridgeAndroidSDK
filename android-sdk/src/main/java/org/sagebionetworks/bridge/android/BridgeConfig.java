@@ -94,7 +94,12 @@ public class BridgeConfig {
 
     @NonNull
     public int getAppVersion() {
-        return applicationContext.getResources().getInteger(R.integer.osb_app_version);
+        return BuildConfig.VERSION_CODE;
+    }
+
+    @NonNull
+    public String getAppVersionName() {
+        return BuildConfig.VERSION_NAME;
     }
 
     @NonNull
@@ -120,7 +125,7 @@ public class BridgeConfig {
     }
 
     @NonNull
-    String getDeviceName() {
+    public String getDeviceName() {
         String manufacturer = Build.MANUFACTURER;
         if (TextUtils.isEmpty(manufacturer)) {
             manufacturer = "Unknown";

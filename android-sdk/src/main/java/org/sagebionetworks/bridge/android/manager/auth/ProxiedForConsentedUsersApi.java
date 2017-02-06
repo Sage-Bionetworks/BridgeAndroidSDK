@@ -68,7 +68,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
 
     @Override
     public Call<Message> emailDataToUser(@Query("startDate") LocalDate localDate, @Query
-            ("endDate") LocalDate localDate1) {
+            ("getEndDate") LocalDate localDate1) {
         return getRawApi().emailDataToUser(localDate, localDate1);
     }
 
@@ -89,7 +89,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
 
     @Override
     public Call<ReportDataList> getParticipantReportRecords(@Path("identifier") String s, @Query
-            ("startDate") LocalDate localDate, @Query("endDate") LocalDate localDate1) {
+            ("startDate") LocalDate localDate, @Query("getEndDate") LocalDate localDate1) {
         return getRawApi().getParticipantReportRecords(s, localDate, localDate1);
     }
 
@@ -116,7 +116,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
 
     @Override
     public Call<ReportDataList> getStudyReportRecords(@Path("identifier") String s, @Query
-            ("startDate") LocalDate localDate, @Query("endDate") LocalDate localDate1) {
+            ("startDate") LocalDate localDate, @Query("getEndDate") LocalDate localDate1) {
         return getRawApi().getStudyReportRecords(s, localDate, localDate1);
     }
 
