@@ -94,12 +94,12 @@ public class BridgeConfig {
 
     @NonNull
     public int getAppVersion() {
-        return applicationContext.getResources().getInteger(R.integer.osb_app_version);
+        return BuildConfig.VERSION_CODE;
     }
 
     @NonNull
     public String getAppVersionName() {
-        return applicationContext.getResources().getString(R.string.osb_app_version_name);
+        return BuildConfig.VERSION_NAME;
     }
 
     @NonNull
