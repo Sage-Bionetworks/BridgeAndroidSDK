@@ -21,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -37,9 +38,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * functionality will be limited. Many APIs will return a
  * {@link org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException} if any required
  * consent has not been granted by the participant.
+ *
+ * FIXME: handle async upload of consents
  */
 public class ConsentManager {
     private static final Logger LOG = LoggerFactory.getLogger(ConsentManager.class);
+
+    private static final Type CONSENT_MAP_TYPE =
+            new TypeToken<Map<String, ConsentSignature>>() {
+            }.getType();
+
     private final AuthenticationManager authenticationManager;
     private final ForConsentedUsersApi forConsentedUsersApi;
     private final DAO dao;
@@ -67,13 +75,15 @@ public class ConsentManager {
                     .getSharedPreferences(PREFERENCES_FILE, Context.MODE_PRIVATE);
             this.consents = Maps.newConcurrentMap();
 
-            String consentMapJson = sharedPreferences.getString(KEY_CONSENT_MAP, null);
-            TypeToken<Map<String, ConsentSignature>> type =
-                    new TypeToken<Map<String, ConsentSignature>>() {
-                    };
-            Map<String, ConsentSignature> consents =
-                    RestUtils.GSON.fromJson(consentMapJson, type.getType());
-            consents.putAll(consents);
+            load();
+        }
+
+        Set<String> list() {
+            return consents.keySet();
+        }
+
+        ConsentSignature get(String subpopulationGuid) {
+            return consents.get(subpopulationGuid);
         }
 
         synchronized void put(String subpopulationGuid, ConsentSignature consentSignature) {
@@ -86,17 +96,18 @@ public class ConsentManager {
             persist();
         }
 
+        private synchronized void load() {
+            String consentMapJson = sharedPreferences.getString(KEY_CONSENT_MAP, null);
+            Map<String, ConsentSignature> consents =
+                    RestUtils.GSON.fromJson(consentMapJson, CONSENT_MAP_TYPE);
+            if (consents != null) {
+                consents.putAll(consents);
+            }
+        }
+
         private synchronized void persist() {
             String consentMapJson = RestUtils.GSON.toJson(consents);
             sharedPreferences.edit().putString(KEY_CONSENT_MAP, consentMapJson).apply();
-        }
-
-        ConsentSignature get(String subpopulationGuid) {
-            return consents.get(subpopulationGuid);
-        }
-
-        Set<String> list() {
-            return consents.keySet();
         }
     }
 
@@ -107,11 +118,7 @@ public class ConsentManager {
     public boolean isConsented(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        ConsentStatus consentStatus = getConsentStatus(subpopulationGuid);
-        if (consentStatus == null) {
-            return false;
-        }
-        return consentStatus.getConsented();
+        return isConsentedInSessionOrLocal(authenticationManager.getUserSessionInfo(), subpopulationGuid);
     }
 
     /**
@@ -138,12 +145,43 @@ public class ConsentManager {
                 .get(subpopulationGuid);
     }
 
+    // if the participant's session indicates consent to this subpopulation, use that. otherwise,
+    // treat presense of consent in DAO as having consented
+    private boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
+        ConsentStatus subpopulationStatus = getConsentStatus(subpopulationGuid);
+        if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
+            return true;
+        }
+        return dao.get(subpopulationGuid) != null;
+    }
+
     /**
      * @return true if all required consents have been signed
      */
     public boolean isConsented() {
         UserSessionInfo userSessionInfo = authenticationManager.getUserSessionInfo();
-        return userSessionInfo == null ? false : userSessionInfo.getConsented();
+        if (userSessionInfo != null) {
+            if (userSessionInfo.getConsented()) {
+                return true;
+            }
+
+            // Bridge session doesn't specify any consents
+            if (userSessionInfo.getConsentStatuses() == null) {
+                return true;
+            }
+
+            for (Map.Entry<String, ConsentStatus> consentStatus
+                    : userSessionInfo.getConsentStatuses().entrySet()) {
+                if (consentStatus.getValue().getRequired()
+                        && !isConsentedInSessionOrLocal(userSessionInfo, consentStatus.getKey())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // without a user session, we can't determine whether they're consented. this shouldn't
+        // happen unless they're logged out of the application
+        return false;
     }
 
     /**

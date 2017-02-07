@@ -11,7 +11,6 @@ import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.exceptions.NotAuthenticatedException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -164,8 +163,8 @@ public class AuthenticationManager {
 
     /**
      * On success, stores participant's email, password and session. If a
-     * NotAuthenticatedException is encountered, the participant's stored password and session
-     * are cleared.
+     * NotAuthenticatedException is encountered, this could mean the credentials are invalid, or the
+     * user has not verified their email.
      *
      * @param email    participant's email address
      * @param password participant's password
@@ -190,10 +189,6 @@ public class AuthenticationManager {
                     dao.setEmail(email);
                     dao.setPassword(password);
                     dao.setUserSessionInfo(userSessionInfo);
-                }).doOnError(throwable -> {
-                    if (throwable instanceof NotAuthenticatedException) {
-                        dao.setPassword(null);
-                    }
                 });
     }
 
@@ -230,11 +225,6 @@ public class AuthenticationManager {
                 (config.getStudyId()).email(email))).toCompletable();
     }
 
-    @NonNull
-    public DAO getDao() {
-        return dao;
-    }
-
     /**
      * Get access to bridge API for currently authenticated client.
      *
@@ -259,7 +249,15 @@ public class AuthenticationManager {
     }
 
     /**
-     * Get latest session local store if needed.
+     * @return the email currently associated with auth manager.
+     */
+    @Nullable
+    public String getEmail() {
+        return dao.getEmail();
+    }
+
+    /**
+     * Get latest session from local store. Does not make a service call.
      *
      * @return Bridge session
      */

@@ -8,6 +8,7 @@ import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
 import org.joda.time.LocalDate;
+import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.ResourcePathManager;
@@ -18,11 +19,14 @@ import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
-import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
+import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.ConsentManager;
+import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.researchstack.upload.UploadRequest;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
@@ -45,15 +49,19 @@ import java.io.IOException;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
+import rx.Completable;
 import rx.Observable;
+import rx.Single;
+import rx.functions.Action0;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
 
 /*
 * This is a very simple implementation that hits only part of the Sage Bridge REST API
 * a complete port of the Sage Bridge Java SDK for android: https://github.com/Sage-Bionetworks/BridgeJavaSDK
  */
-public abstract class BridgeDataProvider extends BridgeDataProvider2 {
+public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
     private final String studyId;
@@ -77,6 +85,12 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
     private ForConsentedUsersApi forConsentedUsersApi;
 
+    private final BridgeManagerProvider bridgeManagerProvider;
+    private final BridgeConfig bridgeConfig;
+    private final AuthenticationManager authenticationManager;
+    private final ConsentManager consentManager;
+
+
     //used by tests to mock service
     BridgeDataProvider(String baseUrl, String studyId,
                        String userAgent, ResourcePathManager.Resource publicKey, ApiClientProvider
@@ -99,6 +113,13 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         this.apiClientProvider = apiClientProvider;
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
 
+        this.bridgeManagerProvider = BridgeManagerProvider.getInstance();
+
+        // convenience accessors
+        this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
+        this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.consentManager = bridgeManagerProvider.getConsentManager();
+
         updateBridgeService(null, null);
     }
 
@@ -120,8 +141,17 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
 
         this.storageAccess = new StorageAccessWrapper();
+
+        this.bridgeManagerProvider = BridgeManagerProvider.getInstance();
+
+        // convenience accessors
+        this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
+        this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.consentManager = bridgeManagerProvider.getConsentManager();
+
         updateBridgeService(null, null);
     }
+
 
     private void updateBridgeService(@Nullable String sessionToken, @Nullable SignIn signIn) {
         if (signIn == null) {
@@ -160,7 +190,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
     @Override
     public String getStudyId() {
-        return studyId;
+        return bridgeConfig.getStudyId();
     }
 
     private void checkForTempConsentAndUpload() {
@@ -182,7 +212,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     @Override
     public boolean isConsented() {
         logger.debug("Called isConsented");
-        return super.isConsented();
+        return consentManager.isConsented();
     }
 
     @Override
@@ -190,7 +220,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         logger.debug("Called withdrawConsent");
         //TODO: allow withdrawal from specific subpopulation
 
-        return super.withdrawAllConsents(reason).andThen(SUCCESS_DATA_RESPONSE)
+        return withdrawAllConsents(reason).andThen(SUCCESS_DATA_RESPONSE)
                 .compose(ObservableUtils.applyDefault())
                 .doOnNext(response -> {
                     UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
@@ -199,6 +229,17 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
                 }).doOnError(throwable -> {
                     ApiUtils.handleError(context, ((BridgeSDKException) throwable).getStatusCode());
                 });
+    }
+
+    @NonNull
+    public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
+        return consentManager.withdrawConsent(subpopulationGuid, reason);
+    }
+
+
+    @NonNull
+    public Completable withdrawAllConsents(@Nullable String reason) {
+        return consentManager.withdrawAll(reason);
     }
 
     @Override
@@ -220,7 +261,17 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         user.setEmail(signUp.getEmail());
         userLocalStorage.saveUser(user);
 
-        return super.signUp(signUp.getEmail(), signUp.getPassword());
+        return signUp(signUp.getEmail(), signUp.getPassword());
+    }
+
+    @NonNull
+    public Observable<DataResponse> signUp(@NonNull String email, @NonNull String password) {
+        checkNotNull(email);
+        checkNotNull(password);
+
+        return authenticationManager
+                .signUp(email, password)
+                .andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @Override
@@ -228,13 +279,32 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         logger.debug("Called signIn");
         final SignIn signIn = new SignIn().study(studyId).email(username).password(password);
 
-        return super.signIn(username, password)
+        return signIn(username, password)
                 .andThen(SUCCESS_DATA_RESPONSE)
                 .doOnError(throwable -> {
                     if (throwable instanceof ConsentRequiredException) {
                         UserSessionInfo userSessionInfo = ((ConsentRequiredException) throwable).getSession();
                         processSignInResponse(signIn, userSessionInfo);
                     }
+                });
+    }
+
+    /**
+     * @see DataProvider#signIn(Context, String, String)
+     * <p>
+     * May fail with ConsentRequiredException, to indicate
+     * consent is required.
+     * NotAuthenticatedException could indicate the user has not verified their email
+     */
+    @NonNull
+    public Completable signIn(@NonNull String email, @NonNull String password) {
+        checkNotNull(email);
+        checkNotNull(password);
+
+        return authenticationManager
+                .signIn(email, password)
+                .toCompletable().doOnCompleted((Action0) () -> {
+                    // TODO: upload pending files
                 });
     }
 
@@ -258,7 +328,7 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     public Observable<DataResponse> signOut(Context context) {
         logger.debug("Called signOut");
 
-        return super.signOut().andThen(SUCCESS_DATA_RESPONSE)
+        return signOut().andThen(SUCCESS_DATA_RESPONSE)
                 .doOnNext(response -> {
                     userLocalStorage.clearUserSession();
                     userLocalStorage.clearSignIn();
@@ -266,26 +336,47 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
                 });
     }
 
-//    @Override
+    @NonNull
+    public Completable signOut() {
+        return authenticationManager
+                .signOut();
+    }
+
+    //    @Override
 //    public Observable<DataResponse> resendEmailVerification(Context context, String email) {
 //        return ApiUtils.toBodyObservable(
 //                authenticationApi.resendEmailVerification(new Email().study(studyId).email(email)))
 //                .map(response -> new DataResponse(true, null));
 //    }
+    @Override
+    public Observable<DataResponse> resendEmailVerification(Context context, @NonNull String
+            email) {
+        return resendEmailVerification(email).andThen(SUCCESS_DATA_RESPONSE);
+    }
 
-//    /**
-//     * Called to verify the user's email address
-//     * Behind the scenes this calls signIn with securely stored username and password
-//     *
-//     * @param context android context
-//     * @return Observable of the result of the method, with {@link DataResponse#isSuccess()}
-//     * returning true if verifyEmail was successful
-//     */
-//    public Observable<DataResponse> verifyEmail(Context context, String password) {
-//        User user = getUser(context);
-//        final String email = user.getEmail();
-//        return signIn(context, email, password);
-//    }
+    @NonNull
+    public Completable resendEmailVerification(@NonNull String email) {
+        checkNotNull(email);
+
+        return authenticationManager.resendEmailVerification(email);
+    }
+
+    /**
+     * Called to verify the user's email address
+     * Behind the scenes this calls signIn with securely stored username and password
+     *
+     * @param context android context
+     * @return Observable of the result of the method, with {@link DataResponse#isSuccess()}
+     * returning true if verifyEmail was successful
+     */
+    @Override
+    public Observable<DataResponse> verifyEmail(Context context, String email, String password) {
+        return verifyEmail(email, password).andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    public Completable verifyEmail(String email, String password) {
+        return authenticationManager.signIn(email, password).toCompletable();
+    }
 
     @Override
     public boolean isSignedUp(Context context) {
@@ -295,11 +386,12 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
         return userLocalStorage.isSignedUp();
     }
 
+    public boolean isSignedUp() {
+        return authenticationManager.getEmail() != null;
+    }
+
     public boolean isSignedIn() {
-        if (userLocalStorage != null) {
-            return userLocalStorage.isSignedIn();
-        }
-        return false;
+        return authenticationManager.getEmail() != null;
     }
 
     @Deprecated
@@ -410,22 +502,41 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     @Nullable
     public String getUserSharingScope(Context context) {
         logger.debug("Called getUserSharingScope");
-        UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-        return userLocalStorage == null ? null : userSessionInfo.getSharingScope().name();
+        return getUserSharingScope().name();
     }
+
+    @Nullable
+    public SharingScope getUserSharingScope() {
+        UserSessionInfo session = authenticationManager.getUserSessionInfo();
+        if (session == null) {
+            return null;
+        }
+        return session.getSharingScope();
+    }
+
 
     @Override
     public void setUserSharingScope(Context context, String scope) {
         StudyParticipant participant = new StudyParticipant();
         participant.setSharingScope(SharingScope.valueOf(scope));
 
-        super.setUserSharingScope(scope)
+        setUserSharingScope(scope)
                 .doOnSuccess(userSessionInfo -> userLocalStorage
                         .saveUserSession(userSessionInfo, userLocalStorage.getSignIn()))
                 .doOnError(throwable -> ApiUtils
                         .handleError(context, ((BridgeSDKException) throwable).getStatusCode()))
                 .subscribe();
     }
+
+    @NonNull
+    public Single<UserSessionInfo> setUserSharingScope(@Nullable String scope) {
+
+        return bridgeManagerProvider.getStudyParticipantManager()
+                .updateParticipant((StudyParticipant) new StudyParticipant()
+                        .email(authenticationManager.getEmail())
+                        .sharingScope(SharingScope.valueOf(scope)));
+    }
+
 
     @Override
     public void uploadConsent(Context context, TaskResult consentResult) {
@@ -439,37 +550,35 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
     }
 
     private Observable<DataResponse> uploadConsent(String subpopulationGuid, ConsentSignature consent) {
-
-        super.giveConsent(
+        return giveConsent(
                 subpopulationGuid,
                 consent.getName(),
                 consent.getBirthdate(),
                 consent.getImageData(),
                 consent.getImageMimeType(),
-                consent.getScope())
-        ;
-        return ApiUtils.toResponseObservable(forConsentedUsersApi.createConsentSignature(subpopulationGuid, consent)).
-                compose(ObservableUtils.applyDefault())
+                consent.getScope()).andThen(SUCCESS_DATA_RESPONSE)
+                .compose(ObservableUtils.applyDefault())
                 .doOnNext(response -> {
-                    if (response.code() == 201 || response.code() == 409) // success or already consented
-                    {
-                        UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-                        userSessionInfo.setConsented(true);
-                        userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
 
-                        LogExt.d(getClass(), "Response: " + response.code() + ", message: " +
-                                response.message());
+                    UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
+                    userSessionInfo.setConsented(true);
+                    userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
 
-                        if (consentLocalStorage.hasConsent()) {
-                            consentLocalStorage.deleteConsent();
-                        }
-                    } else {
-                        throw new RuntimeException(
-                                "Error uploading consent, code: " + response.code() + " message: " +
-                                        response.message());
+
+                    if (consentLocalStorage.hasConsent()) {
+                        consentLocalStorage.deleteConsent();
                     }
-                })
-                .map(response -> new DataResponse(response.isSuccessful() || response.code() == 409, response.message()));
+
+                });
+    }
+
+    @NonNull
+    public Completable giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
+                                   @NonNull LocalDate birthdate,
+                                   @NonNull String base64Image, @NonNull String imageMimeType,
+                                   @Nullable SharingScope sharingScope) {
+        return consentManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
+                imageMimeType, sharingScope);
     }
 
     @Override
@@ -480,7 +589,15 @@ public abstract class BridgeDataProvider extends BridgeDataProvider2 {
 
     @Override
     public Observable<DataResponse> forgotPassword(Context context, String email) {
-        return super.forgotPassword(email).andThen(SUCCESS_DATA_RESPONSE);
+        return forgotPassword(email).andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @NonNull
+    public Completable forgotPassword(@NonNull String email) {
+        checkNotNull(email);
+
+        return authenticationManager
+                .requestPasswordResetForEmail(email);
     }
 
     @Override

@@ -5,6 +5,9 @@ import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 
@@ -52,26 +55,28 @@ public class BridgeManagerProvider {
         checkNotNull(applicationContext);
         checkState(instance == null, "BridgeManagerProvider has already been initialized");
 
-        instance = new BridgeManagerProvider(new BridgeConfig(applicationContext.getApplicationContext()));
+        instance = new BridgeManagerProvider(applicationContext);
     }
 
-    private BridgeManagerProvider(@NonNull BridgeConfig bridgeConfig) {
-        checkNotNull(bridgeConfig);
+    private BridgeManagerProvider(@NonNull Context applicationContext) {
+        this.applicationContext = applicationContext;
 
-        this.bridgeConfig = bridgeConfig;
-        this.authenticationManager = new AuthenticationManager(bridgeConfig);
-        this.studyParticipantManager = new StudyParticipantManager(authenticationManager);
-        this.consentManager = new ConsentManager(authenticationManager);
+        this.bridgeConfig = new BridgeConfig(this.applicationContext);
+        this.authenticationManager = Suppliers.memoize(this::createAuthenticationManager);
+        this.studyParticipantManager = Suppliers.memoize(this::createStudyParticipantManager);
+        this.consentManager = Suppliers.memoize(this::createConsentManager);
     }
 
+    @NonNull
+    private final Context applicationContext;
     @NonNull
     private final BridgeConfig bridgeConfig;
     @NonNull
-    private final AuthenticationManager authenticationManager;
+    private final Supplier<AuthenticationManager> authenticationManager;
     @NonNull
-    private final StudyParticipantManager studyParticipantManager;
+    private final Supplier<StudyParticipantManager> studyParticipantManager;
     @NonNull
-    private final ConsentManager consentManager;
+    private final Supplier<ConsentManager> consentManager;
 
     @NonNull
     public BridgeConfig getBridgeConfig() {
@@ -80,16 +85,28 @@ public class BridgeManagerProvider {
 
     @NonNull
     public AuthenticationManager getAuthenticationManager() {
-        return authenticationManager;
+        return authenticationManager.get();
+    }
+
+    private AuthenticationManager createAuthenticationManager() {
+        return new AuthenticationManager(getBridgeConfig());
     }
 
     @NonNull
     public StudyParticipantManager getStudyParticipantManager() {
-        return studyParticipantManager;
+        return studyParticipantManager.get();
+    }
+
+    private StudyParticipantManager createStudyParticipantManager() {
+        return new StudyParticipantManager(getAuthenticationManager());
     }
 
     @NonNull
     public ConsentManager getConsentManager() {
-        return consentManager;
+        return consentManager.get();
+    }
+
+    private ConsentManager createConsentManager() {
+        return new ConsentManager(getAuthenticationManager());
     }
 }
