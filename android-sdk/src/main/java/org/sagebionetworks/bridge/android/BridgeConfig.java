@@ -24,8 +24,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <p>
  * To provide your own settings, either override this class or modify these files:
  * <ul>
- *     <li>./assets/study_public_key.pem</li>
- *     <li>./res/values/bridge-config.xml</li>
+ * <li>./assets/study_public_key.pem</li>
+ * <li>./res/values/bridge-config.xml</li>
  * </ul>
  */
 @AnyThread
@@ -42,11 +42,6 @@ public class BridgeConfig {
         checkNotNull(context);
 
         this.applicationContext = context.getApplicationContext();
-    }
-
-    @NonNull
-    public Context getApplicationContext() {
-        return applicationContext;
     }
 
     /**
@@ -69,8 +64,8 @@ public class BridgeConfig {
         }
 
         return MessageFormat.format("{0}-{1}",
-                                    uiLocale.getLanguage(),
-                                    uiLocale.getCountry());
+                uiLocale.getLanguage(),
+                uiLocale.getCountry());
     }
 
     public int getSdkVersion() {
@@ -106,10 +101,8 @@ public class BridgeConfig {
     public X509Certificate getPublicKey() throws IOException, CertificateException {
         CertificateFactory factory = new CertificateFactory();
 
-        return (X509Certificate) factory.engineGenerateCertificate
-                (applicationContext
-                         .getAssets()
-                         .open(STUDY_PUBLIC_KEY, ACCESS_BUFFER));
+        return (X509Certificate) factory.engineGenerateCertificate(
+                applicationContext.getAssets().open(STUDY_PUBLIC_KEY, ACCESS_BUFFER));
     }
 
     /**

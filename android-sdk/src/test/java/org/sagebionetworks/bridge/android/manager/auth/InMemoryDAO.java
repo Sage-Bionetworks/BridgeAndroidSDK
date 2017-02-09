@@ -5,6 +5,9 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.sagebionetworks.bridge.android.manager.AccountDAO;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +18,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Created by jyliu on 1/20/2017.
  */
 @AnyThread
-class InMemoryDAO implements AuthenticationManager.DAO {
+class InMemoryDAO implements AccountDAO {
     private static final Logger logger = LoggerFactory.getLogger
             (InMemoryDAO.class);
 
@@ -26,52 +29,53 @@ class InMemoryDAO implements AuthenticationManager.DAO {
     @Nullable
     private UserSessionInfo userSessionInfo;
     @Nullable
-    private String email;
+    private SignIn signIn;
     @Nullable
-    private String password;
+    private StudyParticipant studyParticipant;
 
     @Nullable
     @Override
     public UserSessionInfo getUserSessionInfo() {
-        logger.info("getUserSessionInfo called, found: " + userSessionInfo);
+        logger.debug("getUserSessionInfo called, found: " + userSessionInfo);
 
         return userSessionInfo;
     }
 
     @Override
     public void setUserSessionInfo(@Nullable UserSessionInfo userSessionInfo) {
-        logger.info("setUserSessionInfo called with: " + userSessionInfo);
+        logger.debug("setUserSessionInfo called with: " + userSessionInfo);
 
         this.userSessionInfo = userSessionInfo;
     }
 
     @Nullable
     @Override
-    public String getEmail() {
-        logger.info("getEmail called, found: " + email);
+    public SignIn getSignIn() {
+        logger.debug("getSignIn called, found: " + signIn);
 
-        return email;
+        return signIn;
     }
 
     @Override
-    public void setEmail(@Nullable String email) {
-        logger.info("setEmail called with: " + email);
-
-        this.email = email;
+    public void setSignIn(@Nullable SignIn signIn) {
+        logger.debug("setSignIn called with: " + signIn);
+        this.signIn = signIn;
     }
 
     @Nullable
     @Override
-    public String getPassword() {
-        logger.info("getPassword called, found: " + password);
+    public StudyParticipant getStudyParticipant() {
+        logger.debug("getStudyParticipant called, found: " + studyParticipant);
 
-        return password;
+        return studyParticipant;
     }
 
     @Override
-    public void setPassword(@Nullable String password) {
-        logger.info("setPassword called with: " + password);
+    public void setStudyParticipant(@Nullable StudyParticipant studyParticipant) {
+        logger.debug("setStudyParticipant called with: " + studyParticipant);
 
-        this.password = password;
+        this.studyParticipant = studyParticipant;
     }
+
+
 }

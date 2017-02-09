@@ -9,7 +9,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
+import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -60,11 +60,13 @@ public class BridgeManagerProvider {
 
     private BridgeManagerProvider(@NonNull Context applicationContext) {
         this.applicationContext = applicationContext;
+        bridgeConfig = new BridgeConfig(this.applicationContext);
+        apiClientProviderSupplier = Suppliers.memoize(this::createApiClientProvider);
+        authenticationManagerSupplier = Suppliers.memoize(this::createAuthenticationManager);
+        participantManagerSupplier = Suppliers.memoize(this::createStudyParticipantManager);
+        consentManagerSupplier = Suppliers.memoize(this::createConsentManager);
+        plaintextSharedPrefsDAOSupplier = Suppliers.memoize(this::createSharedPreferencesDAO);
 
-        this.bridgeConfig = new BridgeConfig(this.applicationContext);
-        this.authenticationManager = Suppliers.memoize(this::createAuthenticationManager);
-        this.studyParticipantManager = Suppliers.memoize(this::createStudyParticipantManager);
-        this.consentManager = Suppliers.memoize(this::createConsentManager);
     }
 
     @NonNull
@@ -72,11 +74,20 @@ public class BridgeManagerProvider {
     @NonNull
     private final BridgeConfig bridgeConfig;
     @NonNull
-    private final Supplier<AuthenticationManager> authenticationManager;
+    private final Supplier<ApiClientProvider> apiClientProviderSupplier;
     @NonNull
-    private final Supplier<StudyParticipantManager> studyParticipantManager;
+    private final Supplier<AuthenticationManager> authenticationManagerSupplier;
     @NonNull
-    private final Supplier<ConsentManager> consentManager;
+    private final Supplier<ParticipantManager> participantManagerSupplier;
+    @NonNull
+    private final Supplier<ConsentManager> consentManagerSupplier;
+    @NonNull
+    private final Supplier<PlaintextSharedPreferencesDAO> plaintextSharedPrefsDAOSupplier;
+
+    @NonNull
+    public Context getApplicationContext() {
+        return applicationContext;
+    }
 
     @NonNull
     public BridgeConfig getBridgeConfig() {
@@ -84,29 +95,57 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public AuthenticationManager getAuthenticationManager() {
-        return authenticationManager.get();
+    public ApiClientProvider getApiClientProvider() {
+        return apiClientProviderSupplier.get();
     }
 
-    private AuthenticationManager createAuthenticationManager() {
-        return new AuthenticationManager(getBridgeConfig());
+    private ApiClientProvider createApiClientProvider() {
+        BridgeConfig config = getBridgeConfig();
+
+        return new ApiClientProvider(
+                config.getBaseUrl(),
+                config.getUserAgent(),
+                config.getAcceptLanguage());
     }
 
     @NonNull
-    public StudyParticipantManager getStudyParticipantManager() {
-        return studyParticipantManager.get();
+    public AuthenticationManager getAuthenticationManager() {
+        return authenticationManagerSupplier.get();
     }
 
-    private StudyParticipantManager createStudyParticipantManager() {
-        return new StudyParticipantManager(getAuthenticationManager());
+    private AuthenticationManager createAuthenticationManager() {
+        return new AuthenticationManager(getBridgeConfig(), getApiClientProvider(), getAccountDao());
+    }
+
+    @NonNull
+    public ParticipantManager getParticipantManager() {
+        return participantManagerSupplier.get();
+    }
+
+    private ParticipantManager createStudyParticipantManager() {
+        return new ParticipantManager(getAuthenticationManager(), getAccountDao());
     }
 
     @NonNull
     public ConsentManager getConsentManager() {
-        return consentManager.get();
+        return consentManagerSupplier.get();
     }
 
     private ConsentManager createConsentManager() {
-        return new ConsentManager(getAuthenticationManager());
+        return new ConsentManager(getAuthenticationManager(), getConsentDao());
+    }
+
+    @NonNull
+    public AccountDAO getAccountDao() {
+        return plaintextSharedPrefsDAOSupplier.get();
+    }
+
+    @NonNull
+    public ConsentDAO getConsentDao() {
+        return plaintextSharedPrefsDAOSupplier.get();
+    }
+
+    private PlaintextSharedPreferencesDAO createSharedPreferencesDAO() {
+        return new PlaintextSharedPreferencesDAO(applicationContext);
     }
 }

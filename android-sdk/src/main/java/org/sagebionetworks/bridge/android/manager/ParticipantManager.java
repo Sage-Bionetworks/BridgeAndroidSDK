@@ -2,12 +2,14 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.joda.time.LocalDate;
-import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import rx.Completable;
 import rx.Single;
@@ -18,17 +20,25 @@ import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySin
 /**
  * Any authenticated user may use this class's methods. The user does not need to have consented to
  * the study in order to manage their participant record.
+ * <p>
+ * TODO: offline syncing
  */
 @AnyThread
-public class StudyParticipantManager {
+public class ParticipantManager {
+    private static final Logger LOG = LoggerFactory.getLogger(ParticipantManager.class);
 
     @NonNull
     private final ForConsentedUsersApi api;
+    @NonNull
+    private final AccountDAO accountDAO;
 
-    public StudyParticipantManager(@NonNull AuthenticationManager authenticationManager) {
+    public ParticipantManager(@NonNull AuthenticationManager authenticationManager,
+                              @NonNull AccountDAO accountDAO) {
         checkNotNull(authenticationManager);
+        checkNotNull(accountDAO);
 
         this.api = authenticationManager.getApi();
+        this.accountDAO = accountDAO;
     }
 
 
@@ -49,15 +59,34 @@ public class StudyParticipantManager {
     public Single<UserSessionInfo> updateParticipant(@NonNull StudyParticipant studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return toBodySingle(api.updateUsersParticipantRecord(studyParticipant));
+        return toBodySingle(api.updateUsersParticipantRecord(studyParticipant)).doOnSuccess(
+                userSessionInfo -> {
+                    LOG.debug("Successfully updated participant");
+                    getLatestParticipant().toCompletable()
+                            .onErrorComplete(e -> {
+                                LOG.warn("Could not retrieve updated participant", e);
+                                return true;
+                            });
+                });
     }
 
     /**
+     * @return Get cached information about participant.
+     */
+    @Nullable
+    public StudyParticipant getParticipant() {
+        return accountDAO.getStudyParticipant();
+    }
+
+    /**
+     * Calls Bridge for participant information. Updates local cache of participant.
+     *
      * @return Current user's participant record
      */
     @NonNull
-    public Single<StudyParticipant> getParticipant() {
-        return toBodySingle(api.getUsersParticipantRecord());
+    public Single<StudyParticipant> getLatestParticipant() {
+        return toBodySingle(api.getUsersParticipantRecord())
+                .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
     }
 
     /**

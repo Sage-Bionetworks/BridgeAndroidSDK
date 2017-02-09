@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.restmm.upload;
+package org.sagebionetworks.bridge.researchstack.upload;
 
 public class FileInfo {
   private String filename;

@@ -23,7 +23,7 @@ import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+import org.sagebionetworks.bridge.researchstack.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

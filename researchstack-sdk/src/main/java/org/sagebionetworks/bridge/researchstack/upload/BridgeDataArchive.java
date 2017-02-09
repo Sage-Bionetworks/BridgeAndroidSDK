@@ -9,8 +9,6 @@ import com.google.gson.Gson;
 import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.utils.FileUtils;
 import org.researchstack.backbone.utils.LogExt;
-import org.sagebionetworks.bridge.sdk.restmm.upload.FileInfo;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
 import org.spongycastle.cms.CMSAlgorithm;
 import org.spongycastle.cms.CMSEnvelopedData;
 import org.spongycastle.cms.CMSEnvelopedDataGenerator;

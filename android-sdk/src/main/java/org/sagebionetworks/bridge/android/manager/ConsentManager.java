@@ -1,18 +1,12 @@
 package org.sagebionetworks.bridge.android.manager;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.google.common.collect.Maps;
-import com.google.gson.reflect.TypeToken;
-
 import org.joda.time.LocalDate;
-import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
-import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -21,10 +15,7 @@ import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 import rx.Completable;
 import rx.Single;
@@ -38,77 +29,23 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * functionality will be limited. Many APIs will return a
  * {@link org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException} if any required
  * consent has not been granted by the participant.
- *
- * FIXME: handle async upload of consents
+ * <p>
+ * FIXME: handle async upload of consents which are being stored locally
  */
 public class ConsentManager {
     private static final Logger LOG = LoggerFactory.getLogger(ConsentManager.class);
 
-    private static final Type CONSENT_MAP_TYPE =
-            new TypeToken<Map<String, ConsentSignature>>() {
-            }.getType();
+
 
     private final AuthenticationManager authenticationManager;
     private final ForConsentedUsersApi forConsentedUsersApi;
-    private final DAO dao;
+    private final ConsentDAO dao;
 
-    public ConsentManager(@NonNull AuthenticationManager authenticationManager) {
-        // TODO: it shouldn't be simpler to get the context
-        this(authenticationManager, new DAO(BridgeManagerProvider.getInstance().getBridgeConfig().getApplicationContext()));
-    }
 
-    public ConsentManager(@NonNull AuthenticationManager authenticationManager, DAO dao) {
+    public ConsentManager(@NonNull AuthenticationManager authenticationManager, ConsentDAO dao) {
         this.authenticationManager = authenticationManager;
         this.forConsentedUsersApi = authenticationManager.getApi();
         this.dao = dao;
-    }
-
-    public static class DAO {
-        public static final String PREFERENCES_FILE = "consents";
-
-        private static final String KEY_CONSENT_MAP = "consent-map";
-        private final SharedPreferences sharedPreferences;
-        private final ConcurrentMap<String, ConsentSignature> consents;
-
-        public DAO(Context applicationContext) {
-            this.sharedPreferences = applicationContext
-                    .getSharedPreferences(PREFERENCES_FILE, Context.MODE_PRIVATE);
-            this.consents = Maps.newConcurrentMap();
-
-            load();
-        }
-
-        Set<String> list() {
-            return consents.keySet();
-        }
-
-        ConsentSignature get(String subpopulationGuid) {
-            return consents.get(subpopulationGuid);
-        }
-
-        synchronized void put(String subpopulationGuid, ConsentSignature consentSignature) {
-            consents.put(subpopulationGuid, consentSignature);
-            persist();
-        }
-
-        synchronized void remove(String subpopulationGuid) {
-            consents.remove(subpopulationGuid);
-            persist();
-        }
-
-        private synchronized void load() {
-            String consentMapJson = sharedPreferences.getString(KEY_CONSENT_MAP, null);
-            Map<String, ConsentSignature> consents =
-                    RestUtils.GSON.fromJson(consentMapJson, CONSENT_MAP_TYPE);
-            if (consents != null) {
-                consents.putAll(consents);
-            }
-        }
-
-        private synchronized void persist() {
-            String consentMapJson = RestUtils.GSON.toJson(consents);
-            sharedPreferences.edit().putString(KEY_CONSENT_MAP, consentMapJson).apply();
-        }
     }
 
     /**
@@ -262,7 +199,13 @@ public class ConsentManager {
     public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid));
+        return RxUtils.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid))
+                .onErrorResumeNext(throwable -> {
+                    if (throwable instanceof EntityNotFoundException) {
+                        return Single.just(dao.get(subpopulationGuid));
+                    }
+                    return Single.error(throwable);
+                });
     }
 
     /**
@@ -307,13 +250,12 @@ public class ConsentManager {
      * @param <T> value type
      * @return modified observable
      */
-    private static <T> Single.Transformer<T, T> safeGetNewSessionOnSuccess() {
+    private <T> Single.Transformer<T, T> safeGetNewSessionOnSuccess() {
         return observable -> observable.doOnSuccess(
                 message -> {
                     LOG.info("Calling Bridge for latest session");
 
-                    BridgeManagerProvider.getInstance()
-                            .getAuthenticationManager()
+                    authenticationManager
                             .getLatestUserSessionInfo()
                             .toCompletable()
                             .onErrorComplete(e -> {

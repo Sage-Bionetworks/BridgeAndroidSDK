@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.sdk.restmm.upload;
+package org.sagebionetworks.bridge.researchstack.upload;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;

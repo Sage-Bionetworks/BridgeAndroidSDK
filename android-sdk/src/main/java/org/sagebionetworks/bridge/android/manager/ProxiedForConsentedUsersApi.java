@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.android.manager.auth;
+package org.sagebionetworks.bridge.android.manager;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;

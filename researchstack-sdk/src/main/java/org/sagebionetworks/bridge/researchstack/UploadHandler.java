@@ -14,7 +14,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+import org.sagebionetworks.bridge.researchstack.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
