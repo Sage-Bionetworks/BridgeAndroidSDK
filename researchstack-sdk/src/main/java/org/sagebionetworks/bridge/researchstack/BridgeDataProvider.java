@@ -48,8 +48,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
     // set in initialize
-    protected TaskHelper taskHelper;
-    protected UploadHandler uploadHandler;
+    private final TaskHelper taskHelper;
+    private final UploadHandler uploadHandler;
 
     private final StorageAccessWrapper storageAccessWrapper;
     private final ResearchStackDAO researchStackDAO;
@@ -73,29 +73,29 @@ public abstract class BridgeDataProvider extends DataProvider {
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
         this.consentManager = bridgeManagerProvider.getConsentManager();
+
     }
 
-    public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider) {
+    public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider,
+                              ResourcePathManager.Resource publicKey) {
         this.researchStackDAO = new ResearchStackDAO(bridgeManagerProvider.getApplicationContext());
         this.bridgeManagerProvider = bridgeManagerProvider;
-        this.storageAccessWrapper = new StorageAccessWrapper();
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
         this.consentManager = bridgeManagerProvider.getConsentManager();
+
+        this.storageAccessWrapper = new StorageAccessWrapper();
+        this.uploadHandler = new UploadHandler(bridgeManagerProvider.getApplicationContext(),
+                storageAccessWrapper, publicKey);
+        this.taskHelper = new TaskHelper(storageAccessWrapper, ResourceManager.getInstance(),
+                AppPrefs.getInstance(), uploadHandler);
     }
 
 
     @Override
     public Observable<DataResponse> initialize(Context context) {
         logger.debug("Called initialize");
-
-        // TODO: temporarily hard coded, this will no longer be needed with StudyUploadEncrypter
-        ResourcePathManager.Resource publicKey =
-                new ResourcePathManager.Resource(4, null, BridgeConfig.STUDY_PUBLIC_KEY);
-        this.uploadHandler = new UploadHandler(context, storageAccessWrapper, publicKey);
-        this.taskHelper = new TaskHelper(storageAccessWrapper, ResourceManager.getInstance(),
-                AppPrefs.getInstance(), uploadHandler);
 
         return SUCCESS_DATA_RESPONSE;
     }
