@@ -246,7 +246,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void uploadConsent(Context context, TaskResult consentResult) {
         giveConsentSync(createConsentSignature(consentResult));
-        uploadConsent(BuildConfig.STUDY_SUBPOPULATION_GUID,
+        uploadConsent(bridgeConfig.getStudyId(),
                 createConsentSignature(consentResult));
     }
 
@@ -261,7 +261,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public Observable<DataResponse> uploadConsent(Context context, ConsentSignatureBody signature) {
-        return uploadConsent(BuildConfig.STUDY_SUBPOPULATION_GUID, createConsentSignature(signature));
+        return uploadConsent(bridgeConfig.getStudyId(), createConsentSignature(signature));
     }
 
     private Observable<DataResponse> uploadConsent(String subpopulationGuid, ConsentSignature consent) {

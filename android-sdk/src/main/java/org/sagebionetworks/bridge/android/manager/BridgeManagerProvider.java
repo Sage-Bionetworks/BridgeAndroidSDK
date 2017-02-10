@@ -5,13 +5,10 @@ import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
-import org.sagebionetworks.bridge.android.manager.dao.SharedPreferencesJsonDAO;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -65,7 +62,7 @@ public class BridgeManagerProvider {
         this.applicationContext = applicationContext;
         bridgeConfig = new BridgeConfig(this.applicationContext);
 
-        apiClientProvider =  new ApiClientProvider(
+        apiClientProvider = new ApiClientProvider(
                 bridgeConfig.getBaseUrl(),
                 bridgeConfig.getUserAgent(),
                 bridgeConfig.getAcceptLanguage());
@@ -74,8 +71,16 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
 
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
-        participantManager = new ParticipantManager(authenticationManager,accountDAO);
+        participantManager = new ParticipantManager(authenticationManager, accountDAO);
         consentManager = new ConsentManager(authenticationManager, consentDAO);
+
+        try {
+            studyUploadEncryptor = new StudyUploadEncryptor(bridgeConfig.getPublicKey());
+        } catch (Exception e) {
+            throw new RuntimeException("Could create StudyUploadEncryptor", e);
+        }
+
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor);
     }
 
     @NonNull
@@ -94,6 +99,10 @@ public class BridgeManagerProvider {
     private final ConsentDAO consentDAO;
     @NonNull
     private final AccountDAO accountDAO;
+    @NonNull
+    private final StudyUploadEncryptor studyUploadEncryptor;
+    @NonNull
+    private final UploadManager uploadManager;
 
     @NonNull
     public Context getApplicationContext() {
@@ -134,4 +143,15 @@ public class BridgeManagerProvider {
     public ConsentDAO getConsentDao() {
         return consentDAO;
     }
+
+    @NonNull
+    public UploadManager getUploadManager() {
+        return uploadManager;
+    }
+
+    @NonNull
+    public StudyUploadEncryptor getStudyUploadEncryptor() {
+        return studyUploadEncryptor;
+    }
+
 }

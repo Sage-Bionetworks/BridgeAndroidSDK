@@ -21,9 +21,6 @@ android {
     versionCode 1
     versionName "1.0"
     multiDexEnabled true
-    // hack until subpopulation Guid is properly handled and not hardcoded
-    // add a field studyId="your-study-name" to your app's gradle.properties
-    buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', studyId // default subpopulation
   }
   buildTypes {
     release {
