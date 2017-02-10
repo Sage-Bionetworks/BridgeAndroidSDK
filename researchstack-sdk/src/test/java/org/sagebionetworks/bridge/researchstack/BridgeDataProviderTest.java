@@ -5,7 +5,6 @@ import android.content.Context;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.researchstack.backbone.DataProvider;
@@ -17,12 +16,12 @@ import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.Task;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.android.manager.ParticipantManager;
+import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
@@ -42,6 +41,7 @@ import rx.Single;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -62,8 +62,6 @@ public class BridgeDataProviderTest {
     private PinCodeConfig pinCodeConfig;
     private FileAccess fileAccess;
     private BridgeEncryptedDatabase appDatabase;
-    private ConsentLocalStorage consentLocalStorage;
-    private UserLocalStorage userLocalStorage;
     @Mock
     private TaskHelper taskHelper;
     @Mock
@@ -79,6 +77,8 @@ public class BridgeDataProviderTest {
     protected AccountDAO accountDAO;
     @Mock
     protected ConsentDAO consentDAO;
+    @Mock
+    protected ResearchStackDAO researchStackDAO;
     @Mock
     protected AuthenticationManager authenticationManager;
     @Mock
@@ -109,37 +109,25 @@ public class BridgeDataProviderTest {
         when(storageAccess.getAppDatabase()).thenReturn(appDatabase);
         when(storageAccess.getFileAccess()).thenReturn(fileAccess);
 
-        consentLocalStorage = mock(ConsentLocalStorage.class);
-        userLocalStorage = mock(UserLocalStorage.class);
-
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
-        when(apiClientProvider.getClient(Matchers.same(ForConsentedUsersApi.class), any(SignIn.class))).thenReturn(forConsentedUsersApi);
+        when(apiClientProvider
+                .getClient(same(ForConsentedUsersApi.class), any(SignIn.class)))
+                .thenReturn(forConsentedUsersApi);
 
         dataProvider =
-                new BridgeDataProvider(userLocalStorage, consentLocalStorage,
-                        taskHelper, uploadHandler) {
+                new BridgeDataProvider(researchStackDAO, storageAccess, taskHelper, uploadHandler) {
 
                     @Override
                     public void processInitialTaskResult(Context context, TaskResult taskResult) {
-
+                        throw new UnsupportedOperationException();
                     }
                 };
     }
 
-
     @Test
+    @Ignore
     public void testInitialize() {
-
         dataProvider.initialize(context).test().assertCompleted();
-
-
-    }
-
-    private <T> Call<T> setupCall(T body) throws IOException {
-        Call<T> call = mock(Call.class);
-        when(call.clone()).thenReturn(call);
-        when(call.execute()).thenReturn(Response.success(body));
-        return call;
     }
 
     @Test
@@ -199,12 +187,12 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testIsSignedUp() {
-        when(userLocalStorage.isSignedUp()).thenReturn(true);
+        when(authenticationManager.getEmail()).thenReturn("Email");
 
         boolean isSignedUp = dataProvider.isSignedUp(context);
-
         assertTrue(isSignedUp);
-        verify(userLocalStorage).isSignedUp();
+
+        verify(authenticationManager).getEmail();
     }
 
 
@@ -218,12 +206,14 @@ public class BridgeDataProviderTest {
         verify(consentManager).isConsented();
     }
 
-    @Ignore
     @Test
     public void testWithdrawConsent() {
         String reasonString = "reason";
-        Observable<DataResponse> dataResponseObservable =
-                dataProvider.withdrawConsent(context, reasonString);
+        when(consentManager.withdrawAll(reasonString)).thenReturn(Completable.complete());
+
+        dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
+
+        verify(consentManager).withdrawAll(reasonString);
     }
 
     @Ignore
@@ -244,12 +234,12 @@ public class BridgeDataProviderTest {
     @Test
     public void testGetUser() {
         User user = mock(User.class);
-        when(userLocalStorage.loadUser()).thenReturn(user);
+        when(researchStackDAO.getUser()).thenReturn(user);
 
         User userResult = dataProvider.getUser(context);
 
         assertEquals(user, userResult);
-        verify(userLocalStorage).loadUser();
+        verify(researchStackDAO).getUser();
     }
 
     @Test
@@ -269,32 +259,13 @@ public class BridgeDataProviderTest {
     @Test
     public void testGetUserEmail() {
         String email = "email@example.com";
-        User user = mock(User.class);
-        when(user.getEmail()).thenReturn(email);
-        when(userLocalStorage.loadUser()).thenReturn(user);
+        when(authenticationManager.getEmail()).thenReturn(email);
 
         String emailResult = dataProvider.getUserEmail(context);
 
         assertEquals(email, emailResult);
 
-        verify(user).getEmail();
-        verify(userLocalStorage).loadUser();
-    }
-
-
-    @Test
-    public void testGetUserEmail_Null() {
-        String email = null;
-        User user = mock(User.class);
-        when(user.getEmail()).thenReturn(email);
-        when(userLocalStorage.loadUser()).thenReturn(user);
-
-        String emailResult = dataProvider.getUserEmail(context);
-
-        assertEquals(email, emailResult);
-
-        verify(user).getEmail();
-        verify(userLocalStorage).loadUser();
+        verify(authenticationManager).getEmail();
     }
 
     @Ignore

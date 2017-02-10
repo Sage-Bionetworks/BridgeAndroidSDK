@@ -4,11 +4,11 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.google.gson.Gson;
-
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
@@ -17,14 +17,14 @@ import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
+import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.ConsentManager;
-import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -47,14 +47,12 @@ import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RES
 public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
-    protected final Gson gson = RestUtils.GSON;
-
     // set in initialize
-    protected UserLocalStorage userLocalStorage;
-    protected ConsentLocalStorage consentLocalStorage;
     protected TaskHelper taskHelper;
     protected UploadHandler uploadHandler;
 
+    private final StorageAccessWrapper storageAccessWrapper;
+    private final ResearchStackDAO researchStackDAO;
     private final BridgeManagerProvider bridgeManagerProvider;
     private final BridgeConfig bridgeConfig;
     private final AuthenticationManager authenticationManager;
@@ -62,12 +60,10 @@ public abstract class BridgeDataProvider extends DataProvider {
 
 
     //used by tests to mock service
-    BridgeDataProvider(UserLocalStorage userLocalStorage,
-                       ConsentLocalStorage consentLocalStorage, TaskHelper taskHelper,
-                       UploadHandler uploadHandler) {
-
-        this.userLocalStorage = userLocalStorage;
-        this.consentLocalStorage = consentLocalStorage;
+    BridgeDataProvider(ResearchStackDAO researchStackDAO, StorageAccessWrapper storageAccessWrapper,
+                       TaskHelper taskHelper, UploadHandler uploadHandler) {
+        this.researchStackDAO = researchStackDAO;
+        this.storageAccessWrapper = storageAccessWrapper;
         this.taskHelper = taskHelper;
         this.uploadHandler = uploadHandler;
 
@@ -77,17 +73,16 @@ public abstract class BridgeDataProvider extends DataProvider {
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
         this.consentManager = bridgeManagerProvider.getConsentManager();
-
     }
 
     public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider) {
+        this.researchStackDAO = new ResearchStackDAO(bridgeManagerProvider.getApplicationContext());
         this.bridgeManagerProvider = bridgeManagerProvider;
-
+        this.storageAccessWrapper = new StorageAccessWrapper();
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
         this.consentManager = bridgeManagerProvider.getConsentManager();
-
     }
 
 
@@ -95,7 +90,12 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> initialize(Context context) {
         logger.debug("Called initialize");
 
-        // TODO: data provider
+        // temporary hard coded, this will no longer be needed with StudyUploadEncrypter
+        ResourcePathManager.Resource publicKey =
+                new ResourcePathManager.Resource(4, null, BridgeConfig.STUDY_PUBLIC_KEY);
+        this.uploadHandler = new UploadHandler(context, storageAccessWrapper, publicKey);
+        this.taskHelper = new TaskHelper(storageAccessWrapper, ResourceManager.getInstance(),
+                AppPrefs.getInstance(), uploadHandler);
 
         return SUCCESS_DATA_RESPONSE;
     }
@@ -144,6 +144,15 @@ public abstract class BridgeDataProvider extends DataProvider {
                 imageMimeType, sharingScope);
     }
 
+    public Completable giveConsent(String subpopulationGuid, ConsentSignature consentSignature) {
+        return giveConsent(subpopulationGuid,
+                consentSignature.getName(),
+                consentSignature.getBirthdate(),
+                consentSignature.getImageData(),
+                consentSignature.getImageMimeType(),
+                consentSignature.getScope());
+    }
+
     @NonNull
     public Single<ConsentSignature> getConsent(@NonNull String subpopulation) {
         checkNotNull(subpopulation);
@@ -156,46 +165,25 @@ public abstract class BridgeDataProvider extends DataProvider {
     // isConsented
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
-        if (consentLocalStorage == null) {
-            return null;
-        }
-        if (!consentLocalStorage.hasConsent()) {
-            return null;
-        }
-        ConsentSignature bridgeSignature = consentLocalStorage.loadConsent();
-        ConsentSignatureBody backboneSignature = new ConsentSignatureBody(
-                getStudyId(), bridgeSignature.getName(), bridgeSignature.getBirthdate().toDate(),
-                bridgeSignature.getImageData(), bridgeSignature.getImageMimeType(), bridgeSignature.getScope().toString());
-        return backboneSignature;
+
+        return createConsentSignatureBody(consentManager.getConsentSync(bridgeConfig.getStudyId()));
     }
 
     @Override
     public void saveConsent(Context context, TaskResult consentResult) {
-        saveLocalConsent(context, createConsentSignatureBody(consentResult));
+        giveConsent(bridgeConfig.getStudyId(), createConsentSignature(consentResult));
     }
 
     @Override
     public void saveLocalConsent(Context context, ConsentSignatureBody signatureBody) {
-        ConsentSignature signature = createConsentSignature(signatureBody);
-        saveLocalConsent(context, signature);
+        giveConsent(bridgeConfig.getStudyId(), createConsentSignature(signatureBody));
     }
 
-    protected void saveLocalConsent(Context context, ConsentSignature signature) {
-        consentLocalStorage.saveConsent(signature);
-
-        User user = userLocalStorage.loadUser();
-        if (user == null) {
-            user = new User();
-        }
-
-        user.setName(signature.getName());
-        LocalDate birthdate = signature.getBirthdate();
-        user.setBirthDate(birthdate.toDate());
-
-        userLocalStorage.saveUser(user);
-    }
-
+    @Nullable
     protected ConsentSignature createConsentSignature(ConsentSignatureBody consentSignatureBody) {
+        if (consentSignatureBody == null) {
+            return null;
+        }
         ConsentSignature signature = new ConsentSignature();
         signature.setName(consentSignatureBody.name);
         signature.setBirthdate(LocalDate.fromDateFields(consentSignatureBody.birthdate));
@@ -211,8 +199,23 @@ public abstract class BridgeDataProvider extends DataProvider {
         return signature;
     }
 
+    @Nullable
+    protected ConsentSignatureBody createConsentSignatureBody(ConsentSignature consentSignature) {
+        if (consentSignature == null) {
+            return null;
+        }
+
+        return new ConsentSignatureBody(
+                getStudyId(),
+                consentSignature.getName(),
+                consentSignature.getBirthdate().toDate(),
+                consentSignature.getImageData(),
+                consentSignature.getImageMimeType(),
+                consentSignature.getScope().toString());
+    }
+
     @NonNull
-    protected ConsentSignature createConsentSignatureBody(TaskResult consentResult) {
+    protected ConsentSignature createConsentSignature(TaskResult consentResult) {
         StepResult<StepResult> formResult =
                 (StepResult<StepResult>) consentResult.getStepResult(ConsentTask.ID_FORM);
 
@@ -232,13 +235,28 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         // Save Consent Information
         // User is not signed in yet, so we need to save consent info to disk for later upload
-        return new ConsentSignature().name(fullName).birthdate(new LocalDate(birthdateInMillis)).imageData(base64Image).imageMimeType("image/png").scope(SharingScope.valueOf(sharingScope));
+        return new ConsentSignature()
+                .name(fullName)
+                .birthdate(new LocalDate(birthdateInMillis))
+                .imageData(base64Image)
+                .imageMimeType("image/png")
+                .scope(SharingScope.valueOf(sharingScope));
     }
 
     @Override
     public void uploadConsent(Context context, TaskResult consentResult) {
+        giveConsentSync(createConsentSignature(consentResult));
         uploadConsent(BuildConfig.STUDY_SUBPOPULATION_GUID,
-                createConsentSignatureBody(consentResult));
+                createConsentSignature(consentResult));
+    }
+
+    private void giveConsentSync(ConsentSignature consentSignature) {
+        consentManager.giveConsentSync(bridgeConfig.getStudyId(),
+                consentSignature.getName(),
+                consentSignature.getBirthdate(),
+                consentSignature.getImageData(),
+                consentSignature.getImageMimeType(),
+                consentSignature.getScope());
     }
 
     @Override
@@ -254,19 +272,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                 consent.getImageData(),
                 consent.getImageMimeType(),
                 consent.getScope()).andThen(SUCCESS_DATA_RESPONSE)
-                .compose(ObservableUtils.applyDefault())
-                .doOnNext(response -> {
-
-                    UserSessionInfo userSessionInfo = userLocalStorage.loadUserSession();
-                    userSessionInfo.setConsented(true);
-                    userLocalStorage.saveUserSession(userSessionInfo, userLocalStorage.getSignIn());
-
-
-                    if (consentLocalStorage.hasConsent()) {
-                        consentLocalStorage.deleteConsent();
-                    }
-
-                });
+                .compose(ObservableUtils.applyDefault());
     }
 
     //endregion
@@ -285,12 +291,6 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> signUp(SignUp signUp) {
         // saving email to user object should exist elsewhere.
         // Save email to user object.
-        User user = userLocalStorage.loadUser();
-        if (user == null) {
-            user = new User();
-        }
-        user.setEmail(signUp.getEmail());
-        userLocalStorage.saveUser(user);
 
         return signUp(signUp.getEmail(), signUp.getPassword());
     }
@@ -307,10 +307,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public boolean isSignedUp(@Nullable Context context) {
-        if (userLocalStorage == null) {
-            return false;
-        }
-        return userLocalStorage.isSignedUp();
+
+        return authenticationManager.getEmail() != null;
     }
 
     public boolean isSignedUp() {
@@ -327,14 +325,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     /**
+     * @param email    the participant's email
+     * @param password participant's password
+     * @return completion
      * @see DataProvider#signIn(Context, String, String)
      * <p>
      * May fail with ConsentRequiredException, to indicate
      * consent is required.
      * NotAuthenticatedException could indicate the user has not verified their email
-     * @param email the participant's email
-     * @param password participant's password
-     * @return completion
      */
     @NonNull
     public Completable signIn(@NonNull String email, @NonNull String password) {
@@ -363,12 +361,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> signOut(Context context) {
         logger.debug("Called signOut");
 
-        return signOut().andThen(SUCCESS_DATA_RESPONSE)
-                .doOnNext(response -> {
-                    userLocalStorage.clearUserSession();
-                    userLocalStorage.clearSignIn();
-                    // we aren't clearing the user, so we still know their email and that they've signed up
-                });
+        return signOut().andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @NonNull
@@ -430,24 +423,18 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     @Nullable
     public User getUser(@Nullable Context context) {
-        logger.debug("Called getUser");
-        if (userLocalStorage == null) {
-            return null;
-        }
-        return userLocalStorage.loadUser();
+        return researchStackDAO.getUser();
     }
 
     @Override
     @Nullable
     public void setUser(Context context, User user) {
-        logger.debug("Called getUser");
-        userLocalStorage.saveUser(user);
+        researchStackDAO.setUser(user);
     }
 
     @Override
     public String getUserEmail(Context context) {
-        User user = userLocalStorage.loadUser();
-        return user == null ? null : user.getEmail();
+        return authenticationManager.getEmail();
     }
 
     //endregion
@@ -479,10 +466,6 @@ public abstract class BridgeDataProvider extends DataProvider {
         participant.setSharingScope(SharingScope.valueOf(scope));
 
         setUserSharingScope(scope)
-                .doOnSuccess(userSessionInfo -> userLocalStorage
-                        .saveUserSession(userSessionInfo, userLocalStorage.getSignIn()))
-                .doOnError(throwable -> ApiUtils
-                        .handleError(context, ((BridgeSDKException) throwable).getStatusCode()))
                 .subscribe();
     }
 

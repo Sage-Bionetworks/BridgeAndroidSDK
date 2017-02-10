@@ -7,9 +7,12 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
@@ -30,6 +33,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 public class BridgeConfig {
+    private static final Logger logger = LoggerFactory.getLogger(BridgeConfig.class);
+
     /**
      * Filename of the study's public key. File is found in the assets folder can be overriden by
      * your app
@@ -99,10 +104,15 @@ public class BridgeConfig {
 
     @NonNull
     public X509Certificate getPublicKey() throws IOException, CertificateException {
-        CertificateFactory factory = new CertificateFactory();
+        InputStream publicKeyFile;
+        try {
+            publicKeyFile = applicationContext.getAssets().open(STUDY_PUBLIC_KEY, ACCESS_BUFFER);
+        } catch(IOException e) {
+            logger.error("Could not load public key from /assets/study_public_key.pem", e);
+            throw e;
+        }
 
-        return (X509Certificate) factory.engineGenerateCertificate(
-                applicationContext.getAssets().open(STUDY_PUBLIC_KEY, ACCESS_BUFFER));
+        return (X509Certificate) new CertificateFactory().engineGenerateCertificate(publicKeyFile);
     }
 
     /**

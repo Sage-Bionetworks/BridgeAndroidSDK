@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -25,6 +26,7 @@ import retrofit2.Response;
 import rx.Completable;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.when;
  * Created by jyliu on 2/8/2017.
  */
 public class AuthenticationManagerTest {
+
     private static final String STUDY_ID = "study-id";
     private static final String EMAIL = "email@test.com";
     private static final String PASSWORD = "P4ssw0rd";
@@ -94,6 +97,21 @@ public class AuthenticationManagerTest {
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
         verify(accountDAO).setStudyParticipant(null);
+    }
+
+    @Test
+    public void getRawApi_NullSignIn() throws Exception {
+        ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
+
+        when(accountDAO.getSignIn()).thenReturn(null);
+        when(apiClientProvider.getClient(ForConsentedUsersApi.class))
+                .thenReturn(forConsentedUsersApi);
+
+        ForConsentedUsersApi result = authenticationManager.getRawApi();
+        assertNotNull(forConsentedUsersApi);
+
+        verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
+        verify(accountDAO).getSignIn();
     }
 
     private boolean matches(SignUp signUp, SignIn signIn) {

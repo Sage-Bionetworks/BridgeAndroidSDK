@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
@@ -226,7 +227,12 @@ public class AuthenticationManager {
         return proxiedForConsentedUsersApi;
     }
 
+    @NonNull
     ForConsentedUsersApi getRawApi() {
+        SignIn signIn = accountDAO.getSignIn();
+        if (signIn== null) {
+            return apiClientProvider.getClient(ForConsentedUsersApi.class);
+        }
         return apiClientProvider.getClient(ForConsentedUsersApi.class, accountDAO.getSignIn());
     }
 

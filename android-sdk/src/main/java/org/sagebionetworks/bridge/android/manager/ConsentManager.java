@@ -4,6 +4,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.LocalDate;
+import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -36,16 +37,15 @@ public class ConsentManager {
     private static final Logger LOG = LoggerFactory.getLogger(ConsentManager.class);
 
 
-
     private final AuthenticationManager authenticationManager;
     private final ForConsentedUsersApi forConsentedUsersApi;
-    private final ConsentDAO dao;
+    private final ConsentDAO consentDAO;
 
 
-    public ConsentManager(@NonNull AuthenticationManager authenticationManager, ConsentDAO dao) {
+    public ConsentManager(@NonNull AuthenticationManager authenticationManager, ConsentDAO consentDAO) {
         this.authenticationManager = authenticationManager;
         this.forConsentedUsersApi = authenticationManager.getApi();
-        this.dao = dao;
+        this.consentDAO = consentDAO;
     }
 
     /**
@@ -89,7 +89,7 @@ public class ConsentManager {
         if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
             return true;
         }
-        return dao.get(subpopulationGuid) != null;
+        return consentDAO.get(subpopulationGuid) != null;
     }
 
     /**
@@ -131,24 +131,62 @@ public class ConsentManager {
     }
 
     /**
-     * @param subpopulationGuid guid for the subpopulation of the consent
-     * @param name              participant's full name
-     * @param birthdate         participant's date of birth
+     * @param subpopulationGuid guid for the subpopulation of the consent (required)
+     * @param name              participant's full name (required)
+     * @param birthdate         participant's date of birth (required)
      * @param base64Image       participant's signature, encoded
      * @param imageMimeType     mime type of participant's signature
-     * @param sharingScope      participant's sharing scope for the study
+     * @param sharingScope      participant's sharing scope for the study (required)
      * @return completable
      */
     @NonNull
     public Completable giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
                                    @NonNull LocalDate birthdate,
-                                   @NonNull String base64Image, @NonNull String imageMimeType,
-                                   @Nullable SharingScope sharingScope) {
+                                   @Nullable String base64Image, @Nullable String imageMimeType,
+                                   @NonNull SharingScope sharingScope) {
+        ConsentSignature consent = giveConsentSync(
+                subpopulationGuid,
+                name,
+                birthdate,
+                base64Image,
+                imageMimeType,
+                sharingScope);
+
+        return Single.just(consent)
+                .flatMapCompletable(consentSignature -> RxUtils.toBodySingle(
+                        forConsentedUsersApi
+                                .createConsentSignature(
+                                        subpopulationGuid,
+                                        consentSignature))
+                        .doOnError(e ->
+                                LOG.info("Couldn't upload consent to Bridge, " +
+                                        "subpopulationGuid: " + subpopulationGuid, e))
+                        .compose(safeGetNewSessionOnSuccess())
+                        .toCompletable()
+                );
+    }
+
+    /**
+     * Gives consent synchronously without making network call on current thread. Upload to Bridge
+     * will happen in the background, eventually.
+     *
+     * @param subpopulationGuid guid for the subpopulation of the consent (required)
+     * @param name              participant's full name (required)
+     * @param birthdate         participant's date of birth (required)
+     * @param base64Image       participant's signature, encoded
+     * @param imageMimeType     mime type of participant's signature
+     * @param sharingScope      participant's sharing scope for the study (required)
+     * @return the resulting consentSignature
+     */
+    public ConsentSignature giveConsentSync(@NonNull String subpopulationGuid, @NonNull String name,
+                                            @NonNull LocalDate birthdate,
+                                            @Nullable String base64Image,
+                                            @Nullable String imageMimeType,
+                                            @NonNull SharingScope sharingScope) {
         checkNotNull(subpopulationGuid);
         checkNotNull(name);
         checkNotNull(birthdate);
-        checkNotNull(base64Image);
-        checkNotNull(imageMimeType);
+        checkNotNull(sharingScope);
 
         final ConsentSignature consentSignature = new ConsentSignature()
                 .name(name)
@@ -157,38 +195,19 @@ public class ConsentManager {
                 .imageMimeType(imageMimeType)
                 .scope(sharingScope);
 
-        return storeConsentSignatureLocally(subpopulationGuid, consentSignature)
-                .andThen(
-                        RxUtils.toBodySingle(forConsentedUsersApi.
-                                createConsentSignature(subpopulationGuid, consentSignature))
-                                .compose(safeGetNewSessionOnSuccess())
-                                .toCompletable()
-                                .onErrorComplete(e -> {
-                                    LOG.info("Couldn't upload consent to Bridge, " +
-                                            "subpopulationGuid: " + subpopulationGuid, e);
-                                    return true;
-                                }));
+        storeConsentSignatureLocally(subpopulationGuid, consentSignature);
+
+        return consentSignature;
     }
 
-    private Completable storeConsentSignatureLocally(@NonNull String subpopulationGuid,
-                                                     @NonNull ConsentSignature consentSignature) {
+    private void storeConsentSignatureLocally(@NonNull String subpopulationGuid,
+                                              @NonNull ConsentSignature consentSignature) {
+        checkNotNull(subpopulationGuid);
+        checkNotNull(consentSignature);
+
         LOG.debug("Saving consent locally, subpopulationGuid: " + subpopulationGuid);
 
-        return Completable.fromAction(() -> dao.put(subpopulationGuid, consentSignature));
-    }
-
-    /**
-     * Sends a copy of the participant's signed consent to their email address.
-     *
-     * @param subpopulationGuid guid for the subpopulation of the consent
-     * @return completable
-     */
-    @NonNull
-    public Completable emailConsent(@NonNull String subpopulationGuid) {
-        checkNotNull(subpopulationGuid);
-
-        return RxUtils.toBodySingle(forConsentedUsersApi.emailConsentAgreement(subpopulationGuid))
-                .toCompletable();
+        consentDAO.put(subpopulationGuid, consentSignature);
     }
 
     /**
@@ -202,10 +221,21 @@ public class ConsentManager {
         return RxUtils.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
-                        return Single.just(dao.get(subpopulationGuid));
+                        return Single.just(consentDAO.get(subpopulationGuid));
                     }
                     return Single.error(throwable);
                 });
+    }
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return participant's previously given consent from local cache
+     */
+    @Nullable
+    public ConsentSignature getConsentSync(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        return consentDAO.get(subpopulationGuid);
     }
 
     /**
