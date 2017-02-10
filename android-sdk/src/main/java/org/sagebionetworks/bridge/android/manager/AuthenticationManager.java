@@ -268,13 +268,13 @@ public class AuthenticationManager {
     }
 
     /**
-     * Call Bridge to get session. Cached session is updated as a side-effect.
+     * Call Bridge to getConsent session. Cached session is updated as a side-effect.
      *
      * @return Bridge session
      */
     @NonNull
     public Single<UserSessionInfo> getLatestUserSessionInfo() {
-        // no-op call to the participant update API, we'll get a recomputed session
+        // no-op call to the participant update API, we'll getConsent a recomputed session
         // session interceptor will update itself with the session in the response
         return RxUtils.toBodySingle(
                 getApi().updateUsersParticipantRecord(new StudyParticipant()));

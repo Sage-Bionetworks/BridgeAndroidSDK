@@ -50,7 +50,7 @@ public class UploadHandler {
     uploadBridgeData(forConsentedUsersApi, info, Arrays.asList(dataFiles));
   }
 
-  // figure out what directory to save files in and where to put this method
+  // figure out what directory to save files in and where to putConsent this method
   public static File getFilesDir(Context context) {
     return new File(context.getFilesDir() + "/upload_request/");
   }

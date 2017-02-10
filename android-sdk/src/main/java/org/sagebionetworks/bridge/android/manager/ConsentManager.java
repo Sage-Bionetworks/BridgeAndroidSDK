@@ -89,7 +89,7 @@ public class ConsentManager {
         if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
             return true;
         }
-        return consentDAO.get(subpopulationGuid) != null;
+        return consentDAO.getConsent(subpopulationGuid) != null;
     }
 
     /**
@@ -207,7 +207,7 @@ public class ConsentManager {
 
         LOG.debug("Saving consent locally, subpopulationGuid: " + subpopulationGuid);
 
-        consentDAO.put(subpopulationGuid, consentSignature);
+        consentDAO.putConsent(subpopulationGuid, consentSignature);
     }
 
     /**
@@ -221,7 +221,7 @@ public class ConsentManager {
         return RxUtils.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
-                        return Single.just(consentDAO.get(subpopulationGuid));
+                        return Single.just(consentDAO.getConsent(subpopulationGuid));
                     }
                     return Single.error(throwable);
                 });
@@ -235,7 +235,7 @@ public class ConsentManager {
     public ConsentSignature getConsentSync(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return consentDAO.get(subpopulationGuid);
+        return consentDAO.getConsent(subpopulationGuid);
     }
 
     /**

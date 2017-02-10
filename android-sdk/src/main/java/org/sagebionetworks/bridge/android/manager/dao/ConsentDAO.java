@@ -4,14 +4,12 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.google.common.collect.Maps;
-import com.google.gson.reflect.TypeToken;
+import com.google.common.collect.Sets;
 
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -22,74 +20,69 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ConsentDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(ConsentDAO.class);
 
-    private static final String PREFRENCES_FILE = "consents";
-    private static final String KEY_CONSENT_MAP = "consent-map";
+    private static final String PREFERENCES_FILE = "consents";
 
-    private static final TypeToken<Map<String, ConsentSignature>> CONSENT_MAP_TYPE =
-            new TypeToken<Map<String, ConsentSignature>>() {
-            };
-
+    private static final String CONSENT_KEY_PREFIX = "subpopulation-";
 
     public ConsentDAO(Context applicationContext) {
-        super(applicationContext, PREFRENCES_FILE);
+        super(applicationContext, PREFERENCES_FILE);
     }
 
+    /**
+     * This returns the subpouplationGuid of consent signatures stored locally. It is not to be used
+     * as a means to determine the participant's consent status. For the participant's consent
+     * state, use ConsentManager (preferred) or UserSessionInfo
+     *
+     * @return subpopulationGuids
+     */
     @NonNull
-    public Set<String> list() {
-        Set<String> subpopulations = load().keySet();
+    public Set<String> listConsents() {
+        Set<String> subpopulations = Sets.newHashSet();
 
-        logger.debug("list called, found subpopulations: " + subpopulations);
+        for (String key : sharedPreferences.getAll().keySet()) {
+            if (key.startsWith(CONSENT_KEY_PREFIX)) {
+                String subpopulation = key.substring(CONSENT_KEY_PREFIX.length());
+                subpopulations.add(subpopulation);
+            }
+        }
+
+        logger.debug("listConsents called, found subpopulations: " + subpopulations);
 
         return subpopulations;
     }
 
     @Nullable
-    public ConsentSignature get(@NonNull String subpopulationGuid) {
+    public ConsentSignature getConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        Map<String, ConsentSignature> consents = load();
-        ConsentSignature consentSignature = consents.get(subpopulationGuid);
+        ConsentSignature consentSignature = getValue(
+                consentKey(subpopulationGuid),
+                ConsentSignature.class);
 
-        logger.debug("get called for subpopulation " + subpopulationGuid
+        logger.debug("getConsent called for subpopulation " + subpopulationGuid
                 + ", found: " + consentSignature);
 
         return consentSignature;
     }
 
-    public synchronized void put(@NonNull String subpopulationGuid,
-                                 @NonNull ConsentSignature consentSignature) {
+    public void putConsent(@NonNull String subpopulationGuid,
+                           @NonNull ConsentSignature consentSignature) {
         checkNotNull(subpopulationGuid);
         checkNotNull(consentSignature);
 
-        logger.debug("put called for subpopulations " + subpopulationGuid
+        logger.debug("putConsent called for subpopulations " + subpopulationGuid
                 + ", with: " + consentSignature);
 
-        Map<String, ConsentSignature> consents = load();
-        consents.put(subpopulationGuid, consentSignature);
-        persist(consents);
+        setValue(consentKey(subpopulationGuid), consentSignature, ConsentSignature.class);
     }
 
-    public synchronized void remove(@NonNull String subpopulationGuid) {
+    public void remove(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        Map<String, ConsentSignature> consents = load();
-        ConsentSignature consent = consents.remove(subpopulationGuid);
-
-        logger.debug("remove called for subpopulations " + subpopulationGuid
-                + ", removed: " + consent);
-
-        persist(consents);
+        removeValue(consentKey(subpopulationGuid));
     }
 
-    private synchronized Map<String, ConsentSignature> load() {
-        Map<String, ConsentSignature> map = getValue(KEY_CONSENT_MAP, CONSENT_MAP_TYPE);
-        if (map == null) {
-            map = Maps.newHashMap();
-        }
-        return map;
-    }
-
-    private synchronized void persist(Map<String, ConsentSignature> consentMap) {
-        setValue(KEY_CONSENT_MAP, consentMap, CONSENT_MAP_TYPE);
+    private String consentKey(String subpopulationGuid) {
+        return CONSENT_KEY_PREFIX + subpopulationGuid;
     }
 }

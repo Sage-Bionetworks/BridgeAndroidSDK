@@ -28,6 +28,12 @@ public class SharedPreferencesJsonDAO {
                 .getSharedPreferences(preferencesFile, Context.MODE_PRIVATE);
     }
 
+    protected void removeValue(String key) {
+        logger.debug("removing key: " + key);
+        
+        sharedPreferences.edit().remove(key).apply();
+    }
+
     protected <T> void setValue(String key, T value, Class<? super T> klass) {
         String json = RestUtils.GSON.toJson(value, klass);
 

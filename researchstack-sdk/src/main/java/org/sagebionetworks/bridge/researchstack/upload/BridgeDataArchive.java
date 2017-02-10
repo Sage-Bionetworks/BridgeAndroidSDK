@@ -79,7 +79,7 @@ public class BridgeDataArchive {
 
       File encryptedFile = new File(baseDir, filename);
 
-      // might as well get the md5 hash while we're doing this
+      // might as well getConsent the md5 hash while we're doing this
       MessageDigest md5 = MessageDigest.getInstance("MD5");
       DigestInputStream inputStream = new DigestInputStream(encryptedInputStream, md5);
 
@@ -135,7 +135,7 @@ public class BridgeDataArchive {
     // Creating a CMS encrypted input stream that only recipients can decrypt
     CMSEnvelopedDataGenerator gen = new CMSEnvelopedDataGenerator();
 
-    // Load bridge public key certificate from R.raw and add to recipients list
+    // Load bridge public key certificate from R.raw and add to recipients listConsents
     try {
       CertificateFactory factory = new CertificateFactory();
       InputStream keyInputStream = publicKey.open(context);

@@ -36,7 +36,7 @@ import java.util.Map;
 public class TaskHelper {
   private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
-  // these are used to get task/step guids without rereading the json files and iterating through
+  // these are used to getConsent task/step guids without rereading the json files and iterating through
   private final Map<String, String> loadedTaskGuids = new HashMap<String, String>();
   private final Map<String, String> loadedTaskDates = new HashMap<String, String>();
   private final Map<String, String> loadedTaskCrons = new HashMap<String, String>();

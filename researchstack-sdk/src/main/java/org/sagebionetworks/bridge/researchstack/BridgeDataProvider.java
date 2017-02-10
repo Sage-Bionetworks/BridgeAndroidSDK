@@ -160,7 +160,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         return consentManager.getConsentSignature(subpopulation);
     }
 
-    // TODO: get rid of Consent methods below on the interface. let ConsentManager handle the
+    // TODO: getConsent rid of Consent methods below on the interface. let ConsentManager handle the
     // implementation details and expose leave giveConsent, getConsent, withdrawConsent, and
     // isConsented
     @Override
