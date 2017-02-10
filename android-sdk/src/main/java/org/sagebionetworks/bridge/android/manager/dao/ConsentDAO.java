@@ -22,6 +22,7 @@ public class ConsentDAO extends SharedPreferencesJsonDAO {
 
     private static final String PREFERENCES_FILE = "consents";
 
+    // in case we store additional consent objects, let's "namespace" the subpopulation key
     private static final String CONSENT_KEY_PREFIX = "subpopulation-";
 
     public ConsentDAO(Context applicationContext) {
@@ -76,7 +77,7 @@ public class ConsentDAO extends SharedPreferencesJsonDAO {
         setValue(consentKey(subpopulationGuid), consentSignature, ConsentSignature.class);
     }
 
-    public void remove(@NonNull String subpopulationGuid) {
+    public void removeConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
         removeValue(consentKey(subpopulationGuid));

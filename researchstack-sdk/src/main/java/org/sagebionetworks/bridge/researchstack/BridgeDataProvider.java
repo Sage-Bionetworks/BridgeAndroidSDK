@@ -90,7 +90,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> initialize(Context context) {
         logger.debug("Called initialize");
 
-        // temporary hard coded, this will no longer be needed with StudyUploadEncrypter
+        // TODO: temporarily hard coded, this will no longer be needed with StudyUploadEncrypter
         ResourcePathManager.Resource publicKey =
                 new ResourcePathManager.Resource(4, null, BridgeConfig.STUDY_PUBLIC_KEY);
         this.uploadHandler = new UploadHandler(context, storageAccessWrapper, publicKey);
@@ -283,7 +283,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> signUp(Context context, String email, String username,
                                            String password) {
         logger.debug("Called signUp");
-        // we should pass in data groups, remove roles
+        // we should pass in data groups, removeConsent roles
         SignUp signUp = new SignUp().study(getStudyId()).email(email).password(password);
         return signUp(signUp);
     }

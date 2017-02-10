@@ -30,7 +30,7 @@ public class SharedPreferencesJsonDAO {
 
     protected void removeValue(String key) {
         logger.debug("removing key: " + key);
-        
+
         sharedPreferences.edit().remove(key).apply();
     }
 

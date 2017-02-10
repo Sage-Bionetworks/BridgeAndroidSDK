@@ -61,7 +61,7 @@ public class ConsentDAOTest {
         assertTrue(consentDAO.listConsents().containsAll(
                 Arrays.asList(subpopulation1, subpopulation2)));
 
-        consentDAO.remove(subpopulation1);
+        consentDAO.removeConsent(subpopulation1);
 
         retrievedConsent = consentDAO.getConsent(subpopulation1);
         assertNull(retrievedConsent);
