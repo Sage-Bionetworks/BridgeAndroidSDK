@@ -5,6 +5,7 @@ import android.content.res.Configuration;
 
 import net.danlew.android.joda.JodaTimeAndroid;
 
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Logger;
@@ -17,5 +18,6 @@ public class BridgeApplication extends Application {
     public void onCreate() {
         super.onCreate();
         JodaTimeAndroid.init(this);
+        BridgeManagerProvider.init(this);
     }
 }

@@ -76,6 +76,7 @@ public class ApiUtils {
 
     @NonNull
     public static Observable<DataResponse> toDataResponseObservable(@NonNull Message message) {
-        return Observable.just(new DataResponse(true, message.getMessage()));
+        return Observable.just(toDataResponse(message));
     }
+
 }

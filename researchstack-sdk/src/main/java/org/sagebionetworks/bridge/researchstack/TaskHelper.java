@@ -23,7 +23,7 @@ import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+import org.sagebionetworks.bridge.researchstack.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ import java.util.Map;
 public class TaskHelper {
   private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
-  // these are used to get task/step guids without rereading the json files and iterating through
+  // these are used to getConsent task/step guids without rereading the json files and iterating through
   private final Map<String, String> loadedTaskGuids = new HashMap<String, String>();
   private final Map<String, String> loadedTaskDates = new HashMap<String, String>();
   private final Map<String, String> loadedTaskCrons = new HashMap<String, String>();

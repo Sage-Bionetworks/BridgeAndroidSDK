@@ -1,20 +1,19 @@
-package org.sagebionetworks.bridge.android.manager.auth;
+package org.sagebionetworks.bridge.android.manager;
 
-import android.content.ComponentCallbacks;
-import android.content.res.Configuration;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.exceptions.NotAuthenticatedException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,54 +31,23 @@ public class AuthenticationManager {
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
     @NonNull
-    private final DAO dao;
+    private final AccountDAO accountDAO;
     @NonNull
     private final BridgeConfig config;
     private final AuthenticationApi authenticationApi;
     private ApiClientProvider apiClientProvider;
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
-    public AuthenticationManager(@NonNull BridgeConfig config) {
-        this(config, new InMemoryDAO(config.getApplicationContext()));
-    }
-
-    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull
-            DAO dao) {
+    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
+                                 @NonNull AccountDAO accountDAO) {
         checkNotNull(config);
-        checkNotNull(dao);
+        checkNotNull(accountDAO);
 
         this.config = config;
-        this.dao = dao;
-        initApiClientProvider();
+        this.accountDAO = accountDAO;
+        this.apiClientProvider = apiClientProvider;
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
-        config.getApplicationContext()
-                .registerComponentCallbacks(new AuthManagerComponentCallback());
-    }
-
-    private void initApiClientProvider() {
-        this.apiClientProvider = new ApiClientProvider(config.getBaseUrl(),
-                                                       config.getUserAgent(),
-                                                       config.getAcceptLanguage());
-    }
-
-    @AnyThread
-    public interface DAO {
-
-        @Nullable
-        UserSessionInfo getUserSessionInfo();
-
-        void setUserSessionInfo(@Nullable UserSessionInfo userSessionInfo);
-
-        @Nullable
-        String getEmail();
-
-        void setEmail(@Nullable String email);
-
-        @Nullable
-        String getPassword();
-
-        void setPassword(@Nullable String password);
     }
 
     /**
@@ -135,11 +103,22 @@ public class AuthenticationManager {
 
         return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
                 .doOnSuccess(message -> {
-                    dao.setEmail(signUp.getEmail());
-                    dao.setPassword(signUp.getPassword());
+                    accountDAO.setSignIn(
+                            new SignIn()
+                                    .study(config.getStudyId())
+                                    .email(signUp.getEmail())
+                                    .password(signUp.getPassword()));
+
+                    StudyParticipant participant = new StudyParticipant();
+                    participant.email(signUp.getEmail())
+                            .firstName(signUp.getFirstName())
+                            .lastName(signUp.getLastName())
+                            .externalId(signUp.getExternalId());
+
+                    accountDAO.setStudyParticipant(participant);
                 }).doOnError(throwable -> {
-                    dao.setEmail(null);
-                    dao.setPassword(null);
+                    accountDAO.setSignIn(null);
+                    accountDAO.setStudyParticipant(null);
                 }).toCompletable();
     }
 
@@ -163,8 +142,8 @@ public class AuthenticationManager {
 
     /**
      * On success, stores participant's email, password and session. If a
-     * NotAuthenticatedException is encountered, the participant's stored password and session
-     * are cleared.
+     * NotAuthenticatedException is encountered, this could mean the credentials are invalid, or the
+     * user has not verified their email.
      *
      * @param email    participant's email address
      * @param password participant's password
@@ -186,13 +165,11 @@ public class AuthenticationManager {
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .doOnSuccess(userSessionInfo -> {
-                    dao.setEmail(email);
-                    dao.setPassword(password);
-                    dao.setUserSessionInfo(userSessionInfo);
-                }).doOnError(throwable -> {
-                    if (throwable instanceof NotAuthenticatedException) {
-                        dao.setPassword(null);
-                    }
+                    accountDAO.setSignIn(signIn);
+                    accountDAO.setUserSessionInfo(userSessionInfo);
+                    accountDAO.setStudyParticipant(
+                            new StudyParticipant()
+                                    .email(signIn.getEmail()));
                 });
     }
 
@@ -207,9 +184,11 @@ public class AuthenticationManager {
 
         return RxUtils.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
-                    dao.setEmail(null);
-                    dao.setPassword(null);
-                    dao.setUserSessionInfo(null);
+                    accountDAO.setSignIn(null);
+                    accountDAO.setUserSessionInfo(null);
+                    accountDAO.setStudyParticipant(null);
+
+                    // TODO: clear participant data, e.g. files and shared preferences
                 }).toCompletable();
     }
 
@@ -220,18 +199,13 @@ public class AuthenticationManager {
      * @return notifies of completion or error
      */
     @NonNull
-    public Completable requestPasswordResetForEmail(@NonNull String email) {
+    public Completable requestPasswordReset(@NonNull String email) {
         checkNotNull(email);
 
-        logger.debug("requestPasswordResetForEmail called with email: " + email);
+        logger.debug("requestPasswordReset called with email: " + email);
 
         return RxUtils.toBodySingle(authenticationApi.requestResetPassword(new Email().study
                 (config.getStudyId()).email(email))).toCompletable();
-    }
-
-    @NonNull
-    public DAO getDao() {
-        return dao;
     }
 
     /**
@@ -253,14 +227,28 @@ public class AuthenticationManager {
         return proxiedForConsentedUsersApi;
     }
 
+    @NonNull
     ForConsentedUsersApi getRawApi() {
-        return apiClientProvider.getClient(ForConsentedUsersApi.class, getSignInFromStore());
+        SignIn signIn = accountDAO.getSignIn();
+        if (signIn== null) {
+            return apiClientProvider.getClient(ForConsentedUsersApi.class);
+        }
+        return apiClientProvider.getClient(ForConsentedUsersApi.class, accountDAO.getSignIn());
     }
 
     /**
-     * Get latest session, may cause a sign in or retrieve from local store if needed.
+     * @return the email currently associated with auth manager.
+     */
+    @Nullable
+    public String getEmail() {
+        SignIn signIn = accountDAO.getSignIn();
+        return signIn == null ? null : signIn.getEmail();
+    }
+
+    /**
+     * Get latest session from local store. Does not make a service call.
      *
-     * @return session bridge session
+     * @return Bridge session
      */
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
@@ -269,35 +257,26 @@ public class AuthenticationManager {
         // TODO: a way to distinguish if session is null because we haven't signed on, or if it
         // was invalidated
         UserSessionInfo session = apiClientProvider.getUserSessionInfoProvider()
-                .retrieveCachedSession(getSignInFromStore());
+                .retrieveCachedSession(accountDAO.getSignIn());
 
         if (session != null) {
-            dao.setUserSessionInfo(session);
+            accountDAO.setUserSessionInfo(session);
             return session;
         }
 
-        return dao.getUserSessionInfo();
+        return accountDAO.getUserSessionInfo();
     }
 
-    private SignIn getSignInFromStore() {
-        String email = dao.getEmail();
-        String password = dao.getPassword();
-
-        return new SignIn()
-                .study(config.getStudyId())
-                .email(email)
-                .password(password);
-    }
-
-    class AuthManagerComponentCallback implements ComponentCallbacks {
-        @Override
-        public void onConfigurationChanged(Configuration newConfig) {
-            initApiClientProvider();
-        }
-
-        @Override
-        public void onLowMemory() {
-
-        }
+    /**
+     * Call Bridge to getConsent session. Cached session is updated as a side-effect.
+     *
+     * @return Bridge session
+     */
+    @NonNull
+    public Single<UserSessionInfo> getLatestUserSessionInfo() {
+        // no-op call to the participant update API, we'll getConsent a recomputed session
+        // session interceptor will update itself with the session in the response
+        return RxUtils.toBodySingle(
+                getApi().updateUsersParticipantRecord(new StudyParticipant()));
     }
 }

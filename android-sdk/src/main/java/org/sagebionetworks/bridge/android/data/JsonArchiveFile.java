@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.data;
 
+import com.google.common.base.Objects;
 import com.google.common.io.ByteSource;
 
 import org.joda.time.DateTime;
@@ -42,5 +43,20 @@ public class JsonArchiveFile implements ArchiveFile {
     @Override
     public ByteSource getByteSource() {
         return ByteSource.wrap(json.getBytes());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        JsonArchiveFile that = (JsonArchiveFile) o;
+        return Objects.equal(filename, that.filename) &&
+                Objects.equal(endDate, that.endDate) &&
+                Objects.equal(json, that.json);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(filename, endDate, json);
     }
 }

@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.android.manager.auth;
+package org.sagebionetworks.bridge.android.manager;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -31,6 +31,7 @@ import retrofit2.http.Query;
 /**
  * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from AuthenticationManager
  * to make the call.
+ * TODO: push refreshing of credentials into rest-client's authentication handler
  */
 class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     private final AuthenticationManager authenticationManager;

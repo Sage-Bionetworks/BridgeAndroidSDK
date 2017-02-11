@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.data;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import org.joda.time.DateTime;
@@ -48,6 +50,28 @@ public class Archive {
         zos.closeEntry();
         zos.close();
         return zos;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Archive archive = (Archive) o;
+        return Objects.equal(dataFiles, archive.dataFiles)
+                && Objects.equal(archiveInfo, archive.archiveInfo);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(dataFiles, archiveInfo);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("dataFiles", dataFiles)
+                .add("archiveInfo", archiveInfo)
+                .toString();
     }
 
     public static class Builder implements WithBridgeConfig {

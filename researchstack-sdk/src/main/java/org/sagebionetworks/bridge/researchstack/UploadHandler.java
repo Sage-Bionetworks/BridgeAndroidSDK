@@ -14,7 +14,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
-import org.sagebionetworks.bridge.sdk.restmm.upload.Info;
+import org.sagebionetworks.bridge.researchstack.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ public class UploadHandler {
     uploadBridgeData(forConsentedUsersApi, info, Arrays.asList(dataFiles));
   }
 
-  // figure out what directory to save files in and where to put this method
+  // figure out what directory to save files in and where to putConsent this method
   public static File getFilesDir(Context context) {
     return new File(context.getFilesDir() + "/upload_request/");
   }

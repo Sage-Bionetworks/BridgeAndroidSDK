@@ -7,7 +7,6 @@ import com.google.common.io.Files;
 
 import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
-import org.sagebionetworks.bridge.android.manager.auth.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;

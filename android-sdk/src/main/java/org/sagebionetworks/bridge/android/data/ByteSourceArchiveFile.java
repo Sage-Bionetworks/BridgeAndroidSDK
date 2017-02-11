@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.data;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 
@@ -34,5 +36,29 @@ public class ByteSourceArchiveFile implements ArchiveFile {
     @Override
     public ByteSource getByteSource() {
         return byteSource;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ByteSourceArchiveFile that = (ByteSourceArchiveFile) o;
+        return Objects.equal(filename, that.filename) &&
+                Objects.equal(endDate, that.endDate) &&
+                Objects.equal(byteSource, that.byteSource);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("filename", filename)
+                .add("endDate", endDate)
+                .add("byteSource", byteSource)
+                .toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(filename, endDate, byteSource);
     }
 }

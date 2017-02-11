@@ -21,9 +21,6 @@ android {
     versionCode 1
     versionName "1.0"
     multiDexEnabled true
-    // hack until subpopulation Guid is properly handled and not hardcoded
-    // add a field studyId="your-study-name" to your app's gradle.properties
-    buildConfigField 'String', 'STUDY_SUBPOPULATION_GUID', studyId // default subpopulation
   }
   buildTypes {
     release {
@@ -54,8 +51,6 @@ dependencies {
 
   compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
   apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
-
-
 
   testCompile 'junit:junit:4.12'
   testCompile 'org.robolectric:robolectric:3.0'
