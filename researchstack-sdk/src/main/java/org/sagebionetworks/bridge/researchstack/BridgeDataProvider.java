@@ -26,6 +26,8 @@ import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -33,9 +35,12 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
+import rx.SingleSubscriber;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -484,11 +489,16 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
-        // TODO: integrate with bridge
-        // forConsentedUsersApi.getSchedules();
-        // forConsentedUsersApi.getScheduledActivities();
+        logger.info("loadTasksAndSchedules()");
 
-        return taskHelper.loadTasksAndSchedules(context);
+        // TODO: figure out the correct arguments to pass here
+        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getActivityManager().getActivities("-07:00", 1, 0)
+                .toBlocking()
+                .value();
+
+        SchedulesAndTasksModel model = translateActivities(scheduledActivityList);
+
+        return model;
     }
 
     private TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
@@ -515,4 +525,27 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
     //endregion
+
+
+    //
+    // NOTE: this is a crude translation and needs to be updated to properly
+    //       handle schedules and filters
+    private SchedulesAndTasksModel translateActivities(ScheduledActivityList activityList) {
+        logger.info("translateActivities()");
+        SchedulesAndTasksModel model = new SchedulesAndTasksModel();
+        model.schedules = new ArrayList<>();
+        SchedulesAndTasksModel.ScheduleModel sm = new SchedulesAndTasksModel.ScheduleModel();
+        sm.scheduleType = "once";
+        model.schedules.add(sm);
+        sm.tasks = new ArrayList<>();
+        for(ScheduledActivity sa: activityList.getItems()) {
+            SchedulesAndTasksModel.TaskScheduleModel tsm = new SchedulesAndTasksModel.TaskScheduleModel();
+            tsm.taskTitle = sa.getActivity().getLabel();
+            tsm.taskCompletionTime = sa.getActivity().getLabelDetail();
+            tsm.taskID = sa.getActivity().getGuid();
+            sm.tasks.add(tsm);
+        }
+
+        return model;
+    }
 }

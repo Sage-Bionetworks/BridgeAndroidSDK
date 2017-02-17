@@ -73,6 +73,7 @@ public class BridgeManagerProvider {
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
         participantManager = new ParticipantManager(authenticationManager, accountDAO);
         consentManager = new ConsentManager(authenticationManager, consentDAO);
+        activityManager = new ActivityManager(authenticationManager);
 
         try {
             studyUploadEncryptor = new StudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -95,6 +96,8 @@ public class BridgeManagerProvider {
     private final ParticipantManager participantManager;
     @NonNull
     private final ConsentManager consentManager;
+    @NonNull
+    private final ActivityManager activityManager;
     @NonNull
     private final ConsentDAO consentDAO;
     @NonNull
@@ -132,6 +135,11 @@ public class BridgeManagerProvider {
     @NonNull
     public ConsentManager getConsentManager() {
         return consentManager;
+    }
+
+    @NonNull
+    public ActivityManager getActivityManager() {
+        return activityManager;
     }
 
     @NonNull
