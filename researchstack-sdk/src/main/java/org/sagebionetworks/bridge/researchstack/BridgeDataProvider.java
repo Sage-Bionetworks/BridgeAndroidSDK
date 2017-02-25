@@ -35,7 +35,16 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
 
 import rx.Completable;
 import rx.Observable;
@@ -492,7 +501,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.info("loadTasksAndSchedules()");
 
         // TODO: figure out the correct arguments to pass here
-        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getActivityManager().getActivities("-07:00", 1, 0)
+        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getActivityManager().getActivities(4, 0)
                 .toBlocking()
                 .value();
 
@@ -532,20 +541,47 @@ public abstract class BridgeDataProvider extends DataProvider {
     //       handle schedules and filters
     private SchedulesAndTasksModel translateActivities(ScheduledActivityList activityList) {
         logger.info("translateActivities()");
+
+        // first, group activities by day
+        Map<Integer, List<ScheduledActivity>> activityMap = new HashMap<>();
+        for(ScheduledActivity sa: activityList.getItems()) {
+            int day = sa.getScheduledOn().dayOfYear().get();
+            List<ScheduledActivity> actList = activityMap.get(day);
+            if(actList == null) {
+                actList = new ArrayList<>();
+                actList.add(sa);
+                activityMap.put(day, actList);
+            } else {
+                actList.add(sa);
+            }
+        }
+
         SchedulesAndTasksModel model = new SchedulesAndTasksModel();
         model.schedules = new ArrayList<>();
-        SchedulesAndTasksModel.ScheduleModel sm = new SchedulesAndTasksModel.ScheduleModel();
-        sm.scheduleType = "once";
-        model.schedules.add(sm);
-        sm.tasks = new ArrayList<>();
-        for(ScheduledActivity sa: activityList.getItems()) {
-            SchedulesAndTasksModel.TaskScheduleModel tsm = new SchedulesAndTasksModel.TaskScheduleModel();
-            tsm.taskTitle = sa.getActivity().getLabel();
-            tsm.taskCompletionTime = sa.getActivity().getLabelDetail();
-            tsm.taskID = sa.getActivity().getGuid();
-            sm.tasks.add(tsm);
+        for(int day: activityMap.keySet()) {
+            List<ScheduledActivity> aList = activityMap.get(day);
+            ScheduledActivity temp = aList.get(0);
+
+            SchedulesAndTasksModel.ScheduleModel sm = new SchedulesAndTasksModel.ScheduleModel();
+            sm.scheduleType = "once";
+            sm.scheduledOn = temp.getScheduledOn().toDate();
+            model.schedules.add(sm);
+            sm.tasks = new ArrayList<>();
+
+            for(ScheduledActivity sa: aList) {
+                SchedulesAndTasksModel.TaskScheduleModel tsm = new SchedulesAndTasksModel.TaskScheduleModel();
+                tsm.taskTitle = sa.getActivity().getLabel();
+                tsm.taskCompletionTime = sa.getActivity().getLabelDetail();
+                if(sa.getActivity().getTask() != null) {
+                    tsm.taskID = sa.getActivity().getTask().getIdentifier();
+                }
+                tsm.taskIsOptional = sa.getPersistent();
+                tsm.taskType = sa.getActivity().getType();
+                sm.tasks.add(tsm);
+            }
         }
 
         return model;
     }
+
 }
