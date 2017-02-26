@@ -37,12 +37,16 @@ public class ActivityManager {
     }
 
 
-    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
-        return toBodySingle(api.getScheduledActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule)).doOnSuccess(
+    public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
+        return toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                 });
 
+    }
+
+    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
+        return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
     }
 
     public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
