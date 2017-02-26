@@ -54,13 +54,13 @@ public class ActivityManagerTest {
 
     @Test
     public void getActivities_success() throws IOException {
-        String offset = "-07:00";
+        String offset = "";
 
         ScheduledActivityList list = mock(ScheduledActivityList.class);
         Call<ScheduledActivityList> activityCall = successCall(list);
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(0, 0);
+        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
         single.test().assertCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
@@ -68,12 +68,12 @@ public class ActivityManagerTest {
 
     @Test
     public void getActivities_failure() throws IOException {
-        String offset = "-07:00";
+        String offset = "";
 
         Call<ScheduledActivityList> activityCall = errorCall(new BridgeSDKException("Failed", 500));
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(0, 0);
+        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
         single.test().assertNotCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
