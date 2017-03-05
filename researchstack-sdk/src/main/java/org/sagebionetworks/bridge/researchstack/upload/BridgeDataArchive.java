@@ -102,7 +102,7 @@ public class BridgeDataArchive {
   }
 
   public void addFile(Context context, BridgeDataInput dataFile) throws IOException {
-    info.addFileInfo(new FileInfo(dataFile.filename, dataFile.endDate));
+    info.addFileInfo(new FileInfo(dataFile.filename, dataFile.timestamp));
     addZipEntry(dataFile.filename, dataFile.getInputStream(context));
   }
 

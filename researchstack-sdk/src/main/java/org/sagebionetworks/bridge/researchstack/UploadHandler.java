@@ -5,6 +5,8 @@ import android.support.annotation.NonNull;
 import android.widget.Toast;
 
 import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.result.logger.DataLoggerManager;
+import org.researchstack.backbone.utils.LogExt;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataArchive;
 import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.upload.UploadQueue;
@@ -62,7 +64,13 @@ public class UploadHandler {
       archive.start(getFilesDir(applicationContext));
 
       for (BridgeDataInput dataFile : dataFiles) {
-        archive.addFile(applicationContext, dataFile);
+        try {
+          archive.addFile(applicationContext, dataFile);
+        } catch (IOException e) {
+          // We should opt to not crash when a file can't be found, to make the system more robust
+          // However, if a file failed for any reason, you will see why from this stacktrace error message
+          LogExt.e(getClass(), e.getLocalizedMessage() + " " + e.getStackTrace().toString());
+        }
       }
 
       UploadRequest request =
@@ -71,7 +79,20 @@ public class UploadHandler {
 
       ((UploadQueue) storageAccess.getAppDatabase()).saveUploadRequest(
           request);
+
+      // TODO: I don't necessarily think that this is appropriate for Bridge SDK to have to do
+      // TODO: however, it is ok for now, while I welcome any architecture ideas
+      // At this point, the upload request has been processed and saved,
+      // so it is safe to delete the temporary data logger files
+      DataLoggerManager.initialize(applicationContext);
+      for (BridgeDataInput dataFile : dataFiles) {
+        if (dataFile.getFile() != null) {
+          DataLoggerManager.getInstance().deleteFileStatus(dataFile.getFile());
+        }
+      }
+
       uploadPendingFiles(bridforConsentedUsersApieService);
+
     } catch (IOException e) {
       throw new RuntimeException("Error encrypting initial task data", e);
     }
