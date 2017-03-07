@@ -1,9 +1,18 @@
 package org.sagebionetworks.bridge.researchstack;
 
-import com.google.gson.Gson;
+import android.content.Context;
+import android.content.Intent;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.answerformat.BooleanAnswerFormat;
 import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
@@ -20,29 +29,128 @@ import org.researchstack.backbone.step.active.AudioStep;
 import org.researchstack.backbone.step.active.CountdownStep;
 import org.researchstack.backbone.step.active.TappingIntervalStep;
 import org.researchstack.backbone.step.active.TimedWalkStep;
+import org.researchstack.backbone.storage.NotificationHelper;
+import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.factory.TappingTaskFactory;
+import org.researchstack.skin.AppPrefs;
+import org.researchstack.skin.notification.TaskAlertReceiver;
+import org.sagebionetworks.bridge.android.data.Archive;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.UploadManager;
+import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.spongycastle.cms.CMSException;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import rx.Completable;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.researchstack.backbone.result.TappingIntervalResult.TappingButtonIdentifier.TappedButtonLeft;
 import static org.researchstack.backbone.result.TappingIntervalResult.TappingButtonIdentifier.TappedButtonNone;
-import static org.researchstack.backbone.task.factory.TaskFactory.Constants.*;
-import static org.researchstack.backbone.task.factory.WalkingTaskFactory.*;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.AccelerometerRecorderIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.ActiveTaskLeftHandIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.ActiveTaskRightHandIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.DeviceMotionRecorderIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.LocationRecorderIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.PedometerRecorderIdentifier;
+import static org.researchstack.backbone.task.factory.TaskFactory.Constants.TappingStepIdentifier;
+import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkFormAFOStepIdentifier;
+import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkFormAssistanceStepIdentifier;
+import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTrial1StepIdentifier;
+import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTrial2StepIdentifier;
+import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTurnAroundStepIdentifier;
 
 /**
  * Created by TheMDP on 3/3/17.
  */
-
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(TaskAlertReceiver.class)
 public class TaskHelperTest {
 
     private static final String JSON_CONTENT_TYPE = "application/json";
+
+    private TaskHelper taskHelper;
+
+    @Mock
+    StorageAccessWrapper storageAccess;
+    @Mock
+    ResourceManager resourceManager;
+    @Mock
+    AppPrefs appPrefs;
+    @Mock
+    NotificationHelper notificationHelper;
+    @Mock
+    Context applicationContext;
+    @Mock
+    UploadManager uploadManager;
+    @Mock
+    BridgeManagerProvider bridgeManagerProvider;
+
+    @Before
+    public void setupTest() {
+        MockitoAnnotations.initMocks(this);
+
+        when(bridgeManagerProvider.getUploadManager()).thenReturn(uploadManager);
+        when(bridgeManagerProvider.getApplicationContext()).thenReturn(applicationContext);
+
+        taskHelper = new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
+                bridgeManagerProvider);
+    }
+
+    @Test
+    public void testUploadTaskResult() throws IOException, CMSException {
+        Date endDate = mock(Date.class);
+        String taskId = "taskId";
+        String taskChron = "chron";
+
+        TaskResult taskResult = mock(TaskResult.class);
+        when(taskResult.getIdentifier()).thenReturn(taskId);
+        when(taskResult.getEndDate()).thenReturn(endDate);
+
+        Archive archive = mock(Archive.class);
+        Archive.Builder archiveBuilder = mock(Archive.Builder.class);
+        when(archiveBuilder.build()).thenReturn(archive);
+
+        Archive.WithBridgeConfig withBridgeConfig = mock(Archive.WithBridgeConfig.class);
+        when(withBridgeConfig.withBridgeConfig(any())).thenReturn(archiveBuilder);
+
+        when(appPrefs.isTaskReminderEnabled()).thenReturn(true);
+        taskHelper.putTaskChron(taskId, taskChron);
+
+        ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
+                .forClass(TaskNotification.class);
+
+        when(uploadManager.upload(any(), eq(archive))).thenReturn(Completable.complete());
+
+        Intent notificationCreateIntent = mock(Intent.class);
+        mockStatic(TaskAlertReceiver.class);
+        when(TaskAlertReceiver.createCreateIntent(any())).thenReturn(notificationCreateIntent);
+
+        taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
+
+        verify(uploadManager).upload(any(), eq(archive));
+
+        verify(notificationHelper).saveTaskNotification(taskNotificationCaptor.capture());
+        verify(applicationContext).sendBroadcast(notificationCreateIntent);
+
+        TaskNotification taskNotification = taskNotificationCaptor.getValue();
+
+        assertEquals(endDate, taskNotification.endDate);
+        assertEquals(taskChron, taskNotification.chronTime);
+    }
 
     @Test
     public void testFlattenMapForAudioTaskResult() {
@@ -114,8 +222,7 @@ public class TaskHelperTest {
         // This test is based on the results of the tapping task
         TaskResult taskResult = new TaskResult("tappingtaskresultid");
 
-        for (int i = 0; i < 2; i++)
-        {
+        for (int i = 0; i < 2; i++) {
             String handId = (i == 0) ? ActiveTaskRightHandIdentifier : ActiveTaskLeftHandIdentifier;
             String tappingHandIdentifier =
                     TappingTaskFactory.stepIdentifierWithHandId(TappingStepIdentifier, handId);
@@ -214,16 +321,15 @@ public class TaskHelperTest {
             taskResult.setStepResultForStepIdentifier(stepResult.getIdentifier(), stepResult);
         }
 
-        String[] timedWalkIds = new String[] {
+        String[] timedWalkIds = new String[]{
                 TimedWalkTrial1StepIdentifier, TimedWalkTurnAroundStepIdentifier,
-                TimedWalkTrial2StepIdentifier };
+                TimedWalkTrial2StepIdentifier};
 
-        String[] recorderIds = new String[] {
+        String[] recorderIds = new String[]{
                 PedometerRecorderIdentifier, AccelerometerRecorderIdentifier,
-                DeviceMotionRecorderIdentifier, LocationRecorderIdentifier };
+                DeviceMotionRecorderIdentifier, LocationRecorderIdentifier};
 
-        for (String timedWalkId : timedWalkIds)
-        {
+        for (String timedWalkId : timedWalkIds) {
             double distanceInMeters = 30.0;
             int duration = 10;
 

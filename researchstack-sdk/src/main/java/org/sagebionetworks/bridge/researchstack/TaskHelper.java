@@ -2,43 +2,46 @@ package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
+import com.google.common.io.Files;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.StringUtils;
+import org.joda.time.DateTime;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
+import org.researchstack.backbone.result.logger.DataLoggerManager;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.storage.database.AppDatabase;
 import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
-import org.researchstack.backbone.utils.FormatHelper;
-import org.researchstack.backbone.utils.LogExt;
-import org.researchstack.backbone.utils.StepResultHelper;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
 import org.researchstack.skin.schedule.ScheduleHelper;
 import org.researchstack.skin.task.SmartSurveyTask;
+import org.sagebionetworks.bridge.android.data.Archive;
+import org.sagebionetworks.bridge.android.data.ArchiveFile;
+import org.sagebionetworks.bridge.android.data.ByteSourceArchiveFile;
+import org.sagebionetworks.bridge.android.data.JsonArchiveFile;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
-import org.sagebionetworks.bridge.researchstack.upload.BridgeDataInput;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.researchstack.upload.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TaskHelper {
     private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
@@ -51,18 +54,20 @@ public class TaskHelper {
     private final StorageAccessWrapper storageAccess;
     private final ResourceManager resourceManager;
     private final AppPrefs appPrefs;
-    private final UploadHandler uploadHandler;
+    private final NotificationHelper notificationHelper;
+    private final BridgeManagerProvider bridgeManagerProvider;
 
     public TaskHelper(
-          StorageAccessWrapper storageAccess,
-          ResourceManager resourceManager,
-          AppPrefs appPrefs,
-          UploadHandler uploadHandler)
-    {
+            StorageAccessWrapper storageAccess,
+            ResourceManager resourceManager,
+            AppPrefs appPrefs,
+            NotificationHelper notificationHelper,
+            BridgeManagerProvider bridgeManagerProvider) {
         this.storageAccess = storageAccess;
         this.resourceManager = resourceManager;
         this.appPrefs = appPrefs;
-        this.uploadHandler = uploadHandler;
+        this.notificationHelper = notificationHelper;
+        this.bridgeManagerProvider = bridgeManagerProvider;
     }
 
     public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
@@ -83,7 +88,7 @@ public class TaskHelper {
 
             if (task.taskFileName == null) {
                 logger.error(
-                    "No filename found for task with id: " + task.taskID);
+                        "No filename found for task with id: " + task.taskID);
                 continue;
             }
 
@@ -130,87 +135,117 @@ public class TaskHelper {
         return smartSurveyTask;
     }
 
-    public void uploadTaskResult(
-            Context context,
-            ForConsentedUsersApi forConsentedUsersApi,
-            TaskResult taskResult)
-    {
+    public void uploadActivityResult(String schemaId, TaskResult taskResult) {
+        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
+                .forActivity(schemaId);
+
+        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+    }
+
+    public void uploadActivityResult(String schemaId, int schemaRevisionId, TaskResult taskResult) {
+        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
+                .forActivity(schemaId, schemaRevisionId);
+
+        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+    }
+
+    public void uploadSurveyResult(TaskResult taskResult) {
+        String taskId = taskResult.getIdentifier();
+
+        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
+                .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId)));
+
+        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+    }
+
+    //package private for test access
+    void uploadTaskResult(TaskResult taskResult, Archive.WithBridgeConfig withBridgeConfig) {
+        String taskId = taskResult.getIdentifier();
+
         // Update/Create TaskNotificationService
         if (appPrefs.isTaskReminderEnabled()) {
             logger.info("SampleDataProvider", "uploadTaskResult() _ isTaskReminderEnabled() = true");
 
-            String chronTime = findChronTime(taskResult.getIdentifier());
+            String chronTime = findChronTime(taskId);
 
             // If chronTime is null then either the task is not repeating OR its not found within
             // the task_and_schedules.xml
             if (chronTime != null) {
-                scheduleReminderNotification(context, taskResult.getEndDate(), chronTime);
+                scheduleReminderNotification(taskResult.getEndDate(), chronTime);
             }
         }
-
-        List<BridgeDataInput> files = new ArrayList<BridgeDataInput>();
+        Archive.Builder bridgeArchiveBuilder = withBridgeConfig
+                .withBridgeConfig(bridgeManagerProvider.getBridgeConfig());
 
         // Traverse through the StepResult maps and get an ordered list of Results
-        List<Result> resultList = flattenResults(taskResult);
-
-        // Package all the Results as BridgeDataInput objects to send up to server as an Archive
-        for (Result result : resultList) {
-            BridgeDataInput bridgeDataInput = toBridgeDataInput(result);
-            if (bridgeDataInput != null) {
-                files.add(bridgeDataInput);
+        List<Result> results = flattenResults(taskResult);
+        for (Result result : results) {
+            ArchiveFile archiveFile = toBridgeArchiveFile(result);
+            if (archiveFile != null) {
+                bridgeArchiveBuilder.addDataFile(archiveFile);
             } else {
-                LogExt.e(getClass(), "Failed to convert Result to BridgeDataInput " + result.toString());
+                logger.error("Failed to convert Result to BridgeDataInput " + result.toString());
             }
         }
 
-        uploadHandler.uploadBridgeData(forConsentedUsersApi,
-            new Info(context, getGuid(taskResult.getIdentifier()),
-                getCreatedOnDate(taskResult.getIdentifier())), files);
+        String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
+
+        bridgeManagerProvider.getUploadManager()
+                .upload(archiveFilename, bridgeArchiveBuilder.build())
+                .await();
+
+        // At this point, the upload request has been processed and saved,
+        // so it is safe to delete the temporary data logger files
+        for (Result result : results) {
+            if (result instanceof FileResult) {
+                FileResult fileResult = (FileResult) result;
+                DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
+            }
+        }
     }
 
-    private void scheduleReminderNotification(Context context, Date endDate, String chronTime) {
+    private void scheduleReminderNotification(Date endDate, String chronTime) {
         logger.info("SampleDataProvider", "scheduleReminderNotification()");
 
         // Save TaskNotification to DB
         TaskNotification notification = new TaskNotification();
         notification.endDate = endDate;
         notification.chronTime = chronTime;
-        NotificationHelper.getInstance(context).saveTaskNotification(notification);
+        notificationHelper.saveTaskNotification(notification);
 
         // Add notification to Alarm Manager
-        Intent intent = new Intent(TaskAlertReceiver.ALERT_CREATE);
-        intent.putExtra(TaskAlertReceiver.KEY_NOTIFICATION, notification);
-        context.sendBroadcast(intent);
+        Intent intent = TaskAlertReceiver.createCreateIntent(notification);
+        bridgeManagerProvider.getApplicationContext().sendBroadcast(intent);
     }
 
-    protected static BridgeDataInput toBridgeDataInput(Result result) {
+
+    ArchiveFile toBridgeArchiveFile(Result result) {
+        DateTime endTime = new DateTime(result.getEndDate());
+
         if (result instanceof StepResult) {
-            StepResult stepResult = (StepResult)result;
+            StepResult stepResult = (StepResult) result;
+            String filename = bridgifyIdentifier(stepResult.getIdentifier()) + ".json";
 
             // If a step result has an answer format, we know that it was formed from a QuestionStep
             if (stepResult.getAnswerFormat() != null) {
-
                 SurveyAnswer surveyAnswer = SurveyAnswer.create(stepResult);
-                return new BridgeDataInput(surveyAnswer, SurveyAnswer.class,
-                        bridgifyIdentifier(stepResult.getIdentifier()) + ".json",
-                        FormatHelper.DEFAULT_FORMAT.format(stepResult.getStartDate()));
 
+                return new JsonArchiveFile(filename, endTime, surveyAnswer);
             } else {  // otherwise make a generic String, Object JSON Map
+                Type typeOfMap = new TypeToken<Map<String, Object>>() {
+                }.getType();
 
-                Type typeOfMap = new TypeToken<Map<String, Object>>() { }.getType();
-                return new BridgeDataInput(stepResult.getResults(), typeOfMap,
-                        bridgifyIdentifier(stepResult.getIdentifier()) + ".json",
-                        FormatHelper.DEFAULT_FORMAT.format(stepResult.getStartDate()));
-
+                return new JsonArchiveFile(filename, endTime, stepResult.getResults(), typeOfMap);
             }
-
         } else if (result instanceof FileResult) {
+            FileResult fileResult = (FileResult) result;
+            File file = fileResult.getFile();
 
-            FileResult fileResult = (FileResult)result;
-            return new BridgeDataInput(fileResult.getFile(),
-                    FormatHelper.DEFAULT_FORMAT.format(fileResult.getStartDate()));
+            return new ByteSourceArchiveFile(
+                    file.getName(),
+                    endTime,
+                    Files.asByteSource(file));
         }
-
         return null;
     }
 
@@ -219,7 +254,6 @@ public class TaskHelper {
     }
 
     // these stink, I should be able to query the DB and find these
-
     protected String getCreatedOnDate(String identifier) {
         return loadedTaskDates.get(identifier);
     }
@@ -228,16 +262,20 @@ public class TaskHelper {
         return loadedTaskGuids.get(identifier);
     }
 
+    // for unit testing
+    void putTaskChron(String identifier, String chron) {
+        loadedTaskCrons.put(identifier, chron);
+    }
+
     protected String findChronTime(String identifier) {
         return loadedTaskCrons.get(identifier);
     }
 
     /**
-     * This tasks a map structure, which step results are, and flattens it to a List<Result>s
+     * This tasks a map structure, which step results are, and flattens it to a List
      *
      * @param taskResult from the result of a Task, can contain any combination of Result objects
      *                   they can be nested and they can be as deep as desired
-     *
      * @return a list of Result objects from recursively investigating all StepResult objects
      */
     public static List<Result> flattenResults(TaskResult taskResult) {
@@ -273,7 +311,7 @@ public class TaskHelper {
                 if (value instanceof StepResult) {
                     wentDeeper = true;
 
-                    StepResult nestedStepResult = (StepResult)value;
+                    StepResult nestedStepResult = (StepResult) value;
                     if (!nestedStepResult.getResults().isEmpty()) {
                         addResultsRecursively((StepResult) value, resultList);
                     }

@@ -8,12 +8,12 @@ import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
+import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
@@ -35,21 +35,14 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.TimeZone;
 
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.SingleSubscriber;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -63,7 +56,6 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     // set in initialize
     private final TaskHelper taskHelper;
-    private final UploadHandler uploadHandler;
 
     private final StorageAccessWrapper storageAccessWrapper;
     private final ResearchStackDAO researchStackDAO;
@@ -72,14 +64,12 @@ public abstract class BridgeDataProvider extends DataProvider {
     private final AuthenticationManager authenticationManager;
     private final ConsentManager consentManager;
 
-
     //used by tests to mock service
     BridgeDataProvider(ResearchStackDAO researchStackDAO, StorageAccessWrapper storageAccessWrapper,
-                       TaskHelper taskHelper, UploadHandler uploadHandler) {
+                       TaskHelper taskHelper) {
         this.researchStackDAO = researchStackDAO;
         this.storageAccessWrapper = storageAccessWrapper;
         this.taskHelper = taskHelper;
-        this.uploadHandler = uploadHandler;
 
         this.bridgeManagerProvider = BridgeManagerProvider.getInstance();
 
@@ -90,8 +80,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     }
 
-    public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider,
-                              ResourcePathManager.Resource publicKey) {
+    public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider) {
         this.researchStackDAO = new ResearchStackDAO(bridgeManagerProvider.getApplicationContext());
         this.bridgeManagerProvider = bridgeManagerProvider;
         // convenience accessors
@@ -100,10 +89,11 @@ public abstract class BridgeDataProvider extends DataProvider {
         this.consentManager = bridgeManagerProvider.getConsentManager();
 
         this.storageAccessWrapper = new StorageAccessWrapper();
-        this.uploadHandler = new UploadHandler(bridgeManagerProvider.getApplicationContext(),
-                storageAccessWrapper, publicKey);
+
+        NotificationHelper notificationHelper = NotificationHelper.
+                getInstance(bridgeManagerProvider.getApplicationContext());
         this.taskHelper = new TaskHelper(storageAccessWrapper, ResourceManager.getInstance(),
-                AppPrefs.getInstance(), uploadHandler);
+                AppPrefs.getInstance(), notificationHelper, bridgeManagerProvider);
     }
 
 
@@ -527,14 +517,13 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void uploadTaskResult(Context context, TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
-        // FIXME: Use ArchiveInfo and UploadManager
-        taskHelper.uploadTaskResult(context, authenticationManager.getApi(), taskResult);
+        // TODO: Detect and upload non-survey results
+        taskHelper.uploadSurveyResult(taskResult);
     }
 
     @Override
     public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
     //endregion
-
 
     //
     // NOTE: this is a crude translation and needs to be updated to properly
