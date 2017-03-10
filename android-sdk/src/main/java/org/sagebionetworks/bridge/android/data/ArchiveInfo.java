@@ -49,12 +49,16 @@ class ArchiveInfo {
     @SerializedName("schemaRevision")
     int schemaRevision = DEFAULT_SCHEMA_REVISION;
 
+    boolean isSurvey() {
+        return !isNullOrEmpty(surveyGuid) && (surveyCreatedOn != null);
+    }
+
+    boolean isSchema() {
+        return !isNullOrEmpty(item);
+    }
 
     boolean isValid() {
-        boolean isSurvey = !isNullOrEmpty(surveyGuid) && (surveyCreatedOn != null);
-        boolean isSchema = !isNullOrEmpty(item);
-
-        return (isSurvey || isSchema)
+        return (isSurvey() ^ isSchema())
                 && !isNullOrEmpty(appVersion)
                 && !isNullOrEmpty(phoneInfo);
     }

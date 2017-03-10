@@ -56,8 +56,7 @@ public class UploadManager {
         public String md5Hash;
     }
 
-    public Completable upload(String filename, Archive archive) throws
-            IOException, CMSException {
+    public Completable upload(String filename, Archive archive) {
 
         Single<UploadFile> uploadFileSingle = Single
                 .fromCallable(() -> persist(filename, archive));

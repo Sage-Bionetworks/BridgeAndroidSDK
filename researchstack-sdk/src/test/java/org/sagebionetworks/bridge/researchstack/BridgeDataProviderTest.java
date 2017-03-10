@@ -64,8 +64,6 @@ public class BridgeDataProviderTest {
     private BridgeEncryptedDatabase appDatabase;
     @Mock
     private TaskHelper taskHelper;
-    @Mock
-    private UploadHandler uploadHandler;
 
     @Mock
     protected BridgeManagerProvider bridgeManagerProvider;
@@ -115,7 +113,7 @@ public class BridgeDataProviderTest {
                 .thenReturn(forConsentedUsersApi);
 
         dataProvider =
-                new BridgeDataProvider(researchStackDAO, storageAccess, taskHelper, uploadHandler) {
+                new BridgeDataProvider(researchStackDAO, storageAccess, taskHelper) {
 
                     @Override
                     public void processInitialTaskResult(Context context, TaskResult taskResult) {
