@@ -14,6 +14,8 @@ import org.sagebionetworks.bridge.rest.model.ScheduleList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.SubscriptionRequest;
+import org.sagebionetworks.bridge.rest.model.SubscriptionStatusList;
 import org.sagebionetworks.bridge.rest.model.Survey;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -29,7 +31,8 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 /**
- * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from AuthenticationManager
+ * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from
+ * AuthenticationManager
  * to make the call.
  * TODO: push refreshing of credentials into rest-client's authentication handler
  */
@@ -53,7 +56,7 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
 
     @Override
     public Call<GuidHolder> createNotificationRegistration(@Body NotificationRegistration
-                                                                notificationRegistration) {
+                                                                   notificationRegistration) {
         return getRawApi().createNotificationRegistration(notificationRegistration);
     }
 
@@ -128,6 +131,11 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     }
 
     @Override
+    public Call<SubscriptionStatusList> getTopicSubscriptions(@Path("guid") String guid) {
+        return getRawApi().getTopicSubscriptions(guid);
+    }
+
+    @Override
     public Call<UploadValidationStatus> getUploadStatus(@Path("uploadId") String s) {
         return getRawApi().getUploadStatus(s);
     }
@@ -140,6 +148,12 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     @Override
     public Call<UploadSession> requestUploadSession(@Body UploadRequest uploadRequest) {
         return getRawApi().requestUploadSession(uploadRequest);
+    }
+
+    @Override
+    public Call<SubscriptionStatusList> subscribeToTopics(@Path("guid") String guid, @Body
+            SubscriptionRequest body) {
+        return getRawApi().subscribeToTopics(guid, body);
     }
 
     @Override
