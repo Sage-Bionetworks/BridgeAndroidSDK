@@ -19,12 +19,15 @@ import org.spongycastle.cms.CMSException;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
+import retrofit2.Retrofit;
 import rx.Completable;
 import rx.Single;
 
@@ -38,15 +41,13 @@ public class UploadManager {
 
     private final ForConsentedUsersApi api;
     private final StudyUploadEncryptor encryptor;
-    private final S3Service s3Service;
+    private final OkHttpClient s3OkhttpClient;
 
     public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
-            encryptor) {
+            encryptor, OkHttpClient s3OkhttpClient) {
         this.api = authenticationManager.getApi();
-
         this.encryptor = encryptor;
-
-        this.s3Service = null;
+        this.s3OkhttpClient = s3OkhttpClient;
     }
 
     public static class UploadFile {
@@ -75,7 +76,7 @@ public class UploadManager {
         RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
 
         return RxUtils.toBodySingle(
-                s3Service.uploadToS3(
+                getS3Service(session).uploadToS3(
                         session.getUrl(),
                         requestBody,
                         uploadFile.md5Hash,
@@ -137,5 +138,16 @@ public class UploadManager {
         uploadFile.md5Hash = md5Hash;
 
         return uploadFile;
+    }
+
+    private S3Service getS3Service(UploadSession uploadSession) {
+        URI uri = URI.create(uploadSession.getUrl());
+        String baseUrl = uri.getScheme() + "://" + uri.getHost() + "/";
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .client(s3OkhttpClient).build();
+
+        return retrofit.create(S3Service.class);
     }
 }

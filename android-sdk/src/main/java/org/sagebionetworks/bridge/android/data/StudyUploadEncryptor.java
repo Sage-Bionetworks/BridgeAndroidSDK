@@ -55,7 +55,7 @@ public class StudyUploadEncryptor {
     public OutputStream encrypt(OutputStream stream) throws CMSException, IOException {
         JceKeyTransRecipientInfoGenerator recipientInfoGenerator = recipientInfoGeneratorSupplier
                 .get();
-        checkState(recipientInfoGenerator != null, "Recipient archiveInfo generator was not initialized");
+        checkState(recipientInfoGenerator != null, "RecipientInfoGenerator was not initialized successfully");
 
         CMSEnvelopedDataStreamGenerator gen = new CMSEnvelopedDataStreamGenerator();
         gen.addRecipientInfoGenerator(recipientInfoGenerator);
