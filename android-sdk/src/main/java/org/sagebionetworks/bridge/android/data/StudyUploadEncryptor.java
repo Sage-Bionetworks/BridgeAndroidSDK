@@ -10,10 +10,12 @@ import org.spongycastle.cms.CMSEnvelopedDataStreamGenerator;
 import org.spongycastle.cms.CMSException;
 import org.spongycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
 import org.spongycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.operator.OutputEncryptor;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.Security;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 
@@ -28,6 +30,10 @@ public class StudyUploadEncryptor {
     private static final String JCE_PROVIDER = "SC"; // SpongyCastle
 
     private final Supplier<JceKeyTransRecipientInfoGenerator> recipientInfoGeneratorSupplier;
+
+    static {
+        Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    }
 
     public StudyUploadEncryptor(X509Certificate publicKey) {
         this.recipientInfoGeneratorSupplier = Suppliers.memoize(() -> {
@@ -44,7 +50,7 @@ public class StudyUploadEncryptor {
      * @param stream plaintext stream
      * @return encrypted stream
      * @throws CMSException problem with encryption
-     * @throws IOException problem with stream
+     * @throws IOException  problem with stream
      */
     public OutputStream encrypt(OutputStream stream) throws CMSException, IOException {
         JceKeyTransRecipientInfoGenerator recipientInfoGenerator = recipientInfoGeneratorSupplier
