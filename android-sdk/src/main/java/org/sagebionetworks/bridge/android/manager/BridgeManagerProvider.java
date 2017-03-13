@@ -9,11 +9,13 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
+import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
+import retrofit2.Retrofit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -178,5 +180,4 @@ public class BridgeManagerProvider {
     public OkHttpClient getS3OkHttpClient() {
         return s3OkHttpClient;
     }
-
 }

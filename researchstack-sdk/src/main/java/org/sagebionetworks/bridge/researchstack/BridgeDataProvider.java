@@ -47,6 +47,7 @@ import java.util.Map;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
