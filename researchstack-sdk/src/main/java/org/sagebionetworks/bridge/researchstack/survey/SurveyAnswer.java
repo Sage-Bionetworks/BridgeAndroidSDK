@@ -44,6 +44,15 @@ public class SurveyAnswer {
       case Date:
         answer = new DateSurveyAnswer(stepResult);
         break;
+      case ImageChoice:
+        if (stepResult.getResult() instanceof Number) {
+          answer = new NumericSurveyAnswer(stepResult);
+        } else if (stepResult.getResult() instanceof String) {
+          answer = new TextSurveyAnswer(stepResult);
+        } else {
+          throw new RuntimeException("Cannot upload ImageChoice result to bridge");
+        }
+        break;
       case None:
       case Scale:
       case Decimal:
