@@ -38,6 +38,7 @@ import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.UUID;
 
 import rx.Completable;
+import rx.Single;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -133,7 +135,8 @@ public class TaskHelperTest {
         ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
                 .forClass(TaskNotification.class);
 
-        when(uploadManager.upload(any(), eq(archive))).thenReturn(Completable.complete());
+        when(uploadManager.upload(any(), eq(archive)))
+                .thenReturn(Single.just(new UploadValidationStatus()));
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
