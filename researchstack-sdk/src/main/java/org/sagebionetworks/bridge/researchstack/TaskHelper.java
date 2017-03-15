@@ -56,13 +56,17 @@ public class TaskHelper {
     private final AppPrefs appPrefs;
     private final NotificationHelper notificationHelper;
     private final BridgeManagerProvider bridgeManagerProvider;
+    private final String taskResultOutputDirectory;
 
     public TaskHelper(
+            Context context,
             StorageAccessWrapper storageAccess,
             ResourceManager resourceManager,
             AppPrefs appPrefs,
             NotificationHelper notificationHelper,
-            BridgeManagerProvider bridgeManagerProvider) {
+            BridgeManagerProvider bridgeManagerProvider)
+    {
+        taskResultOutputDirectory = context.getFilesDir().getAbsolutePath();
         this.storageAccess = storageAccess;
         this.resourceManager = resourceManager;
         this.appPrefs = appPrefs;
@@ -188,7 +192,8 @@ public class TaskHelper {
             }
         }
 
-        String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
+        String archiveFilename = taskResultOutputDirectory + File.separator +
+                taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
         bridgeManagerProvider.getUploadManager()
                 .upload(archiveFilename, bridgeArchiveBuilder.build())
