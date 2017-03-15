@@ -10,6 +10,7 @@ import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -170,9 +171,19 @@ public class AuthenticationManager {
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
+                }).doOnError(throwable -> {
+                    // a 412 is a successful signin
+                    if (throwable instanceof ConsentRequiredException) {
+                        accountDAO.setSignIn(signIn);
+                        accountDAO.setUserSessionInfo(
+                                ((ConsentRequiredException) throwable).getSession());
+                        accountDAO.setStudyParticipant(
+                                new StudyParticipant()
+                                        .email(signIn.getEmail()));
+                    }
                 });
     }
-
+    
     /**
      * On success, clears the participant's email, password and session from storage
      *
@@ -230,7 +241,7 @@ public class AuthenticationManager {
     @NonNull
     ForConsentedUsersApi getRawApi() {
         SignIn signIn = accountDAO.getSignIn();
-        if (signIn== null) {
+        if (signIn == null) {
             return apiClientProvider.getClient(ForConsentedUsersApi.class);
         }
         return apiClientProvider.getClient(ForConsentedUsersApi.class, accountDAO.getSignIn());
