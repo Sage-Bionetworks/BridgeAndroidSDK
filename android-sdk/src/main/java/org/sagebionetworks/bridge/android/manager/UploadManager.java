@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.support.annotation.NonNull;
+
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSink;
 import com.google.common.io.FileWriteMode;
@@ -12,6 +14,7 @@ import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.cms.CMSException;
@@ -19,13 +22,15 @@ import org.spongycastle.cms.CMSException;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
-import rx.Completable;
+import retrofit2.Retrofit;
 import rx.Single;
 
 /**
@@ -38,44 +43,39 @@ public class UploadManager {
 
     private final ForConsentedUsersApi api;
     private final StudyUploadEncryptor encryptor;
-    private final S3Service s3Service;
+    private final OkHttpClient s3OkhttpClient;
 
     public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
-            encryptor) {
+            encryptor, OkHttpClient s3OkhttpClient) {
         this.api = authenticationManager.getApi();
-
         this.encryptor = encryptor;
-
-        this.s3Service = null;
+        this.s3OkhttpClient = s3OkhttpClient;
     }
 
-    public static class UploadFile {
-        public String filename;
-        public String contentType;
-        public long fileLength;
-        public String md5Hash;
+    public Single<UploadValidationStatus> getStatus(String uploadId) {
+        return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
-    public Completable upload(String filename, Archive archive) {
-
+    @NonNull
+    public Single<UploadValidationStatus> upload(String filename, Archive archive) {
         Single<UploadFile> uploadFileSingle = Single
-                .fromCallable(() -> persist(filename, archive));
+                .fromCallable(() -> persist(filename, archive)).cache();
 
         Single<UploadSession> uploadSessionSingle = uploadFileSingle
                 .flatMap(this::requestUploadSession);
 
-        return Single.zip(uploadFileSingle, uploadSessionSingle, this::upload)
-                .flatMap(i -> i)
-                .toCompletable();
+        return Single.zip(uploadFileSingle, uploadSessionSingle, this::uploadToS3).flatMap(i -> i);
     }
 
-    public Single<UploadSession> upload(UploadFile uploadFile, UploadSession session) {
+    @NonNull
+    Single<UploadValidationStatus> uploadToS3(UploadFile uploadFile, UploadSession session) {
 
-        File file = new File(uploadFile.filename);
+        File file = getFile(uploadFile.filename);
+
         RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
 
         return RxUtils.toBodySingle(
-                s3Service.uploadToS3(
+                getS3Service(session).uploadToS3(
                         session.getUrl(),
                         requestBody,
                         uploadFile.md5Hash,
@@ -84,15 +84,18 @@ public class UploadManager {
                 .doOnCompleted(() -> {
                     // TODO: update upload status in DB, delete file
                     LOG.info("Upload succeeded for id: " + session.getId());
+                }).doOnError(t -> {
+                    LOG.info("Couldn't upload to s3", t);
                 }).andThen(
                         RxUtils.toBodySingle(api.completeUploadSession(session.getId())
                         ).onErrorReturn((t) -> {
                             LOG.info("Failed to call upload complete, server will recover", t);
                             return session;
-                        }));
+                        })).toCompletable()
+                .andThen(getStatus(session.getId()));
     }
 
-    public Single<UploadSession> requestUploadSession(UploadFile uploadFile) {
+    Single<UploadSession> requestUploadSession(UploadFile uploadFile) {
         return RxUtils.toBodySingle(
                 api.requestUploadSession(
                         new UploadRequest()
@@ -106,9 +109,8 @@ public class UploadManager {
                 });
     }
 
-    public UploadFile persist(String filename, Archive archive) throws IOException,
-            CMSException, NoSuchAlgorithmException {
-        File file = new File(filename);
+    UploadFile persist(String filename, Archive archive) throws NoSuchAlgorithmException, IOException {
+        File file = getFile(filename);
 
         ByteSink sink = Files.asByteSink(file, FileWriteMode.APPEND);
 
@@ -120,13 +122,25 @@ public class UploadManager {
             throw e;
         }
 
-        DigestOutputStream md5OutStream = new DigestOutputStream(sink.openBufferedStream(), md5);
+        OutputStream os = sink.openBufferedStream();
+        try {
+            DigestOutputStream md5OutStream = new DigestOutputStream(os, md5);
 
-        OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream);
+            OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream);
+            try {
+                archive.writeTo(encryptedOutputStream);
+            } finally {
+                encryptedOutputStream.close();
+            }
+        } catch (CMSException e) {
+            e.printStackTrace();
+        } finally {
+            os.close();
+        }
 
-        archive.writeTo(encryptedOutputStream);
 
         String md5Hash = BaseEncoding.base64().encode(md5.digest());
+
 
         //TODO: write file metadata to db
 
@@ -137,5 +151,28 @@ public class UploadManager {
         uploadFile.md5Hash = md5Hash;
 
         return uploadFile;
+    }
+
+    private File getFile(String filename) {
+        return new File(BridgeManagerProvider.getInstance()
+                .getApplicationContext().getFilesDir().getAbsolutePath() + File.separator + filename);
+    }
+
+    private S3Service getS3Service(UploadSession uploadSession) {
+        URI uri = URI.create(uploadSession.getUrl());
+        String baseUrl = uri.getScheme() + "://" + uri.getHost() + "/";
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .client(s3OkhttpClient).build();
+
+        return retrofit.create(S3Service.class);
+    }
+
+    public static class UploadFile {
+        public String filename;
+        public String contentType;
+        public long fileLength;
+        public String md5Hash;
     }
 }

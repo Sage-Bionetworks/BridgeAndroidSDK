@@ -34,21 +34,22 @@ public class Archive {
 
     public ZipOutputStream writeTo(OutputStream os) throws IOException {
         ZipOutputStream zos = new ZipOutputStream(os);
+        try {
+            for (ArchiveFile dataFile : dataFiles) {
+                ZipEntry entry = new ZipEntry(dataFile.getFilename());
 
-        for (ArchiveFile dataFile : dataFiles) {
-            ZipEntry entry = new ZipEntry(dataFile.getFilename());
+                zos.putNextEntry(entry);
+                zos.write(dataFile.getByteSource().read());
+                zos.closeEntry();
+            }
 
-            zos.putNextEntry(entry);
-            zos.write(dataFile.getByteSource().read());
+            ZipEntry infoFileEntry = new ZipEntry(ARCHIVE_INFO_FILE_NAME);
+            zos.putNextEntry(infoFileEntry);
+            zos.write(RestUtils.GSON.toJson(archiveInfo).getBytes());
             zos.closeEntry();
+        } finally {
+            zos.close();
         }
-
-
-        ZipEntry infoFileEntry = new ZipEntry(ARCHIVE_INFO_FILE_NAME);
-        zos.putNextEntry(infoFileEntry);
-        zos.write(RestUtils.GSON.toJson(archiveInfo).getBytes());
-        zos.closeEntry();
-        zos.close();
         return zos;
     }
 

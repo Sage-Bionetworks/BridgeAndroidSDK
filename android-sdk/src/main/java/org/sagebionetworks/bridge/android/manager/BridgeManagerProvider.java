@@ -11,6 +11,10 @@ import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -81,7 +85,13 @@ public class BridgeManagerProvider {
             throw new RuntimeException("Could create StudyUploadEncryptor", e);
         }
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor);
+        s3OkHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(false).build();
+
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient);
     }
 
     @NonNull
@@ -106,6 +116,8 @@ public class BridgeManagerProvider {
     private final StudyUploadEncryptor studyUploadEncryptor;
     @NonNull
     private final UploadManager uploadManager;
+    @NonNull
+    private final OkHttpClient s3OkHttpClient;
 
     @NonNull
     public Context getApplicationContext() {
@@ -160,6 +172,11 @@ public class BridgeManagerProvider {
     @NonNull
     public StudyUploadEncryptor getStudyUploadEncryptor() {
         return studyUploadEncryptor;
+    }
+
+    @NonNull
+    public OkHttpClient getS3OkHttpClient() {
+        return s3OkHttpClient;
     }
 
 }

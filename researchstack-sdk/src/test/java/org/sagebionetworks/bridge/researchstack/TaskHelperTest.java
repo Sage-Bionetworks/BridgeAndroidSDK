@@ -38,6 +38,7 @@ import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.UUID;
 
 import rx.Completable;
+import rx.Single;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -133,7 +135,8 @@ public class TaskHelperTest {
         ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
                 .forClass(TaskNotification.class);
 
-        when(uploadManager.upload(any(), eq(archive))).thenReturn(Completable.complete());
+        when(uploadManager.upload(any(), eq(archive)))
+                .thenReturn(Single.just(new UploadValidationStatus()));
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
@@ -244,9 +247,9 @@ public class TaskHelperTest {
 
             {
                 TappingIntervalResult result = new TappingIntervalResult(step.getIdentifier());
-                result.setStepViewSize(new TappingIntervalResult.Size(200, 200));
-                result.setButtonRect1(new TappingIntervalResult.Rect(40, 40, 80, 80));
-                result.setButtonRect2(new TappingIntervalResult.Rect(120, 120, 160, 160));
+                result.setStepViewSize(200, 200);
+                result.setButtonRect1(40, 40, 80, 80);
+                result.setButtonRect2(120, 120, 160, 160);
 
                 // Add all the samples of Mock taps
                 int sampleCount = 20;
@@ -255,7 +258,7 @@ public class TaskHelperTest {
                 long timestamp = System.currentTimeMillis();
                 for (int j = 0; j < sampleCount; j++) {
                     TappingIntervalResult.Sample sample = new TappingIntervalResult.Sample();
-                    sample.setLocation(new TappingIntervalResult.Point(50, 50));
+                    sample.setLocation(50, 50);
                     sample.setTimestamp(timestamp + (timePerSample * j));
                     sample.setDuration(50);
 
