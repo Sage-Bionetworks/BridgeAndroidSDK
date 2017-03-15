@@ -15,6 +15,7 @@ import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.task.Task;
+import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
@@ -92,7 +93,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         NotificationHelper notificationHelper = NotificationHelper.
                 getInstance(bridgeManagerProvider.getApplicationContext());
-        this.taskHelper = new TaskHelper(storageAccessWrapper, ResourceManager.getInstance(),
+        this.taskHelper = new TaskHelper(
+                storageAccessWrapper, ResourceManager.getInstance(),
                 AppPrefs.getInstance(), notificationHelper, bridgeManagerProvider);
     }
 
@@ -517,8 +519,20 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void uploadTaskResult(Context context, TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
-        // TODO: Detect and upload non-survey results
-        taskHelper.uploadSurveyResult(taskResult);
+
+        boolean isActivity = false;
+        if (taskResult.getTaskDetails().containsKey(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY)) {
+            Object isActivityObject = taskResult.getTaskDetails().get(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY);
+            if (isActivityObject instanceof Boolean) {
+                isActivity = (Boolean)isActivityObject;
+            }
+        }
+
+        if (isActivity) {
+            taskHelper.uploadActivityResult("1", taskResult);
+        } else {
+            taskHelper.uploadSurveyResult(taskResult);
+        }
     }
 
     @Override

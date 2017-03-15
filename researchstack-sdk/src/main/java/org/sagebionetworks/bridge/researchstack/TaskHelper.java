@@ -62,7 +62,8 @@ public class TaskHelper {
             ResourceManager resourceManager,
             AppPrefs appPrefs,
             NotificationHelper notificationHelper,
-            BridgeManagerProvider bridgeManagerProvider) {
+            BridgeManagerProvider bridgeManagerProvider)
+    {
         this.storageAccess = storageAccess;
         this.resourceManager = resourceManager;
         this.appPrefs = appPrefs;

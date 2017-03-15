@@ -247,9 +247,9 @@ public class TaskHelperTest {
 
             {
                 TappingIntervalResult result = new TappingIntervalResult(step.getIdentifier());
-                result.setStepViewSize(new TappingIntervalResult.Size(200, 200));
-                result.setButtonRect1(new TappingIntervalResult.Rect(40, 40, 80, 80));
-                result.setButtonRect2(new TappingIntervalResult.Rect(120, 120, 160, 160));
+                result.setStepViewSize(200, 200);
+                result.setButtonRect1(40, 40, 80, 80);
+                result.setButtonRect2(120, 120, 160, 160);
 
                 // Add all the samples of Mock taps
                 int sampleCount = 20;
@@ -258,7 +258,7 @@ public class TaskHelperTest {
                 long timestamp = System.currentTimeMillis();
                 for (int j = 0; j < sampleCount; j++) {
                     TappingIntervalResult.Sample sample = new TappingIntervalResult.Sample();
-                    sample.setLocation(new TappingIntervalResult.Point(50, 50));
+                    sample.setLocation(50, 50);
                     sample.setTimestamp(timestamp + (timePerSample * j));
                     sample.setDuration(50);
 
