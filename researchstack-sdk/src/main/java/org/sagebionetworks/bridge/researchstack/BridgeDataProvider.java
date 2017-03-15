@@ -93,7 +93,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         NotificationHelper notificationHelper = NotificationHelper.
                 getInstance(bridgeManagerProvider.getApplicationContext());
-        this.taskHelper = new TaskHelper(bridgeManagerProvider.getApplicationContext(),
+        this.taskHelper = new TaskHelper(
                 storageAccessWrapper, ResourceManager.getInstance(),
                 AppPrefs.getInstance(), notificationHelper, bridgeManagerProvider);
     }

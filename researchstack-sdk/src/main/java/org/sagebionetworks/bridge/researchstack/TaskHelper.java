@@ -58,7 +58,6 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     public TaskHelper(
-            Context context,
             StorageAccessWrapper storageAccess,
             ResourceManager resourceManager,
             AppPrefs appPrefs,
