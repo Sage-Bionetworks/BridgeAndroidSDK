@@ -32,6 +32,7 @@ public class StudyUploadEncryptor {
     private final Supplier<JceKeyTransRecipientInfoGenerator> recipientInfoGeneratorSupplier;
 
     static {
+        // Dynamically register Cryptographic Service Provider
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
