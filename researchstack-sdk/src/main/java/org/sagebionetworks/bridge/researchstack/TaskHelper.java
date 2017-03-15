@@ -191,8 +191,7 @@ public class TaskHelper {
         String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
         bridgeManagerProvider.getUploadManager()
-                .upload(archiveFilename, bridgeArchiveBuilder.build())
-                .await();
+                .upload(archiveFilename, bridgeArchiveBuilder.build()).toCompletable().await();
 
         // At this point, the upload request has been processed and saved,
         // so it is safe to delete the temporary data logger files
