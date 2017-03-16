@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.WorkerThread;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSink;
@@ -36,7 +37,6 @@ import rx.Single;
 /**
  * Created by jyliu on 1/30/2017.
  */
-
 public class UploadManager {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
@@ -52,12 +52,9 @@ public class UploadManager {
         this.s3OkhttpClient = s3OkhttpClient;
     }
 
-    public Single<UploadValidationStatus> getStatus(String uploadId) {
-        return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
-    }
-
     @NonNull
     public Single<UploadValidationStatus> upload(String filename, Archive archive) {
+        LOG.info("Uploading file: " + filename);
         Single<UploadFile> uploadFileSingle = Single
                 .fromCallable(() -> persist(filename, archive)).cache();
 
@@ -65,6 +62,11 @@ public class UploadManager {
                 .flatMap(this::requestUploadSession);
 
         return Single.zip(uploadFileSingle, uploadSessionSingle, this::uploadToS3).flatMap(i -> i);
+    }
+
+    @NonNull
+    public Single<UploadValidationStatus> getStatus(String uploadId) {
+        return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
     @NonNull
@@ -83,7 +85,8 @@ public class UploadManager {
                 .toCompletable()
                 .doOnCompleted(() -> {
                     // TODO: update upload status in DB, delete file
-                    LOG.info("Upload succeeded for id: " + session.getId());
+                    LOG.info("Upload to s3 succeeded for id: " + session.getId()
+                            + ", filename: " + uploadFile.filename);
                 }).doOnError(t -> {
                     LOG.info("Couldn't upload to s3", t);
                 }).andThen(
@@ -109,6 +112,8 @@ public class UploadManager {
                 });
     }
 
+
+    @WorkerThread
     UploadFile persist(String filename, Archive archive) throws NoSuchAlgorithmException, IOException {
         File file = getFile(filename);
 

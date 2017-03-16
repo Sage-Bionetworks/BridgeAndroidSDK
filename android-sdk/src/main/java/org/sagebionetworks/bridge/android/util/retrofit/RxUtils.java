@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import retrofit2.Call;
 import rx.Observable;
 import rx.Single;
+import rx.schedulers.Schedulers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -14,11 +15,20 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 public class RxUtils {
+
+    /**
+     * Converts a Call to a Single.
+     *
+     * @param call call which returns Response with body type T
+     * @return Single created from call, which emits T
+     * @typeparam T type returned by Single and Call
+     */
     @NonNull
     public static <T> Single<T> toBodySingle(@NonNull Call<T> call) {
         checkNotNull(call);
 
-        return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call))).toSingle();
+        return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call)))
+                .subscribeOn(Schedulers.io()).toSingle();
     }
 
 }

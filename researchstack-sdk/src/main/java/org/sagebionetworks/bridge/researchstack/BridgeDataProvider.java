@@ -524,12 +524,11 @@ public abstract class BridgeDataProvider extends DataProvider {
         if (taskResult.getTaskDetails().containsKey(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY)) {
             Object isActivityObject = taskResult.getTaskDetails().get(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY);
             if (isActivityObject instanceof Boolean) {
-                isActivity = (Boolean)isActivityObject;
+                isActivity = (Boolean) isActivityObject;
             }
         }
-
         if (isActivity) {
-            taskHelper.uploadActivityResult("1", taskResult);
+            taskHelper.uploadActivityResult(taskResult.getIdentifier(), taskResult);
         } else {
             taskHelper.uploadSurveyResult(taskResult);
         }
