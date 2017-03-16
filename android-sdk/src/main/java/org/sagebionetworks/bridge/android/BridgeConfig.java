@@ -93,6 +93,13 @@ public class BridgeConfig {
     }
 
     @NonNull
+    public String getStudyPublicKey() {
+        return applicationContext.getResources().getString(R.string.osb_study_public_key);
+    }
+
+
+
+    @NonNull
     public int getAppVersion() {
         return BuildConfig.VERSION_CODE;
     }
@@ -106,7 +113,7 @@ public class BridgeConfig {
     public X509Certificate getPublicKey() throws IOException, CertificateException {
         InputStream publicKeyFile;
         try {
-            publicKeyFile = applicationContext.getAssets().open(STUDY_PUBLIC_KEY, ACCESS_BUFFER);
+            publicKeyFile = applicationContext.getAssets().open(getStudyPublicKey(), ACCESS_BUFFER);
         } catch(IOException e) {
             logger.error("Could not load public key from /assets/study_public_key.pem", e);
             throw e;
