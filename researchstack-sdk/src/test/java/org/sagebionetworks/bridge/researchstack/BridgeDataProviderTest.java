@@ -1,20 +1,29 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+import android.os.Looper;
+import android.preference.PreferenceManager;
+import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.Task;
+import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
@@ -50,6 +59,8 @@ import static org.mockito.Mockito.when;
 /**
  * Created by liujoshua on 9/12/16.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({PreferenceManager.class, Looper.class})
 public class BridgeDataProviderTest {
     private DataProvider dataProvider;
     @Mock
@@ -120,6 +131,11 @@ public class BridgeDataProviderTest {
                         throw new UnsupportedOperationException();
                     }
                 };
+
+        PowerMockito.mockStatic(PreferenceManager.class);
+        PowerMockito.mockStatic(Looper.class);
+
+        AppPrefs.init(context);
     }
 
     @Test
@@ -159,6 +175,7 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testSignOut() throws IOException {
+
         when(authenticationManager.signOut()).thenReturn(Completable.complete());
 
         Observable<DataResponse> responseObservable = dataProvider.signOut(context);
