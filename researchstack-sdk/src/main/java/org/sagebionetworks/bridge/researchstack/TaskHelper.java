@@ -241,8 +241,16 @@ public class TaskHelper {
             FileResult fileResult = (FileResult) result;
             File file = fileResult.getFile();
 
+            // Get file extension and make a new filename out of it using the FileResult identifier
+            int lastIndex = file.getName().lastIndexOf(".");
+            String fileExtension = ".json";
+            if (lastIndex >= 0) {
+                fileExtension = file.getName().substring(lastIndex, file.getName().length());
+            }
+            String filename = bridgifyIdentifier(fileResult.getIdentifier()) + fileExtension;
+
             return new ByteSourceArchiveFile(
-                    file.getName(),
+                    filename,
                     endTime,
                     Files.asByteSource(file));
         }
