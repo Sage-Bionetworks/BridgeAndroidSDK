@@ -198,8 +198,6 @@ public class AuthenticationManager {
                     accountDAO.setSignIn(null);
                     accountDAO.setUserSessionInfo(null);
                     accountDAO.setStudyParticipant(null);
-
-                    // TODO: clear participant data, e.g. files and shared preferences
                 }).toCompletable();
     }
 

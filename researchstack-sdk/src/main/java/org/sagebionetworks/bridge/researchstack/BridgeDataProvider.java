@@ -8,9 +8,11 @@ import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
+import org.researchstack.backbone.onboarding.OnboardingManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -19,6 +21,7 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
+import org.researchstack.skin.ResearchStack;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
@@ -367,7 +370,15 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> signOut(Context context) {
         logger.debug("Called signOut");
 
-        return signOut().andThen(SUCCESS_DATA_RESPONSE);
+        return signOut().doOnCompleted(new Action0() {
+            @Override
+            public void call() {
+                // After the call is completed and successful,
+                // Clear the other parts of the user data
+                AppPrefs.getInstance().clear();
+                StorageAccess.getInstance().removePinCode(context);
+            }
+        }).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @NonNull
@@ -586,5 +597,4 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         return model;
     }
-
 }
