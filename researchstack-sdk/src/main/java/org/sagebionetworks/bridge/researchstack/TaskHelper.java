@@ -62,8 +62,7 @@ public class TaskHelper {
             ResourceManager resourceManager,
             AppPrefs appPrefs,
             NotificationHelper notificationHelper,
-            BridgeManagerProvider bridgeManagerProvider)
-    {
+            BridgeManagerProvider bridgeManagerProvider) {
         this.storageAccess = storageAccess;
         this.resourceManager = resourceManager;
         this.appPrefs = appPrefs;
@@ -189,19 +188,25 @@ public class TaskHelper {
             }
         }
 
+        // bridgeManagerProvider.getApplicationContext().getFilesDir() + File.separator +
         String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
         bridgeManagerProvider.getUploadManager()
-                .upload(archiveFilename, bridgeArchiveBuilder.build()).toCompletable().await();
+                .queueUpload(archiveFilename, bridgeArchiveBuilder.build())
+                .doOnSuccess(uploadFile -> {
+                    logger.debug("Calling uploadToS3() to upload pending uploads");
 
-        // At this point, the upload request has been processed and saved,
-        // so it is safe to delete the temporary data logger files
-        for (Result result : results) {
-            if (result instanceof FileResult) {
-                FileResult fileResult = (FileResult) result;
-                DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
-            }
-        }
+                    // At this point, the upload request has been processed and saved,
+                    // so it is safe to delete the temporary data logger files
+                    for (Result result : results) {
+                        if (result instanceof FileResult) {
+                            FileResult fileResult = (FileResult) result;
+                            DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
+                        }
+                    }
+
+                    bridgeManagerProvider.getUploadManager().uploadToS3().toCompletable().await();
+                }).toBlocking().value();
     }
 
     private void scheduleReminderNotification(Date endDate, String chronTime) {
@@ -230,7 +235,7 @@ public class TaskHelper {
             if (stepResult.getAnswerFormat() != null) {
                 SurveyAnswer surveyAnswer = SurveyAnswer.create(stepResult);
 
-                return new JsonArchiveFile(filename, endTime, surveyAnswer);
+                return new JsonArchiveFile(filename, endTime, surveyAnswer, SurveyAnswer.class);
             } else {  // otherwise make a generic String, Object JSON Map
                 Type typeOfMap = new TypeToken<Map<String, Object>>() {
                 }.getType();
@@ -241,8 +246,15 @@ public class TaskHelper {
             FileResult fileResult = (FileResult) result;
             File file = fileResult.getFile();
 
+            int lastIndex = file.getName().lastIndexOf(".");
+            String fileExtension = ".json";
+            if (lastIndex >= 0) {
+                fileExtension = file.getName().substring(lastIndex, file.getName().length());
+            }
+            String filename = bridgifyIdentifier(fileResult.getIdentifier()) + fileExtension;
+
             return new ByteSourceArchiveFile(
-                    file.getName(),
+                    filename,
                     endTime,
                     Files.asByteSource(file));
         }

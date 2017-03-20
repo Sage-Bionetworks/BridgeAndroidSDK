@@ -541,7 +541,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         }
 
         if (isActivity) {
-            taskHelper.uploadActivityResult("1", taskResult);
+            taskHelper.uploadActivityResult(taskResult.getIdentifier(), taskResult);
         } else {
             taskHelper.uploadSurveyResult(taskResult);
         }

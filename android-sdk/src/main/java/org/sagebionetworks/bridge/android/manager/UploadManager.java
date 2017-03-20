@@ -34,13 +34,15 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import retrofit2.Retrofit;
+import rx.Completable;
 import rx.Observable;
 import rx.Single;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by jyliu on 1/30/2017.
  */
-
 public class UploadManager {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
@@ -79,25 +81,18 @@ public class UploadManager {
         return Single.fromCallable(() -> persist(filename, archive));
     }
 
+    /**
+     * This triggers an attempt to upload all the previously queued upload files
+     * You must call queueUpload before this method will have anything to operate on
+     *
+     * @return Observable with information on if the upload was successful or not
+     */
     public Observable<UploadValidationStatus> uploadToS3() {
-        Observable<String> filenameObservable = Observable.from((String[]) uploadDAO
-                .listUploadFilenames().toArray());
+        Observable<String> filenameObservable = Observable.from(uploadDAO
+                .listUploadFilenames());
 
         return filenameObservable
                 .flatMap(filename -> uploadToS3(filename).toObservable());
-
-//                .map(filename -> uploadDAO.getUploadFile(filename))
-//                .flatMap(filename);
-//
-
-//                .flatMap(uploadFile -> getUploadSession(uploadFile).toObservable())
-//                .flatMap(uploadSession -> getUploadValidationStatus(uploadSession.getId()).toObservable())
-//                .withLatestFrom(filenameObservable,
-//                        (uploadValidationStatus, filename) ->
-//                                (new Object[]{uploadValidationStatus, filename}))
-//                .filter(data ->
-//                        UploadStatus.SUCCEEDED != ((UploadValidationStatus) data[0]).getStatus())
-//                .map(data -> ((UploadValidationStatus) data[0]));
     }
 
     /**
@@ -108,35 +103,71 @@ public class UploadManager {
      */
     public Single<UploadValidationStatus> uploadToS3(String filename) {
         UploadFile uploadFile = uploadDAO.getUploadFile(filename);
+        if (uploadFile == null) {
+            LOG.warn("Could not find uploadFile for filename: " + filename);
 
-        String uploadId = uploadDAO.getUploadSession(filename).getId();
+            return Single.just(null);
+        }
 
-        return getUploadValidationStatus(uploadId)
+        return getUploadSession(uploadFile)
+                .flatMap(uploadSession -> getUploadValidationStatus(uploadSession.getId()))
                 .flatMap((uploadValidationStatus) -> {
                     if (uploadValidationStatus == null) {
-                        LOG.info("Could not find pending upload session for filename: " + filename);
-                        return null;
+                        LOG.info("Could not find uploadValidationStatus for filename: " + filename);
+                        return Single.just(null);
                     }
+
                     if (UploadStatus.SUCCEEDED == uploadValidationStatus.getStatus()) {
                         LOG.info("Cleaning up successful upload with filename: " + filename
                                 + ", id: " + uploadValidationStatus.getId());
-
                         uploadDAO.removeUploadAndSession(filename);
-                        return Single.just(uploadValidationStatus);
+                        return Single.just(null);
+                    } else if (UploadStatus.VALIDATION_FAILED == uploadValidationStatus.getStatus()) {
+                        LOG.info("Cleaning up validation-failed upload with filename: " + filename
+                                + ", id: " + uploadValidationStatus.getId());
+                        uploadDAO.removeUploadAndSession(filename);
+                        return Single.just(null);
                     }
+
                     return getUploadSession(uploadFile)
-                            .flatMap(uploadSession -> uploadToS3(uploadFile, uploadSession))
-                            .flatMap(uploadSession -> getUploadValidationStatus(uploadId));
+                            .flatMapCompletable(uploadSession -> uploadToS3(uploadFile, uploadSession))
+                            .andThen(getUploadValidationStatus((uploadValidationStatus.getId())));
+                }).doOnSuccess(uploadValidationStatus -> {
+                    LOG.debug("uploadToS3 succeded, uploadValidationStatus: " + uploadValidationStatus);
+                    if (uploadValidationStatus == null) {
+                        LOG.warn("null uploadValidationStatus");
+                    }
+
+                }).onErrorReturn(throwable -> {
+                    LOG.warn("Failed attempt to upload pending file: " + filename, throwable);
+                    if (isPermanentFailure(uploadFile, throwable)) {
+                        uploadDAO.removeUploadAndSession(filename);
+                    }
+                    return null;
                 });
     }
 
+    // determines whether an upload failure is permanent, i.e. no point in retrying
+    boolean isPermanentFailure(UploadFile uploadFile, Throwable throwable) {
+        if (throwable instanceof IllegalStateException) {
+            // some pre-condition failed
+            return true;
+        }
+        return false;
+    }
+
     Single<UploadValidationStatus> getUploadValidationStatus(String uploadId) {
+        if (uploadId == null) {
+            LOG.warn("Cannot retrieve validation status for null uploadId");
+            return Single.just(null);
+        }
         return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
-    Single<UploadSession> uploadToS3(UploadFile uploadFile, UploadSession session) {
+    Completable uploadToS3(UploadFile uploadFile, UploadSession session) {
+        File file = getFile(uploadFile.filename);
+        checkState(file.exists(), "Non-existent file: " + file.getAbsolutePath());
 
-        File file = new File(uploadFile.filename);
         RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
 
         return RxUtils.toBodySingle(
@@ -154,7 +185,8 @@ public class UploadManager {
                         ).onErrorReturn((t) -> {
                             LOG.info("Failed to call upload complete, server will recover", t);
                             return session;
-                        }));
+                        })
+                ).toCompletable();
     }
 
     Single<UploadSession> getUploadSession(UploadFile uploadFile) {
@@ -179,7 +211,7 @@ public class UploadManager {
     @WorkerThread
     UploadFile persist(String filename, Archive archive) throws IOException,
             CMSException, NoSuchAlgorithmException {
-        File file = new File(filename);
+        File file = getFile(filename);
 
         ByteSink sink = Files.asByteSink(file, FileWriteMode.APPEND);
 
@@ -191,15 +223,25 @@ public class UploadManager {
             throw e;
         }
 
-        DigestOutputStream md5OutStream = new DigestOutputStream(sink.openBufferedStream(), md5);
+        LOG.debug("Writing archive with filename: " + filename + ", with contents: " + archive);
 
-        OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream);
+        OutputStream os = sink.openBufferedStream();
+        try {
+            DigestOutputStream md5OutStream = new DigestOutputStream(os, md5);
 
-        archive.writeTo(encryptedOutputStream);
+            OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream);
+            try {
+                archive.writeTo(encryptedOutputStream);
+            } finally {
+                encryptedOutputStream.close();
+            }
+        } catch (CMSException e) {
+            e.printStackTrace();
+        } finally {
+            os.close();
+        }
 
         String md5Hash = BaseEncoding.base64().encode(md5.digest());
-
-        //TODO: write file metadata to db
 
         UploadFile uploadFile = new UploadFile();
         uploadFile.filename = filename;
@@ -210,6 +252,11 @@ public class UploadManager {
         uploadDAO.putUploadFile(filename, uploadFile);
 
         return uploadFile;
+    }
+
+    private File getFile(String filename) {
+        return new File(BridgeManagerProvider.getInstance()
+                .getApplicationContext().getFilesDir().getAbsolutePath() + File.separator + filename);
     }
 
     private S3Service getS3Service(UploadSession uploadSession) {

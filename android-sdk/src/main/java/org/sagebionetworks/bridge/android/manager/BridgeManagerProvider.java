@@ -9,6 +9,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
+import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
@@ -75,6 +76,7 @@ public class BridgeManagerProvider {
 
         accountDAO = new AccountDAO(applicationContext);
         consentDAO = new ConsentDAO(applicationContext);
+        uploadDAO = new UploadDAO(applicationContext);
 
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
         participantManager = new ParticipantManager(authenticationManager, accountDAO);
@@ -93,7 +95,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
     }
 
     @NonNull
@@ -114,6 +116,8 @@ public class BridgeManagerProvider {
     private final ConsentDAO consentDAO;
     @NonNull
     private final AccountDAO accountDAO;
+    @NonNull
+    private final UploadDAO uploadDAO;
     @NonNull
     private final StudyUploadEncryptor studyUploadEncryptor;
     @NonNull
