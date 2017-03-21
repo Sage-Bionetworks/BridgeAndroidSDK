@@ -245,6 +245,15 @@ public class TaskHelper {
                     file.getName(),
                     endTime,
                     Files.asByteSource(file));
+        } else {
+            if (result instanceof TappingIntervalResult) {
+                // TODO: replace this in RestUtils.GSON
+                // TODO: you can do standard json parsing after this
+                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create();
+                String filename = bridgifyIdentifier(result.getIdentifier()) + ".json";
+                String json = gson.toJson(result, TappingIntervalResult.class);
+                return new JsonArchiveFile(filename, endTime, json);
+            }
         }
         return null;
     }
@@ -317,6 +326,9 @@ public class TaskHelper {
                     }
                 } else if (value instanceof FileResult) {
                     resultList.add((Result) value);
+                } else if (value instanceof TappingIntervalResult) {
+                    resultList.add((Result) value);
+                    wentDeeper = true;
                 }
             }
         }
