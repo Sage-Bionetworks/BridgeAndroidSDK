@@ -135,8 +135,8 @@ public class TaskHelperTest {
         ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
                 .forClass(TaskNotification.class);
 
-        when(uploadManager.upload(any(), eq(archive)))
-                .thenReturn(Single.just(new UploadValidationStatus()));
+        when(uploadManager.queueUpload(any(), eq(archive)))
+                .thenReturn(Single.just(new UploadManager.UploadFile()));
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
@@ -144,7 +144,7 @@ public class TaskHelperTest {
 
         taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
 
-        verify(uploadManager).upload(any(), eq(archive));
+        verify(uploadManager).queueUpload(any(), eq(archive));
 
         verify(notificationHelper).saveTaskNotification(taskNotificationCaptor.capture());
         verify(applicationContext).sendBroadcast(notificationCreateIntent);
