@@ -206,19 +206,19 @@ public class TaskHelperTest {
 
         assertNotNull(resultList);
         assertFalse(resultList.isEmpty());
-        assertEquals(resultList.size(), 4); // 12 for data recorder files, 5 for step results
+        assertEquals(resultList.size(), 4); // 2 data accel data recorders, and 2 step results, and 2 TappingIntervalResult
 
         int fileCount = 0;
-        int stepResultCount = 0;
+        int tappingResultCount = 0;
         for (Result result : resultList) {
-            if (result instanceof StepResult) {
-                stepResultCount++;
-            } else if (result instanceof FileResult) {
+            if (result instanceof FileResult) {
                 fileCount++;
+            } else if (result instanceof TappingIntervalResult) {
+                tappingResultCount++;
             }
         }
         assertEquals(fileCount, 2);
-        assertEquals(stepResultCount, 2);
+        assertEquals(tappingResultCount, 2);
     }
 
     public static TaskResult tappingTaskResult() {
