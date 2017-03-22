@@ -6,8 +6,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.Archive;
-import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
-import org.sagebionetworks.bridge.android.manager.activity.ArchiveBuilderFactory;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -27,7 +25,7 @@ public class ArchiveBuilderFactoryTest {
     @Mock
     private BridgeConfig bridgeConfig;
 
-    private ActivityCache activityCache;
+    private ActivitySchemaCache activityCache;
 
     private ArchiveBuilderFactory archiveBuilderFactory;
 
@@ -35,7 +33,7 @@ public class ArchiveBuilderFactoryTest {
     public void setup() {
         MockitoAnnotations.initMocks(this);
 
-        activityCache = new ActivityCache();
+        activityCache = new ActivitySchemaCache();
         archiveBuilderFactory = new ArchiveBuilderFactory(bridgeConfig, activityCache);
 
         when(bridgeConfig.getAppVersionName()).thenReturn("app version");
@@ -62,7 +60,7 @@ public class ArchiveBuilderFactoryTest {
                                 .id(SCHEMA_ID)
                                 .revision(SCHEMA_REVISION)));
 
-        activityCache.cacheActivity(activity);
+        activityCache.cacheActivitySchema(activity);
 
         Archive.Builder builder = archiveBuilderFactory.create(TASK_ID);
 

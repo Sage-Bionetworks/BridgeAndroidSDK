@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
+import org.sagebionetworks.bridge.android.manager.activity.ActivitySchemaCache;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
@@ -41,7 +41,7 @@ public class ActivityManagerTest {
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
-    private ActivityCache activityCache;
+    private ActivitySchemaCache activityCache;
 
     private ActivityManager activityManager;
 

@@ -17,11 +17,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
- * Created by jyliu on 3/21/2017.
+ * A cache of mappings from activities' identifiers (tasks, surveys, compound activities) to
+ * (SchemaReference, SurveyReference). This is to help identify how an activity's return data should
+ * be formatted.
  */
-
-public class ActivityCache {
-    private static final Logger LOG = LoggerFactory.getLogger(ActivityCache.class);
+public class ActivitySchemaCache {
+    private static final Logger LOG = LoggerFactory.getLogger(ActivitySchemaCache.class);
     @NonNull
     private final Map<String, SchemaReference> taskIdentifierToSchema;
     @NonNull
@@ -34,7 +35,7 @@ public class ActivityCache {
     private final Map<String, ActivityType> identifierToActivityType;
 
 
-    public ActivityCache() {
+    public ActivitySchemaCache() {
         taskIdentifierToSchema = Maps.newHashMap();
         surveyIdentifierToSurvey = Maps.newHashMap();
         surveyGuidToIdentifier = Maps.newHashMap();
@@ -45,7 +46,7 @@ public class ActivityCache {
     }
 
     private void addTasks() {
-        // TODO: this should be configurable
+        // TODO: these should be configurable
         identifierToActivityType.put("1-APHMedicationTracker-20EF8ED2-E461-4C20-9024-F43FCAAAF4C3", ActivityType.TASK);
         taskIdentifierToSchema.put("1-APHMedicationTracker-20EF8ED2-E461-4C20-9024-F43FCAAAF4C3",
                 new SchemaReference().id("Medication Tracker").revision(8L));
@@ -71,7 +72,12 @@ public class ActivityCache {
                 new SchemaReference().id("Walking Activity").revision(6L));
     }
 
-    public void cacheActivity(Activity activity) {
+    /**
+     * Caches the activity's schema information according to its type.
+     *
+     * @param activity activity to cache
+     */
+    public void cacheActivitySchema(Activity activity) {
         switch (activity.getActivityType()) {
             case TASK:
                 TaskReference taskReference = activity.getTask();
@@ -103,26 +109,46 @@ public class ActivityCache {
         }
     }
 
+    /**
+     * @param identifier for activity (this could be a taskIdentifier, surveyGuid)
+     * @return Ttpe of activity
+     */
     @Nullable
     public ActivityType getActivityType(String identifier) {
         return identifierToActivityType.get(identifier);
     }
 
+    /**
+     * @param taskIdentifier identifer for a task
+     * @return activity's schema
+     */
     @Nullable
     public SchemaReference getSchemaReference(String taskIdentifier) {
         return taskIdentifierToSchema.get(taskIdentifier);
     }
 
+    /**
+     * @param guid survey guid
+     * @return surveyIdentifier
+     */
     @Nullable
     public String getSurveyIdentifier(String guid) {
         return surveyGuidToIdentifier.get(guid);
     }
 
+    /**
+     * @param surveyIdentifier survey identifier
+     * @return survey reference
+     */
     @Nullable
     public SurveyReference getSurvey(String surveyIdentifier) {
         return surveyIdentifierToSurvey.get(surveyIdentifier);
     }
 
+    /**
+     * @param taskIdentifier identifier for compound task
+     * @return compound activity, containing SurveyReferences and SchemaReferences
+     */
     @Nullable
     public CompoundActivity getCompoundActivity(String taskIdentifier) {
         return taskIdentifierToCompoundActivity.get(taskIdentifier);

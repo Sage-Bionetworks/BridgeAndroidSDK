@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
 
-import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
+import org.sagebionetworks.bridge.android.manager.activity.ActivitySchemaCache;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -31,9 +31,9 @@ public class ActivityManager {
     private final ForConsentedUsersApi api;
 
     @NonNull
-    private final ActivityCache activityCache;
+    private final ActivitySchemaCache activityCache;
 
-    public ActivityManager(@NonNull AuthenticationManager authenticationManager, ActivityCache activityCache) {
+    public ActivityManager(@NonNull AuthenticationManager authenticationManager, ActivitySchemaCache activityCache) {
         checkNotNull(authenticationManager);
 
         api = authenticationManager.getApi();
@@ -52,7 +52,7 @@ public class ActivityManager {
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                     for (ScheduledActivity scheduleActivity : scheduleActivityList.getItems()) {
-                        activityCache.cacheActivity(scheduleActivity.getActivity());
+                        activityCache.cacheActivitySchema(scheduleActivity.getActivity());
                     }
                 });
     }

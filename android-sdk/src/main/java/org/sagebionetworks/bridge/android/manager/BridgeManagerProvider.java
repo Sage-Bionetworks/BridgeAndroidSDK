@@ -7,7 +7,7 @@ import android.support.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
-import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
+import org.sagebionetworks.bridge.android.manager.activity.ActivitySchemaCache;
 import org.sagebionetworks.bridge.android.manager.activity.ArchiveBuilderFactory;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
@@ -79,7 +79,7 @@ public class BridgeManagerProvider {
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
         participantManager = new ParticipantManager(authenticationManager, accountDAO);
         consentManager = new ConsentManager(authenticationManager, consentDAO);
-        activityCache = new ActivityCache();
+        activityCache = new ActivitySchemaCache();
         activityManager = new ActivityManager(authenticationManager, activityCache);
         archiveBuilderFactory = new ArchiveBuilderFactory(bridgeConfig, activityCache);
 
@@ -111,10 +111,10 @@ public class BridgeManagerProvider {
     @NonNull
     private final ConsentManager consentManager;
     @NonNull
-    private final ActivityCache activityCache;
+    private final ActivitySchemaCache activityCache;
 
     @NonNull
-    public ActivityCache getActivityCache() {
+    public ActivitySchemaCache getActivityCache() {
         return activityCache;
     }
 

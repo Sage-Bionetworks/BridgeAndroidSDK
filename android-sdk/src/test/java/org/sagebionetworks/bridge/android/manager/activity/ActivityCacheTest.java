@@ -2,7 +2,6 @@ package org.sagebionetworks.bridge.android.manager.activity;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
@@ -18,11 +17,11 @@ public class ActivityCacheTest {
     private static final String SCHEMA_ID = "schemaIdentifier";
     private static final Long SCHEMA_REVISION = 10L;
 
-    private ActivityCache activityCache;
+    private ActivitySchemaCache activityCache;
 
     @Before
     public void setupTest() {
-        activityCache = new ActivityCache();
+        activityCache = new ActivitySchemaCache();
     }
 
     @Test
@@ -36,7 +35,7 @@ public class ActivityCacheTest {
                                 .revision(SCHEMA_REVISION)));
 
 
-        activityCache.cacheActivity(activity);
+        activityCache.cacheActivitySchema(activity);
 
 
         assertEquals(TASK, activityCache.getActivityType(TASK_ID));

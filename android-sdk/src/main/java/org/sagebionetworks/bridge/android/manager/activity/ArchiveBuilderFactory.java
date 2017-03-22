@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.activity;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.Archive;
@@ -14,22 +15,27 @@ import static org.sagebionetworks.bridge.rest.model.ActivityType.SURVEY;
 import static org.sagebionetworks.bridge.rest.model.ActivityType.TASK;
 
 /**
- * Created by jyliu on 3/21/2017.
+ * Creates Archive.Builder instances from an activity identifier, popoulated with correct metadata
+ * to identify the format of the payload to Bridge.
  */
-
 public class ArchiveBuilderFactory {
     Logger logger = LoggerFactory.getLogger(ArchiveBuilderFactory.class);
 
     @NonNull
     private final BridgeConfig bridgeConfig;
     @NonNull
-    private final ActivityCache activityCache;
+    private final ActivitySchemaCache activityCache;
 
-    public ArchiveBuilderFactory(BridgeConfig bridgeConfig, ActivityCache activityCache) {
+    public ArchiveBuilderFactory(BridgeConfig bridgeConfig, ActivitySchemaCache activityCache) {
         this.bridgeConfig = bridgeConfig;
         this.activityCache = activityCache;
     }
 
+    /**
+     * @param identifier activity identifier (surveyGuid, taskId)
+     * @return builder for the corresponding activity, or null if not known
+     */
+    @Nullable
     public Archive.Builder create(String identifier) {
 
         ActivityType activityType = activityCache.getActivityType(identifier);
