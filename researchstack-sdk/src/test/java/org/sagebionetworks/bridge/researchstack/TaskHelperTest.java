@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.UUID;
 
 import rx.Completable;
+import rx.Observable;
 import rx.Single;
 
 import static org.junit.Assert.assertEquals;
@@ -137,6 +138,7 @@ public class TaskHelperTest {
 
         when(uploadManager.queueUpload(any(), eq(archive)))
                 .thenReturn(Single.just(new UploadManager.UploadFile()));
+        when(uploadManager.uploadToS3()).thenReturn(Observable.just(new UploadValidationStatus()));
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
@@ -145,6 +147,7 @@ public class TaskHelperTest {
         taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
 
         verify(uploadManager).queueUpload(any(), eq(archive));
+        verify(uploadManager).uploadToS3();
 
         verify(notificationHelper).saveTaskNotification(taskNotificationCaptor.capture());
         verify(applicationContext).sendBroadcast(notificationCreateIntent);

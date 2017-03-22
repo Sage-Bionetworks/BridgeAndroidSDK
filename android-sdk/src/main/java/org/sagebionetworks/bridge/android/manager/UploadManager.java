@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
 import com.google.common.io.BaseEncoding;
@@ -77,6 +78,7 @@ public class UploadManager {
      * @param archive  archive to be queued
      * @return information about file that produced by the archive
      */
+    @NonNull
     public Single<UploadFile> queueUpload(String filename, Archive archive) {
         return Single.fromCallable(() -> persist(filename, archive));
     }
@@ -87,6 +89,7 @@ public class UploadManager {
      *
      * @return Observable with information on if the upload was successful or not
      */
+    @NonNull
     public Observable<UploadValidationStatus> uploadToS3() {
         Observable<String> filenameObservable = Observable.from(uploadDAO
                 .listUploadFilenames());
@@ -101,6 +104,7 @@ public class UploadManager {
      * @param filename filename to upload
      * @return Single of current upload validation status, which could be null if pending upload not found
      */
+    @NonNull
     public Single<UploadValidationStatus> uploadToS3(String filename) {
         UploadFile uploadFile = uploadDAO.getUploadFile(filename);
         if (uploadFile == null) {
@@ -156,6 +160,7 @@ public class UploadManager {
         return false;
     }
 
+    @NonNull
     Single<UploadValidationStatus> getUploadValidationStatus(String uploadId) {
         if (uploadId == null) {
             LOG.warn("Cannot retrieve validation status for null uploadId");
@@ -164,6 +169,7 @@ public class UploadManager {
         return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
+    @NonNull
     Completable uploadToS3(UploadFile uploadFile, UploadSession session) {
         File file = getFile(uploadFile.filename);
         checkState(file.exists(), "Non-existent file: " + file.getAbsolutePath());
@@ -188,7 +194,7 @@ public class UploadManager {
                         })
                 ).toCompletable();
     }
-
+    @NonNull
     Single<UploadSession> getUploadSession(UploadFile uploadFile) {
         UploadSession cachedUploadSession = uploadDAO.getUploadSession(uploadFile.filename);
         if (cachedUploadSession != null && cachedUploadSession.getExpires().isAfterNow()) {
@@ -209,6 +215,7 @@ public class UploadManager {
     }
 
     @WorkerThread
+    @NonNull
     UploadFile persist(String filename, Archive archive) throws IOException,
             CMSException, NoSuchAlgorithmException {
         File file = getFile(filename);
