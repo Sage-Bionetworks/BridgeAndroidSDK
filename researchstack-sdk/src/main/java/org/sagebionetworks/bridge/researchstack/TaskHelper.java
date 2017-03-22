@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.StringUtils;
@@ -13,6 +15,7 @@ import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
+import org.researchstack.backbone.result.TappingIntervalResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.result.logger.DataLoggerManager;
 import org.researchstack.backbone.storage.NotificationHelper;
