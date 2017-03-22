@@ -19,6 +19,7 @@ import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.storage.database.AppDatabase;
 import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
+import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
@@ -28,6 +29,7 @@ import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.data.ArchiveFile;
 import org.sagebionetworks.bridge.android.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.android.data.JsonArchiveFile;
+import org.sagebionetworks.bridge.android.manager.activity.ArchiveBuilderFactory;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
@@ -62,8 +64,7 @@ public class TaskHelper {
             ResourceManager resourceManager,
             AppPrefs appPrefs,
             NotificationHelper notificationHelper,
-            BridgeManagerProvider bridgeManagerProvider)
-    {
+            BridgeManagerProvider bridgeManagerProvider) {
         this.storageAccess = storageAccess;
         this.resourceManager = resourceManager;
         this.appPrefs = appPrefs;
@@ -136,31 +137,50 @@ public class TaskHelper {
         return smartSurveyTask;
     }
 
-    public void uploadActivityResult(String schemaId, TaskResult taskResult) {
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forActivity(schemaId);
+    public void uploadTaskResult(TaskResult taskResult) {
+        ArchiveBuilderFactory af = new ArchiveBuilderFactory(null, null);
 
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
-    }
+        Archive.Builder builder = af.create(taskResult.getIdentifier());
 
-    public void uploadActivityResult(String schemaId, int schemaRevisionId, TaskResult taskResult) {
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forActivity(schemaId, schemaRevisionId);
+        if (builder != null) {
+            uploadTaskResult(taskResult, builder);
+            return;
+        }
 
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
-    }
+        logger.debug("Handling TaskResult using TaskDetails");
+        boolean isActivity = false;
+        if (taskResult.getTaskDetails().containsKey(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY)) {
+            Object isActivityObject = taskResult.getTaskDetails().get(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY);
+            if (isActivityObject instanceof Boolean) {
+                isActivity = (Boolean) isActivityObject;
+            }
+        }
 
-    public void uploadSurveyResult(TaskResult taskResult) {
-        String taskId = taskResult.getIdentifier();
+        if (isActivity) {
+            Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
+                    .forActivity(taskResult.getIdentifier());
 
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId)));
+            uploadTaskResult(taskResult, bridgeArchiveBuilder);
 
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+        } else {
+            String taskId = taskResult.getIdentifier();
+
+            Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
+                    .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId)));
+
+            uploadTaskResult(taskResult, bridgeArchiveBuilder);
+        }
     }
 
     //package private for test access
     void uploadTaskResult(TaskResult taskResult, Archive.WithBridgeConfig withBridgeConfig) {
+        Archive.Builder bridgeArchiveBuilder = withBridgeConfig
+                .withBridgeConfig(bridgeManagerProvider.getBridgeConfig());
+        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+    }
+
+    //package private for test access
+    void uploadTaskResult(TaskResult taskResult, Archive.Builder bridgeArchiveBuilder) {
         String taskId = taskResult.getIdentifier();
 
         // Update/Create TaskNotificationService
@@ -175,8 +195,6 @@ public class TaskHelper {
                 scheduleReminderNotification(taskResult.getEndDate(), chronTime);
             }
         }
-        Archive.Builder bridgeArchiveBuilder = withBridgeConfig
-                .withBridgeConfig(bridgeManagerProvider.getBridgeConfig());
 
         // Traverse through the StepResult maps and get an ordered list of Results
         List<Result> results = flattenResults(taskResult);

@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
 
+import org.sagebionetworks.bridge.android.manager.activity.ActivityCache;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -29,24 +30,31 @@ public class ActivityManager {
     @NonNull
     private final ForConsentedUsersApi api;
 
+    @NonNull
+    private final ActivityCache activityCache;
 
-    public ActivityManager(@NonNull AuthenticationManager authenticationManager) {
+    public ActivityManager(@NonNull AuthenticationManager authenticationManager, ActivityCache activityCache) {
         checkNotNull(authenticationManager);
 
-        this.api = authenticationManager.getApi();
+        api = authenticationManager.getApi();
+        this.activityCache = activityCache;
     }
 
 
+    @NonNull
+    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
+        return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
+    }
+
+    @NonNull
     public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
         return toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
+                    for (ScheduledActivity scheduleActivity : scheduleActivityList.getItems()) {
+                        activityCache.cacheActivity(scheduleActivity.getActivity());
+                    }
                 });
-
-    }
-
-    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
-        return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
     }
 
     public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
@@ -62,10 +70,8 @@ public class ActivityManager {
         Date currentLocalTime = calendar.getTime();
         DateFormat date = new SimpleDateFormat("Z");
         String localTime = date.format(currentLocalTime);
-        String offset = localTime.substring(0, 3) + ":"+ localTime.substring(3, 5);
+        String offset = localTime.substring(0, 3) + ":" + localTime.substring(3, 5);
 
         return offset;
     }
-
-
 }

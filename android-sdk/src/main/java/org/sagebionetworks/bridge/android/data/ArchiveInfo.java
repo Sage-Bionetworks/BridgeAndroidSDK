@@ -14,7 +14,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
  * This is the model for info.json
  */
 @SuppressWarnings("unused")
-class ArchiveInfo {
+public class ArchiveInfo {
     private static final int DEFAULT_SCHEMA_REVISION = 1;
 
     public static class FileInfo {
