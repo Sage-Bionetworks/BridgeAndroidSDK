@@ -38,7 +38,6 @@ import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -49,8 +48,10 @@ import java.util.List;
 import java.util.UUID;
 
 import rx.Completable;
-import rx.Observable;
+import rx.Scheduler;
 import rx.Single;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,7 +81,7 @@ import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWa
  * Created by TheMDP on 3/3/17.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(TaskAlertReceiver.class)
+@PrepareForTest({TaskAlertReceiver.class, AndroidSchedulers.class})
 public class TaskHelperTest {
 
     private static final String JSON_CONTENT_TYPE = "application/json";
@@ -133,12 +134,15 @@ public class TaskHelperTest {
         when(appPrefs.isTaskReminderEnabled()).thenReturn(true);
         taskHelper.putTaskChron(taskId, taskChron);
 
+        mockStatic(AndroidSchedulers.class);
+        when(AndroidSchedulers.mainThread()).thenReturn(Schedulers.immediate());
+
         ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
                 .forClass(TaskNotification.class);
 
         when(uploadManager.queueUpload(any(), eq(archive)))
                 .thenReturn(Single.just(new UploadManager.UploadFile()));
-        when(uploadManager.uploadToS3()).thenReturn(Observable.just(new UploadValidationStatus()));
+        when(uploadManager.processUploadFile(any())).thenReturn(Completable.complete());
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
@@ -147,7 +151,7 @@ public class TaskHelperTest {
         taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
 
         verify(uploadManager).queueUpload(any(), eq(archive));
-        verify(uploadManager).uploadToS3();
+        verify(uploadManager).processUploadFile(any());
 
         verify(notificationHelper).saveTaskNotification(taskNotificationCaptor.capture());
         verify(applicationContext).sendBroadcast(notificationCreateIntent);

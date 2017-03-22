@@ -43,6 +43,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+
 public class TaskHelper {
     private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
@@ -174,6 +177,7 @@ public class TaskHelper {
                 scheduleReminderNotification(taskResult.getEndDate(), chronTime);
             }
         }
+
         Archive.Builder bridgeArchiveBuilder = withBridgeConfig
                 .withBridgeConfig(bridgeManagerProvider.getBridgeConfig());
 
@@ -188,25 +192,29 @@ public class TaskHelper {
             }
         }
 
-        // bridgeManagerProvider.getApplicationContext().getFilesDir() + File.separator +
         String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
         bridgeManagerProvider.getUploadManager()
                 .queueUpload(archiveFilename, bridgeArchiveBuilder.build())
                 .doOnSuccess(uploadFile -> {
-                    logger.debug("Calling uploadToS3() to upload pending uploads");
-
-                    // At this point, the upload request has been processed and saved,
-                    // so it is safe to delete the temporary data logger files
+                    logger.debug("Attempting upload in io() thread");
+                    bridgeManagerProvider.getUploadManager()
+                            .processUploadFile(uploadFile)
+                            .subscribeOn(Schedulers.io())
+                            .subscribe();
+                })
+                .subscribeOn(Schedulers.computation())
+                .toCompletable()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() ->{
+                    logger.debug("Successfully queued upload");
                     for (Result result : results) {
                         if (result instanceof FileResult) {
                             FileResult fileResult = (FileResult) result;
                             DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
                         }
                     }
-
-                    bridgeManagerProvider.getUploadManager().uploadToS3().toCompletable().await();
-                }).toBlocking().value();
+                });
     }
 
     private void scheduleReminderNotification(Date endDate, String chronTime) {
