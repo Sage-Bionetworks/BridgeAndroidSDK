@@ -15,6 +15,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 public class RxUtils {
+    /**
+     * Converts a Retrofit Call to a single, subscribes on an IO thread, so the network call is
+     * performed on an IO thread.
+     *
+     * @param call call to get response of
+     * @param <T> response type
+     * @return a response single
+     */
     @NonNull
     public static <T> Single<T> toBodySingle(@NonNull Call<T> call) {
         checkNotNull(call);
@@ -22,5 +30,4 @@ public class RxUtils {
         return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call)))
                 .subscribeOn(Schedulers.io()).toSingle();
     }
-
 }
