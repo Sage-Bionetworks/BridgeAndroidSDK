@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.StringUtils;
@@ -13,6 +15,7 @@ import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
+import org.researchstack.backbone.result.TappingIntervalResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.result.logger.DataLoggerManager;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -265,6 +268,15 @@ public class TaskHelper {
                     filename,
                     endTime,
                     Files.asByteSource(file));
+        } else {
+            if (result instanceof TappingIntervalResult) {
+                // TODO: replace this in RestUtils.GSON
+                // TODO: you can do standard json parsing after this
+                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create();
+                String filename = bridgifyIdentifier(result.getIdentifier()) + ".json";
+                String json = gson.toJson(result, TappingIntervalResult.class);
+                return new JsonArchiveFile(filename, endTime, json);
+            }
         }
         return null;
     }
@@ -337,6 +349,9 @@ public class TaskHelper {
                     }
                 } else if (value instanceof FileResult) {
                     resultList.add((Result) value);
+                } else if (value instanceof TappingIntervalResult) {
+                    resultList.add((Result) value);
+                    wentDeeper = true;
                 }
             }
         }
