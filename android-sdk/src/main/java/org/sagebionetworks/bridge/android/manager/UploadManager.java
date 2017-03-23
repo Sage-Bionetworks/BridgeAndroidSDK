@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
 
 import com.google.common.io.BaseEncoding;
@@ -112,25 +113,31 @@ public class UploadManager {
      * @param uploadFile file to upload
      * @return completable of next upload step
      */
-    public Completable processUploadFile(UploadFile uploadFile) {
+    @NonNull
+    public Completable processUploadFile(@NonNull UploadFile uploadFile) {
+        checkNotNull(uploadFile);
+
         Single<UploadSession> cachedSessionSingle =
                 Single.just(uploadDAO.getUploadSession(uploadFile.filename));
 
         return Single.zip(
                 Single.just(uploadFile),
                 cachedSessionSingle,
-                this::processUpload
+                this::processUploadForCachedSession
         ).flatMapCompletable(i -> i);
     }
 
     /**
-     * Performs the next upload step, retrieving an UploadSession from local cache or from Bridge.
+     * Performs the next upload step using an UploadSession from local cache or one from Bridge,
+     * if cachedSession is null.
      *
      * @param uploadFile    file to upload
-     * @param cachedSession locally cached upload session
+     * @param cachedSession locally cached upload session, or null if not in cache
      * @return completion of next upload step
      */
-    Completable processUpload(UploadFile uploadFile, UploadSession cachedSession) {
+    @NonNull
+    Completable processUploadForCachedSession(@NonNull UploadFile uploadFile,
+                                              @Nullable UploadSession cachedSession) {
         checkNotNull(uploadFile, "uploadFile cannot be null");
 
         Single<UploadSession> sessionSingle;
@@ -149,7 +156,7 @@ public class UploadManager {
                 Single.just(uploadFile),
                 sessionSingle,
                 statusSingle,
-                this::processUpload
+                this::processUploadForValidationStatus
         ).flatMapCompletable(i -> i);
     }
 
@@ -163,9 +170,13 @@ public class UploadManager {
      * @param uploadValidationStatus upload validation status from Bridge
      * @return completion of next upload step
      */
-    Completable processUpload(UploadFile uploadFile, UploadSession uploadSession, UploadValidationStatus uploadValidationStatus) {
+    @NonNull
+    Completable processUploadForValidationStatus(@NonNull UploadFile uploadFile,
+                                                 @NonNull UploadSession uploadSession,
+                                                 @NonNull UploadValidationStatus uploadValidationStatus) {
         checkNotNull(uploadFile, "uploadFile cannot be null");
         checkNotNull(uploadSession, "uploadSession cannot be null");
+        checkNotNull(uploadValidationStatus, "uploadValidationSession cannot be null");
 
         switch (uploadValidationStatus.getStatus()) {
             case REQUESTED:
@@ -197,7 +208,10 @@ public class UploadManager {
      * @param filename the file's name
      * @return dequeueing completable
      */
-    Completable dequeueUpload(String filename) {
+    @NonNull
+    Completable dequeueUpload(@NonNull String filename) {
+        checkNotNull(filename, "filename required");
+
         if (getFile(filename).delete()) {
             LOG.warn("Successfully deleted upload file: " + filename + ", "
                     + "removing upload from queue");
@@ -213,11 +227,9 @@ public class UploadManager {
      * @return upload validation status single
      */
     @NonNull
-    Single<UploadValidationStatus> getUploadValidationStatus(String uploadId) {
-        if (uploadId == null) {
-            LOG.warn("Cannot retrieve validation status for null uploadId");
-            return Single.just(null);
-        }
+    Single<UploadValidationStatus> getUploadValidationStatus(@NonNull String uploadId) {
+        checkNotNull(uploadId, "uploadId required");
+
         return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
@@ -244,7 +256,7 @@ public class UploadManager {
         return sessionSingle.flatMap(freshSession -> RxUtils.toBodySingle(
                 getS3Service(freshSession)
                         .uploadToS3(
-                                session.getUrl(),
+                                freshSession.getUrl(),
                                 requestBody,
                                 uploadFile.md5Hash,
                                 uploadFile.contentType)))
@@ -329,12 +341,12 @@ public class UploadManager {
         return uploadFile;
     }
 
-    private File getFile(String filename) {
+    File getFile(String filename) {
         return new File(BridgeManagerProvider.getInstance()
                 .getApplicationContext().getFilesDir().getAbsolutePath() + File.separator + filename);
     }
 
-    private S3Service getS3Service(UploadSession uploadSession) {
+    S3Service getS3Service(UploadSession uploadSession) {
         URI uri = URI.create(uploadSession.getUrl());
         String baseUrl = uri.getScheme() + "://" + uri.getHost() + "/";
 
