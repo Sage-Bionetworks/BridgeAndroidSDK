@@ -79,7 +79,7 @@ public class UploadManager {
     }
 
     /**
-     * Persists the archive on disk and add it to the queue of pending uploads.
+     * Persists the archive on disk and add it to the queue of pending uploads, runs in an IO thread.
      *
      * @param filename filename for the archive
      * @param archive  archive to be queued
@@ -87,7 +87,8 @@ public class UploadManager {
      */
     @NonNull
     public Single<UploadFile> queueUpload(String filename, Archive archive) {
-        return Single.fromCallable(() -> persist(filename, archive));
+        return Single.fromCallable(() -> persist(filename, archive))
+                .subscribeOn(Schedulers.io());
     }
 
     /**

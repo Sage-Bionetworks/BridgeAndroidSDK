@@ -206,7 +206,6 @@ public class TaskHelper {
                             .subscribeOn(Schedulers.io())
                             .subscribe();
                 })
-                .subscribeOn(Schedulers.computation())
                 .toCompletable()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(() ->{
