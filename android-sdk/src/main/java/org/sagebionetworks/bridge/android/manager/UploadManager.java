@@ -61,7 +61,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * made, e.g. whether the file has been uploaded, whether the validation succeeded, failed or a
  * duplicate archive was detected.
  */
-public class UploadManager {
+public class UploadManager implements AuthenticationManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
 
@@ -80,6 +80,7 @@ public class UploadManager {
     public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
         this.api = authenticationManager.getApi();
+        authenticationManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
     }
@@ -112,6 +113,16 @@ public class UploadManager {
         return Completable.merge(
                 getUploadFilenames()
                         .map(this::dequeueUpload));
+    }
+
+    @Override
+    public void onSignedOut(String email) {
+        clearUploads().await();
+    }
+
+    @Override
+    public void onSignedIn(String email) {
+
     }
 
     /**
