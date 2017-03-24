@@ -30,6 +30,7 @@ import java.net.URI;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.MediaType;
@@ -45,7 +46,20 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Created by jyliu on 1/30/2017.
+ * Manages upload of Archive files to Bridge for processing.
+ * <p>
+ * To upload an Archive for processing, an UploadSession is requested from Bridge. This UploadSession
+ * contains a pre-signed URL to which the Archive should be uploaded via a PUT request. After upload,
+ * optionally call to notify Bridge of the completion of upload, if this call is not made, Bridge
+ * will be notified later by a server-side background process.
+ * <p>
+ * When Bridge is notified of the completion of an upload, it will run validation on the Archive.
+ * The validation includes steps such as decryption, unzipping, parsing JSON files, and schema
+ * validation in order to prepare the file for upload.
+ * <p>
+ * The UploadValidationStatus can be retrieved from Bridge to determine how much progress has been
+ * made, e.g. whether the file has been uploaded, whether the validation succeeded, failed or a
+ * duplicate archive was detected.
  */
 public class UploadManager {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
@@ -92,27 +106,50 @@ public class UploadManager {
     }
 
     /**
-     * This triggers an attempt to upload all the previously queued upload files
-     * You must call queueUpload before this method will have anything to operate on
+     * Clears all queued uploads
+     */
+    Completable clearUploads() {
+        return Completable.merge(
+                getUploadFilenames()
+                        .map(this::dequeueUpload));
+    }
+
+    /**
+     * This triggers an attempt to upload all the previously queued upload files. Call queueUpload
+     * to add UploadFiles for this method to operate on.
+     * <p>
+     * Retrieves cached UploadSession (if one exists) for each UploadFile and perform the next step
+     * in the upload flow by calling this{@link #processUploadForCachedSession(UploadFile, UploadSession)}.
      *
      * @return Observable with information on if the upload was successful or not
      */
     @NonNull
     public Completable processUploadFiles() {
-        Observable<String> filenameObservable = Observable.from(uploadDAO
-                .listUploadFilenames());
-
-        return filenameObservable
-                .map(filename -> uploadDAO.getUploadFile(filename))
-                .flatMap(uploadFile -> processUploadFile(uploadFile).toObservable())
-                .toCompletable();
+        return Completable.mergeDelayError(
+                getUploadFilenames()
+                        .map(uploadDAO::getUploadFile)
+                        .map(uploadFile ->
+                                processUploadForCachedSession(
+                                        uploadFile,
+                                        uploadDAO.getUploadSession(uploadFile.filename)
+                                )));
     }
 
     /**
-     * Performs next upload step for a file.
+     * @return observable of queued filenames
+     */
+    Observable<String> getUploadFilenames() {
+        Set<String> filenames = uploadDAO.listUploadFilenames();
+
+        return Observable.from(filenames.toArray(new String[filenames.size()]));
+    }
+
+    /**
+     * Retrieves cached UploadSession (if one exists) for an UploadFile and calls the next step
+     * of the upload flow: {@link #processUploadForCachedSession(UploadFile, UploadSession)}.
      *
      * @param uploadFile file to upload
-     * @return completable of next upload step
+     * @return completable
      */
     @NonNull
     public Completable processUploadFile(@NonNull UploadFile uploadFile) {
@@ -129,8 +166,9 @@ public class UploadManager {
     }
 
     /**
-     * Performs the next upload step using an UploadSession from local cache or one from Bridge,
-     * if cachedSession is null.
+     * Uses the provided cached UploadSession or retrieves one from Bridge to retrieve the status
+     * of the upload and calls the next step of the upload flow:
+     * {@link #processUploadForValidationStatus(UploadFile, UploadSession, UploadValidationStatus)}
      *
      * @param uploadFile    file to upload
      * @param cachedSession locally cached upload session, or null if not in cache
@@ -164,7 +202,7 @@ public class UploadManager {
     /**
      * Performs the next upload step, according to the UploadValidationStatus. The normal
      * transition of UploadValidationStatus is from REQUESTED to VALIDATION_IN_PROGRESS to
-     * REQUESTED.
+     * SUCCEEDED.
      *
      * @param uploadFile             file being uploaded
      * @param uploadSession          pre-signed upload session
@@ -213,14 +251,15 @@ public class UploadManager {
     Completable dequeueUpload(@NonNull String filename) {
         checkNotNull(filename, "filename required");
 
-        if (getFile(filename).delete()) {
-            LOG.warn("Successfully deleted upload file: " + filename + ", "
-                    + "removing upload from queue");
-            return Completable.fromAction(() -> uploadDAO.removeUploadAndSession(filename));
-        } else {
-            LOG.warn("Failed to delete upload file: " + filename);
-            return Completable.error(new IOException("Failed to delete upload file: " + filename));
-        }
+        return Completable.fromAction(() -> {
+            if (getFile(filename).delete()) {
+                LOG.warn("Successfully deleted upload file: " + filename + ", "
+                        + "removing upload from queue");
+            } else {
+                LOG.warn("Failed to delete upload file: " + filename);
+            }
+        }).doOnCompleted(() -> uploadDAO.removeUploadAndSession(filename))
+                .subscribeOn(Schedulers.io());
     }
 
     /**
@@ -234,6 +273,14 @@ public class UploadManager {
         return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
     }
 
+    /**
+     * Uses the pre-signed URL in UploadSession to upload the file to S3. If the provided pre-signed
+     * URL has expired or is nearing expiry, request a new UploadSession before uploading the file.
+     *
+     * @param uploadFile file being uploaded
+     * @param session    pre-signed upload session
+     * @return completable
+     */
     @NonNull
     Completable uploadToS3(UploadFile uploadFile, UploadSession session) {
         File file = getFile(uploadFile.filename);
@@ -273,7 +320,6 @@ public class UploadManager {
                                 LOG.info("Failed to call upload complete, server will recover", t);
                                 return session;
                             })
-                            .subscribeOn(Schedulers.computation())
                             .subscribe();
 
                 }).toCompletable();
