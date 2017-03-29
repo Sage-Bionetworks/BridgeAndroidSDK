@@ -9,9 +9,10 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.step.Step;
 import org.researchstack.backbone.storage.file.FileAccess;
-import org.researchstack.backbone.utils.LogExt;
 import org.researchstack.backbone.utils.StepResultHelper;
 import org.researchstack.backbone.utils.StepResultHelper.ResultClassComparator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.Serializable;
@@ -27,10 +28,11 @@ import java.util.Map;
 
 public class TrackedDataObjectCollection implements Serializable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(TrackedDataObjectCollection.class);
     public static final String TRACKED_DATA_STORE_PATH = "TRACKED_DATA_STORE_PATH";
 
     private static final int DEFAULT_TRACKING_SURVEY_REPEAT_INTERVAL = 30 * 24 * 60 * 60;   // Every 30 days by default
-    private static final int DEFAULT_MOMENT_IN_DAY_REPEAT_INTERVAL   = 30 * 60;   // Every 20 minutes by default
+    private static final int DEFAULT_MOMENT_IN_DAY_REPEAT_INTERVAL   = 20 * 60;   // Every 20 minutes by default
 
     /**
      * Filename associated we loading and saving this tracked data object collection
@@ -254,13 +256,13 @@ public class TrackedDataObjectCollection implements Serializable {
     protected static FileAccess verifyFileAccess() {
         StorageAccess storageAccess = StorageAccess.getInstance();
         if (storageAccess == null) {
-            LogExt.e(TrackedDataObjectCollection.class, "StorageAccess is null");
+            LOG.error("StorageAccess is null");
             return null;
         }
 
         FileAccess fileAccess = StorageAccess.getInstance().getFileAccess();
         if (fileAccess == null) {
-            LogExt.e(TrackedDataObjectCollection.class, "File access is null");
+            LOG.error("File access is null");
             return null;
         }
 
