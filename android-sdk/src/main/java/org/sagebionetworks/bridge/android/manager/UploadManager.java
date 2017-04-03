@@ -329,7 +329,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                             })
                             .onErrorReturn((t) -> {
                                 LOG.info("Failed to call upload complete, server will recover", t);
-                                return session;
+                                return null; // return doesn't matter, becomes completable
                             })
                             .subscribe();
 
