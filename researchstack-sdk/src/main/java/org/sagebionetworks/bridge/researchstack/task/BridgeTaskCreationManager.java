@@ -1,13 +1,10 @@
 package org.sagebionetworks.bridge.researchstack.task;
 
-import android.content.Context;
-
 import com.google.gson.GsonBuilder;
 
 import org.researchstack.backbone.model.survey.SurveyItem;
 import org.researchstack.backbone.model.taskitem.TaskItem;
 import org.researchstack.backbone.model.taskitem.factory.TaskItemFactory;
-import org.researchstack.backbone.onboarding.ResourceNameToStringConverter;
 import org.researchstack.backbone.task.TaskCreationManager;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeSurveyItemAdapter;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeTaskItemAdapter;
@@ -21,12 +18,8 @@ public class BridgeTaskCreationManager extends TaskCreationManager {
 
     public static final String MEDICATION_TASK_IDENTIFIER = "Medication Task";
 
-    public BridgeTaskCreationManager(Context context) {
-        super(context);
-    }
-
-    protected BridgeTaskCreationManager(ResourceNameToStringConverter converter) {
-        super(converter);
+    public BridgeTaskCreationManager() {
+        super();
     }
 
     @Override
