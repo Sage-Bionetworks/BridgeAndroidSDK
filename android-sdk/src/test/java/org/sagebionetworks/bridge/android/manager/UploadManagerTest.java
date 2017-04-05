@@ -19,7 +19,10 @@ import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
 import rx.Single;
+import rx.schedulers.TestScheduler;
+import rx.subjects.TestSubject;
 
+import static junit.framework.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -35,9 +38,10 @@ import static org.sagebionetworks.bridge.rest.model.UploadStatus.SUCCEEDED;
  * Created by jyliu on 3/22/2017.
  */
 public class UploadManagerTest {
+
     private static final String FILENAME = "archive.zip";
     private static final String UPLOAD_ID = "uploadId";
-private static final String UPLOAD_CONTENT_TYPE = "application/zip";
+    private static final String UPLOAD_CONTENT_TYPE = "application/zip";
     private static final String UPLOAD_URL = "url";
     private static final String UPLOAD_MD5 = "hash";
 
@@ -82,6 +86,25 @@ private static final String UPLOAD_CONTENT_TYPE = "application/zip";
                 .id(UPLOAD_ID);
 
         when(archive.exists()).thenReturn(true);
+    }
+
+    @Test
+    public void onSignedOut() throws Exception {
+        TestScheduler scheduler = new TestScheduler();
+        TestSubject subject = TestSubject.create(scheduler);
+
+
+        Completable completable = subject.toCompletable();
+        doReturn(completable).when(spyUploadManager).clearUploads();
+
+        spyUploadManager.onSignedOut("email");
+
+        verify(spyUploadManager).clearUploads();
+        // verify something has subscribed to the clearUploads completable
+        assertTrue(subject.hasObservers());
+
+        subject.onCompleted();
+        scheduler.triggerActions();
     }
 
     @Test

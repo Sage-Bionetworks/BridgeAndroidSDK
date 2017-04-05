@@ -117,7 +117,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
     @Override
     public void onSignedOut(String email) {
-        clearUploads().await();
+        clearUploads().subscribe();
     }
 
     @Override
