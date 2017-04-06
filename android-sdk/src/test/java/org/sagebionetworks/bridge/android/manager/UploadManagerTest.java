@@ -48,7 +48,7 @@ public class UploadManagerTest {
     @Mock
     private ForConsentedUsersApi api;
     @Mock
-    private AuthenticationManager authenticationManager;
+    private ParticipantManager participantManager;
     @Mock
     private AndroidStudyUploadEncryptor studyUploadEncryptor;
     @Mock
@@ -69,9 +69,9 @@ public class UploadManagerTest {
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApi()).thenReturn(api);
+        when(participantManager.getApi()).thenReturn(api);
 
-        spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO));
+        spyUploadManager = spy(new UploadManager(participantManager, studyUploadEncryptor, uploadDAO));
 
         uploadFile = new UploadManager.UploadFile();
         uploadFile.filename = FILENAME;

@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -51,8 +52,10 @@ public class AuthenticationManagerTest {
     private AuthenticationApi authenticationApi;
     @Mock
     private AccountDAO accountDAO;
+    @Mock
+    private ConsentDAO consentDAO;
 
-    private AuthenticationManager authenticationManager;
+    private ParticipantManager participantManager;
 
     @Before
     public void beforeTest() {
@@ -61,7 +64,7 @@ public class AuthenticationManagerTest {
         when(config.getStudyId()).thenReturn(STUDY_ID);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO);
+        participantManager = new ParticipantManager(config, apiClientProvider, accountDAO, consentDAO);
     }
 
     @Test
@@ -76,7 +79,7 @@ public class AuthenticationManagerTest {
         Call<Message> messageCall = successCall(message);
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        Completable completable = authenticationManager.signUp(signUp);
+        Completable completable = participantManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
@@ -92,7 +95,7 @@ public class AuthenticationManagerTest {
         Call messageCall = errorCall(new BridgeSDKException("Failed", 500));
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        authenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
+        participantManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
@@ -107,7 +110,7 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
-        ForConsentedUsersApi result = authenticationManager.getRawApi();
+        ForConsentedUsersApi result = participantManager.getRawApi();
         assertNotNull(forConsentedUsersApi);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
@@ -160,7 +163,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        participantManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).resendEmailVerification(email);
     }
@@ -174,7 +177,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
-        authenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        participantManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
         verify(accountDAO).setSignIn(signIn);
@@ -192,7 +195,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
-        authenticationManager.signOut().test().awaitTerminalEvent()
+        participantManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
 
         verify(accountDAO).setSignIn(null);
@@ -210,7 +213,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.requestResetPassword(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        participantManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).requestResetPassword(email);
     }
@@ -218,7 +221,7 @@ public class AuthenticationManagerTest {
     @Test
     public void getApi() throws Exception {
         // TODO: fix test once there is no more Proxy
-        ForConsentedUsersApi api = authenticationManager.getApi();
+        ForConsentedUsersApi api = participantManager.getApi();
 
         assertTrue(api instanceof ProxiedForConsentedUsersApi);
     }
@@ -227,7 +230,7 @@ public class AuthenticationManagerTest {
     public void getEmail() throws Exception {
         when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
 
-        String email = authenticationManager.getEmail();
+        String email = participantManager.getEmail();
 
         assertEquals(EMAIL, email);
         verify(accountDAO).getSignIn();

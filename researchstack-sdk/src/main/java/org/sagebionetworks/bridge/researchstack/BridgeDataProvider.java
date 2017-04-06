@@ -12,7 +12,6 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.onboarding.OnboardingManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -21,13 +20,11 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.ResearchStack;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
+import org.sagebionetworks.bridge.android.manager.ParticipantManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
@@ -47,7 +44,6 @@ import java.util.Map;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -66,8 +62,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     private final ResearchStackDAO researchStackDAO;
     private final BridgeManagerProvider bridgeManagerProvider;
     private final BridgeConfig bridgeConfig;
-    private final AuthenticationManager authenticationManager;
-    private final ConsentManager consentManager;
+    private final ParticipantManager participantManager;
 
     //used by tests to mock service
     BridgeDataProvider(ResearchStackDAO researchStackDAO, StorageAccessWrapper storageAccessWrapper,
@@ -80,9 +75,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
-        this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
-        this.consentManager = bridgeManagerProvider.getConsentManager();
-
+        this.participantManager = bridgeManagerProvider.getParticipantManager();
     }
 
     public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider) {
@@ -90,8 +83,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         this.bridgeManagerProvider = bridgeManagerProvider;
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
-        this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
-        this.consentManager = bridgeManagerProvider.getConsentManager();
+        this.participantManager = bridgeManagerProvider.getParticipantManager();
 
         this.storageAccessWrapper = new StorageAccessWrapper();
 
@@ -127,13 +119,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
-        return consentManager.withdrawConsent(subpopulationGuid, reason);
+        return participantManager.withdrawConsent(subpopulationGuid, reason);
     }
 
 
     @NonNull
     public Completable withdrawAllConsents(@Nullable String reason) {
-        return consentManager.withdrawAll(reason);
+        return participantManager.withdrawAll(reason);
     }
 
     /**
@@ -142,7 +134,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public boolean isConsented() {
         logger.debug("Called isConsented");
-        return consentManager.isConsented();
+        return participantManager.isConsented();
     }
 
     @NonNull
@@ -150,7 +142,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                                    @NonNull LocalDate birthdate,
                                    @NonNull String base64Image, @NonNull String imageMimeType,
                                    @Nullable SharingScope sharingScope) {
-        return consentManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
+        return participantManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
                 imageMimeType, sharingScope);
     }
 
@@ -167,7 +159,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Single<ConsentSignature> getConsent(@NonNull String subpopulation) {
         checkNotNull(subpopulation);
 
-        return consentManager.getConsentSignature(subpopulation);
+        return participantManager.getConsentSignature(subpopulation);
     }
 
     // TODO: getConsent rid of Consent methods below on the interface. let ConsentManager handle the
@@ -176,7 +168,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
 
-        return createConsentSignatureBody(consentManager.getConsentSync(bridgeConfig.getStudyId()));
+        return createConsentSignatureBody(participantManager.getConsentSync(bridgeConfig.getStudyId()));
     }
 
     @Override
@@ -261,7 +253,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     private void giveConsentSync(ConsentSignature consentSignature) {
-        consentManager.giveConsentSync(bridgeConfig.getStudyId(),
+        participantManager.giveConsentSync(bridgeConfig.getStudyId(),
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
                 consentSignature.getImageData(),
@@ -310,7 +302,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return authenticationManager
+        return participantManager
                 .signUp(email, password)
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
@@ -318,11 +310,11 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public boolean isSignedUp(@Nullable Context context) {
 
-        return authenticationManager.getEmail() != null;
+        return participantManager.getEmail() != null;
     }
 
     public boolean isSignedUp() {
-        return authenticationManager.getEmail() != null;
+        return participantManager.getEmail() != null;
     }
 
     @Override
@@ -349,7 +341,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return authenticationManager
+        return participantManager
                 .signIn(email, password)
                 .toCompletable().doOnCompleted((Action0) () -> {
                     // TODO: upload pending files
@@ -357,7 +349,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     public boolean isSignedIn() {
-        return authenticationManager.getEmail() != null;
+        return participantManager.getEmail() != null;
     }
 
     @Deprecated
@@ -384,7 +376,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Completable signOut() {
-        return authenticationManager.signOut();
+        return participantManager.signOut();
     }
 
     @Override
@@ -397,7 +389,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Completable resendEmailVerification(@NonNull String email) {
         checkNotNull(email);
 
-        return authenticationManager.resendEmailVerification(email);
+        return participantManager.resendEmailVerification(email);
     }
 
     /**
@@ -418,7 +410,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
-        return authenticationManager.signIn(email, password).toCompletable();
+        return participantManager.signIn(email, password).toCompletable();
     }
 
     @Override
@@ -430,7 +422,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Completable forgotPassword(@NonNull String email) {
         checkNotNull(email);
 
-        return authenticationManager
+        return participantManager
                 .requestPasswordReset(email);
     }
 
@@ -452,7 +444,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public String getUserEmail(Context context) {
-        return authenticationManager.getEmail();
+        return participantManager.getEmail();
     }
 
     //endregion
@@ -470,7 +462,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Nullable
     public SharingScope getUserSharingScope() {
-        UserSessionInfo session = authenticationManager.getUserSessionInfo();
+        UserSessionInfo session = participantManager.getUserSessionInfo();
         if (session == null) {
             return null;
         }
@@ -492,7 +484,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         return bridgeManagerProvider.getParticipantManager()
                 .updateParticipant((StudyParticipant) new StudyParticipant()
-                        .email(authenticationManager.getEmail())
+                        .email(participantManager.getEmail())
                         .sharingScope(SharingScope.valueOf(scope)));
     }
 

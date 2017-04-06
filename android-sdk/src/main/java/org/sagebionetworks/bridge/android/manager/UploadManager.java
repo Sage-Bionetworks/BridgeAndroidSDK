@@ -61,7 +61,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * made, e.g. whether the file has been uploaded, whether the validation succeeded, failed or a
  * duplicate archive was detected.
  */
-public class UploadManager implements AuthenticationManager.AuthenticationEventListener {
+public class UploadManager implements ParticipantManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
 
@@ -77,10 +77,10 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false).build();
 
-    public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
+    public UploadManager(ParticipantManager participantManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
-        this.api = authenticationManager.getApi();
-        authenticationManager.addEventListener(this);
+        this.api = participantManager.getApi();
+        participantManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
     }

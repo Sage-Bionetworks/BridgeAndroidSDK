@@ -21,7 +21,6 @@ import retrofit2.Response;
 import rx.Completable;
 import rx.Single;
 
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,7 +38,7 @@ public class ActivityManagerTest {
     @Mock
     private ForConsentedUsersApi activitiesApi;
     @Mock
-    private AuthenticationManager authenticationManager;
+    private ParticipantManager participantManager;
 
     private ActivityManager activityManager;
 
@@ -48,8 +47,8 @@ public class ActivityManagerTest {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApi()).thenReturn(activitiesApi);
-        activityManager = new ActivityManager(authenticationManager);
+        when(participantManager.getApi()).thenReturn(activitiesApi);
+        activityManager = new ActivityManager(participantManager);
     }
 
     @Test

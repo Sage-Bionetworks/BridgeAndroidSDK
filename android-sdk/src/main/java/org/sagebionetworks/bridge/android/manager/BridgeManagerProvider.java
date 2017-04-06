@@ -10,6 +10,7 @@ import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
+import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -76,10 +77,8 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
         uploadDAO = new UploadDAO(applicationContext);
 
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
-        participantManager = new ParticipantManager(authenticationManager, accountDAO);
-        consentManager = new ConsentManager(authenticationManager, consentDAO);
-        activityManager = new ActivityManager(authenticationManager);
+        participantManager = new ParticipantManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
+        activityManager = new ActivityManager(participantManager);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -93,7 +92,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
+        uploadManager = new UploadManager(participantManager, studyUploadEncryptor, uploadDAO);
     }
 
     @NonNull
@@ -103,11 +102,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final ApiClientProvider apiClientProvider;
     @NonNull
-    private final AuthenticationManager authenticationManager;
-    @NonNull
     private final ParticipantManager participantManager;
-    @NonNull
-    private final ConsentManager consentManager;
     @NonNull
     private final ActivityManager activityManager;
     @NonNull
@@ -139,18 +134,8 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public AuthenticationManager getAuthenticationManager() {
-        return authenticationManager;
-    }
-
-    @NonNull
     public ParticipantManager getParticipantManager() {
         return participantManager;
-    }
-
-    @NonNull
-    public ConsentManager getConsentManager() {
-        return consentManager;
     }
 
     @NonNull
