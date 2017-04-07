@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.activity.ActivitySchemaCache;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
@@ -21,7 +22,6 @@ import retrofit2.Response;
 import rx.Completable;
 import rx.Single;
 
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,6 +40,8 @@ public class ActivityManagerTest {
     private ForConsentedUsersApi activitiesApi;
     @Mock
     private AuthenticationManager authenticationManager;
+    @Mock
+    private ActivitySchemaCache activityCache;
 
     private ActivityManager activityManager;
 
@@ -49,7 +51,7 @@ public class ActivityManagerTest {
         MockitoAnnotations.initMocks(this);
 
         when(authenticationManager.getApi()).thenReturn(activitiesApi);
-        activityManager = new ActivityManager(authenticationManager);
+        activityManager = new ActivityManager(authenticationManager, activityCache);
     }
 
     @Test

@@ -12,7 +12,6 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.onboarding.OnboardingManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -21,17 +20,19 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.ResearchStack;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.SchemaReference;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -51,6 +52,8 @@ import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
+import static org.sagebionetworks.bridge.rest.model.ActivityType.SURVEY;
+import static org.sagebionetworks.bridge.rest.model.ActivityType.TASK;
 
 /**
  * DataProvider implementation backed by a Bridge study.
@@ -531,19 +534,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public void uploadTaskResult(Context context, TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
 
-        boolean isActivity = false;
-        if (taskResult.getTaskDetails().containsKey(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY)) {
-            Object isActivityObject = taskResult.getTaskDetails().get(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY);
-            if (isActivityObject instanceof Boolean) {
-                isActivity = (Boolean)isActivityObject;
-            }
-        }
-
-        if (isActivity) {
-            taskHelper.uploadActivityResult("1", taskResult);
-        } else {
-            taskHelper.uploadSurveyResult(taskResult);
-        }
+        taskHelper.uploadTaskResult(taskResult);
     }
 
     @Override
@@ -558,10 +549,10 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         // first, group activities by day
         Map<Integer, List<ScheduledActivity>> activityMap = new HashMap<>();
-        for(ScheduledActivity sa: activityList.getItems()) {
+        for (ScheduledActivity sa : activityList.getItems()) {
             int day = sa.getScheduledOn().dayOfYear().get();
             List<ScheduledActivity> actList = activityMap.get(day);
-            if(actList == null) {
+            if (actList == null) {
                 actList = new ArrayList<>();
                 actList.add(sa);
                 activityMap.put(day, actList);
@@ -572,7 +563,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         SchedulesAndTasksModel model = new SchedulesAndTasksModel();
         model.schedules = new ArrayList<>();
-        for(int day: activityMap.keySet()) {
+        for (int day : activityMap.keySet()) {
             List<ScheduledActivity> aList = activityMap.get(day);
             ScheduledActivity temp = aList.get(0);
 
@@ -582,11 +573,11 @@ public abstract class BridgeDataProvider extends DataProvider {
             model.schedules.add(sm);
             sm.tasks = new ArrayList<>();
 
-            for(ScheduledActivity sa: aList) {
+            for (ScheduledActivity sa : aList) {
                 SchedulesAndTasksModel.TaskScheduleModel tsm = new SchedulesAndTasksModel.TaskScheduleModel();
                 tsm.taskTitle = sa.getActivity().getLabel();
                 tsm.taskCompletionTime = sa.getActivity().getLabelDetail();
-                if(sa.getActivity().getTask() != null) {
+                if (sa.getActivity().getTask() != null) {
                     tsm.taskID = sa.getActivity().getTask().getIdentifier();
                 }
                 tsm.taskIsOptional = sa.getPersistent();

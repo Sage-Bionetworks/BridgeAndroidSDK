@@ -10,6 +10,7 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -24,11 +25,11 @@ import static com.google.common.base.Preconditions.checkState;
 public class Archive {
     private static final String ARCHIVE_INFO_FILE_NAME = "info.json";
 
-    private final List<ArchiveFile> dataFiles;
-    private final ArchiveInfo archiveInfo;
+    public final List<ArchiveFile> dataFiles;
+    public final ArchiveInfo archiveInfo;
 
     private Archive(List<ArchiveFile> dataFiles, ArchiveInfo archiveInfo) {
-        this.dataFiles = dataFiles;
+        this.dataFiles = Collections.unmodifiableList(dataFiles);
         this.archiveInfo = archiveInfo;
     }
 
