@@ -10,11 +10,11 @@ import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 
 import org.joda.time.DateTime;
-import org.sagebionetworks.bridge.android.data.Archive;
-import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
+import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -69,7 +69,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     private static final int UPLOAD_EXPIRY_WINDOW_MINUTES = 30;
 
     private final ForConsentedUsersApi api;
-    private final StudyUploadEncryptor encryptor;
+    private final AndroidStudyUploadEncryptor encryptor;
     private final UploadDAO uploadDAO;
     private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -77,7 +77,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false).build();
 
-    public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
+    public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
         this.api = authenticationManager.getApi();
         authenticationManager.addEventListener(this);
@@ -101,7 +101,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
      * @return information about file produced from the archive
      */
     @NonNull
-    public Single<UploadFile> queueUpload(String filename, Archive archive) {
+    public Single<UploadFile> queueUpload(String filename, org.sagebionetworks.bridge.data.Archive archive) {
         return Single.fromCallable(() -> persist(filename, archive))
                 .subscribeOn(Schedulers.io());
     }

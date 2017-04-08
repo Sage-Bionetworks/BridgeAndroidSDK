@@ -34,9 +34,10 @@ import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.factory.TappingTaskFactory;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.notification.TaskAlertReceiver;
-import org.sagebionetworks.bridge.android.data.Archive;
+import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
+import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.spongycastle.cms.CMSException;
 
@@ -48,7 +49,6 @@ import java.util.List;
 import java.util.UUID;
 
 import rx.Completable;
-import rx.Scheduler;
 import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -102,6 +102,8 @@ public class TaskHelperTest {
     UploadManager uploadManager;
     @Mock
     BridgeManagerProvider bridgeManagerProvider;
+    @Mock
+    BridgeConfig bridgeConfig;
 
     @Before
     public void setupTest() {
@@ -109,6 +111,7 @@ public class TaskHelperTest {
 
         when(bridgeManagerProvider.getUploadManager()).thenReturn(uploadManager);
         when(bridgeManagerProvider.getApplicationContext()).thenReturn(applicationContext);
+        when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
 
         taskHelper = new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
                 bridgeManagerProvider);
@@ -124,12 +127,16 @@ public class TaskHelperTest {
         when(taskResult.getIdentifier()).thenReturn(taskId);
         when(taskResult.getEndDate()).thenReturn(endDate);
 
-        Archive archive = mock(Archive.class);
-        Archive.Builder archiveBuilder = mock(Archive.Builder.class);
-        when(archiveBuilder.build()).thenReturn(archive);
+        String appVersionName = "appversion";
+        String phoneInfo = "Android";
+        when(bridgeConfig.getAppVersionName()).thenReturn(appVersionName);
+        when(bridgeConfig.getDeviceName()).thenReturn(phoneInfo);
 
-        Archive.WithBridgeConfig withBridgeConfig = mock(Archive.WithBridgeConfig.class);
-        when(withBridgeConfig.withBridgeConfig(any())).thenReturn(archiveBuilder);
+       Archive archive = mock(Archive.class);
+        Archive.Builder archiveBuilder = mock(Archive.Builder.class);
+        when(archiveBuilder.withAppVersionName(appVersionName)).thenReturn(archiveBuilder);
+        when(archiveBuilder.withPhoneInfo(phoneInfo)).thenReturn(archiveBuilder);
+        when(archiveBuilder.build()).thenReturn(archive);
 
         when(appPrefs.isTaskReminderEnabled()).thenReturn(true);
         taskHelper.putTaskChron(taskId, taskChron);
@@ -148,7 +155,10 @@ public class TaskHelperTest {
         mockStatic(TaskAlertReceiver.class);
         when(TaskAlertReceiver.createCreateIntent(any())).thenReturn(notificationCreateIntent);
 
-        taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
+        taskHelper.uploadTaskResult(taskResult, archiveBuilder);
+
+        verify(archiveBuilder).withPhoneInfo(phoneInfo);
+        verify(archiveBuilder).withAppVersionName(appVersionName);
 
         verify(uploadManager).queueUpload(any(), eq(archive));
         verify(uploadManager).processUploadFile(any());

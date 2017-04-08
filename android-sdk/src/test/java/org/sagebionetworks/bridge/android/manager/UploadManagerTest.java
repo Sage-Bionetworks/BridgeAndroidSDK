@@ -5,9 +5,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
+import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
@@ -50,7 +50,7 @@ public class UploadManagerTest {
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
-    private StudyUploadEncryptor studyUploadEncryptor;
+    private AndroidStudyUploadEncryptor studyUploadEncryptor;
     @Mock
     private UploadDAO uploadDAO;
     @Mock

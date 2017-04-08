@@ -6,17 +6,15 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
-import org.sagebionetworks.bridge.android.manager.upload.S3Service;
+import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
-import retrofit2.Retrofit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -84,7 +82,7 @@ public class BridgeManagerProvider {
         activityManager = new ActivityManager(authenticationManager);
 
         try {
-            studyUploadEncryptor = new StudyUploadEncryptor(bridgeConfig.getPublicKey());
+            studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
         } catch (Exception e) {
             throw new RuntimeException("Could create StudyUploadEncryptor", e);
         }
@@ -119,7 +117,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final UploadDAO uploadDAO;
     @NonNull
-    private final StudyUploadEncryptor studyUploadEncryptor;
+    private final AndroidStudyUploadEncryptor studyUploadEncryptor;
     @NonNull
     private final UploadManager uploadManager;
     @NonNull
@@ -176,7 +174,7 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public StudyUploadEncryptor getStudyUploadEncryptor() {
+    public AndroidStudyUploadEncryptor getStudyUploadEncryptor() {
         return studyUploadEncryptor;
     }
 

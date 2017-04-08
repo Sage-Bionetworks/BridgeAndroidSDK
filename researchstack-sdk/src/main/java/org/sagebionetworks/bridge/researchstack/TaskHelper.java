@@ -27,11 +27,11 @@ import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
 import org.researchstack.skin.schedule.ScheduleHelper;
 import org.researchstack.skin.task.SmartSurveyTask;
-import org.sagebionetworks.bridge.android.data.Archive;
-import org.sagebionetworks.bridge.android.data.ArchiveFile;
-import org.sagebionetworks.bridge.android.data.ByteSourceArchiveFile;
-import org.sagebionetworks.bridge.android.data.JsonArchiveFile;
+import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
+import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.slf4j.Logger;
@@ -142,30 +142,29 @@ public class TaskHelper {
     }
 
     public void uploadActivityResult(String schemaId, TaskResult taskResult) {
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forActivity(schemaId);
 
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+        uploadTaskResult(taskResult, Archive.Builder
+                .forActivity(schemaId));
     }
 
     public void uploadActivityResult(String schemaId, int schemaRevisionId, TaskResult taskResult) {
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forActivity(schemaId, schemaRevisionId);
-
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+        uploadTaskResult(taskResult, Archive.Builder
+                .forActivity(schemaId, schemaRevisionId));
     }
 
     public void uploadSurveyResult(TaskResult taskResult) {
         String taskId = taskResult.getIdentifier();
 
-        Archive.WithBridgeConfig bridgeArchiveBuilder = Archive.Builder
-                .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId)));
-
-        uploadTaskResult(taskResult, bridgeArchiveBuilder);
+        uploadTaskResult(taskResult, Archive.Builder
+                .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId))));
     }
 
     //package private for test access
-    void uploadTaskResult(TaskResult taskResult, Archive.WithBridgeConfig withBridgeConfig) {
+    void uploadTaskResult(TaskResult taskResult, Archive.Builder builder) {
+        BridgeConfig config = bridgeManagerProvider.getBridgeConfig();
+        builder.withAppVersionName(config.getAppVersionName())
+                .withPhoneInfo(config.getDeviceName());
+
         String taskId = taskResult.getIdentifier();
 
         // Update/Create TaskNotificationService
@@ -181,15 +180,12 @@ public class TaskHelper {
             }
         }
 
-        Archive.Builder bridgeArchiveBuilder = withBridgeConfig
-                .withBridgeConfig(bridgeManagerProvider.getBridgeConfig());
-
         // Traverse through the StepResult maps and get an ordered list of Results
         List<Result> results = flattenResults(taskResult);
         for (Result result : results) {
-            ArchiveFile archiveFile = toBridgeArchiveFile(result);
+            org.sagebionetworks.bridge.data.ArchiveFile archiveFile = toBridgeArchiveFile(result);
             if (archiveFile != null) {
-                bridgeArchiveBuilder.addDataFile(archiveFile);
+                builder.addDataFile(archiveFile);
             } else {
                 logger.error("Failed to convert Result to BridgeDataInput " + result.toString());
             }
@@ -198,7 +194,7 @@ public class TaskHelper {
         String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
         bridgeManagerProvider.getUploadManager()
-                .queueUpload(archiveFilename, bridgeArchiveBuilder.build())
+                .queueUpload(archiveFilename, builder.build())
                 .doOnSuccess(uploadFile -> {
                     logger.debug("Attempting upload in io() thread");
                     bridgeManagerProvider.getUploadManager()
@@ -208,7 +204,7 @@ public class TaskHelper {
                 })
                 .toCompletable()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(() ->{
+                .subscribe(() -> {
                     logger.debug("Successfully queued upload");
                     for (Result result : results) {
                         if (result instanceof FileResult) {
@@ -234,7 +230,7 @@ public class TaskHelper {
     }
 
 
-    ArchiveFile toBridgeArchiveFile(Result result) {
+    org.sagebionetworks.bridge.data.ArchiveFile toBridgeArchiveFile(Result result) {
         DateTime endTime = new DateTime(result.getEndDate());
 
         if (result instanceof StepResult) {
