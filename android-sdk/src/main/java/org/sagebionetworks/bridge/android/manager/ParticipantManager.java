@@ -34,6 +34,7 @@ import java.util.Map;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
+import rx.functions.Func1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
@@ -186,20 +187,16 @@ public class ParticipantManager {
                 .study(config.getStudyId())
                 .email(email)
                 .password(password);
-        // used so we have signIn as a key to retrieve session in case of 412
+
+        // store sign in, so we have signIn as a key to retrieve session in case of 412
         accountDAO.setSignIn(signIn);
 
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
-                .retryWhen(observable -> observable.flatMap(throwable -> {
-                    if (!(throwable instanceof ConsentRequiredException) || !isConsented()) {
-                        Observable<UserSessionInfo> obs = Observable.error(throwable);
-                        return obs;
-                    }
-                    return uploadConsent();
-                }))
+                .toObservable()
+                .retryWhen(retrySignInForCOnsentOnce())
+                .toSingle()
                 .doOnSuccess(userSessionInfo -> {
-                    accountDAO.setSignIn(signIn);
                     accountDAO.setUserSessionInfo(userSessionInfo);
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
@@ -210,14 +207,36 @@ public class ParticipantManager {
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
-                        accountDAO.setSignIn(signIn);
                         accountDAO.setUserSessionInfo(
                                 ((ConsentRequiredException) throwable).getSession());
                         accountDAO.setStudyParticipant(
                                 new StudyParticipant()
                                         .email(signIn.getEmail()));
+                    } else {
+                        accountDAO.setSignIn(null);
                     }
                 });
+    }
+
+    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>> retrySignInForCOnsentOnce() {
+        return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
+            private int retryAttempt = 0;
+
+            @Override
+            public Observable<UserSessionInfo> call(Observable<? extends Throwable> throwableObservable) {
+                return throwableObservable.flatMap(throwable -> {
+                    retryAttempt++;
+
+                    if (!(throwable instanceof ConsentRequiredException)
+                            || retryAttempt > 1
+                            || !isConsented()) {
+                        Observable<UserSessionInfo> obs = Observable.error(throwable);
+                        return obs;
+                    }
+                    return uploadLocalConsents();
+                });
+            }
+        };
     }
 
     /**
@@ -539,7 +558,7 @@ public class ParticipantManager {
                 );
     }
 
-    private Observable<UserSessionInfo> uploadConsent() {
+    public Observable<UserSessionInfo> uploadLocalConsents() {
         Observable<String> subpopulations = Observable.from(consentDAO.listConsents()).cache();
         return subpopulations
                 .map(subpop -> consentDAO.getConsent(subpop))

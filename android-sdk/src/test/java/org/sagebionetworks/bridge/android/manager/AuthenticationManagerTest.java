@@ -13,6 +13,7 @@ import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -25,12 +26,17 @@ import java.io.IOException;
 import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
+import rx.Observable;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +61,7 @@ public class AuthenticationManagerTest {
     @Mock
     private ConsentDAO consentDAO;
 
-    private ParticipantManager participantManager;
+    private ParticipantManager spyParticipantManager;
 
     @Before
     public void beforeTest() {
@@ -64,7 +70,7 @@ public class AuthenticationManagerTest {
         when(config.getStudyId()).thenReturn(STUDY_ID);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        participantManager = new ParticipantManager(config, apiClientProvider, accountDAO, consentDAO);
+        spyParticipantManager = spy(new ParticipantManager(config, apiClientProvider, accountDAO, consentDAO));
     }
 
     @Test
@@ -79,7 +85,7 @@ public class AuthenticationManagerTest {
         Call<Message> messageCall = successCall(message);
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        Completable completable = participantManager.signUp(signUp);
+        Completable completable = spyParticipantManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
@@ -95,7 +101,7 @@ public class AuthenticationManagerTest {
         Call messageCall = errorCall(new BridgeSDKException("Failed", 500));
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        participantManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
+        spyParticipantManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
@@ -110,7 +116,7 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
-        ForConsentedUsersApi result = participantManager.getRawApi();
+        ForConsentedUsersApi result = spyParticipantManager.getRawApi();
         assertNotNull(forConsentedUsersApi);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
@@ -163,7 +169,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
 
-        participantManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyParticipantManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).resendEmailVerification(email);
     }
@@ -177,14 +183,101 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
-        participantManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        spyParticipantManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        verify(accountDAO).setSignIn(signIn);
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
 
+        verify(authenticationApi).signIn(signIn);
+    }
+
+    @Test
+    public void signIn_UploadLocalConsentAndRetrySignIn() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        Call<UserSessionInfo> signInCall = mock(Call.class);
+        when(signInCall.clone()).thenReturn(signInCall);
+        when(signInCall.isExecuted()).thenReturn(true);
+        when(signInCall.isCanceled()).thenReturn(false);
+
+        // throw 412 first execution, success on second execution
+        when(signInCall.execute())
+                .thenThrow(new ConsentRequiredException("msg", "endpoint", userSessionInfo))
+                .thenReturn(Response.success(userSessionInfo));
+
+        Observable<UserSessionInfo> userSessionInfoObservable = Observable.just(userSessionInfo);
+
+        SignIn signIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
+        when(authenticationApi.signIn(signIn))
+                .thenReturn(signInCall);
+
+        // indicate that locally, we think we are consented
+        doReturn(true)
+                .when(spyParticipantManager).isConsented();
+        doReturn(userSessionInfoObservable)
+                .when(spyParticipantManager).uploadLocalConsents();
+
+        spyParticipantManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+                .assertValue(userSessionInfo).assertCompleted();
+
+        verify(spyParticipantManager).isConsented();
+        // verify there was an attempt to upload all consents
+        verify(spyParticipantManager).uploadLocalConsents();
+
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
+        verify(accountDAO).setUserSessionInfo(userSessionInfo);
+        verify(accountDAO).setStudyParticipant(
+                argThat(participant -> EMAIL.equals(participant.getEmail())));
+
+        verify(signInCall, times(2)).execute();
+        verify(authenticationApi).signIn(signIn);
+    }
+
+    @Test
+    public void signIn_UploadLocalConsentRetrySignInOnce() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        Call<UserSessionInfo> signInCall = mock(Call.class);
+        when(signInCall.clone()).thenReturn(signInCall);
+        when(signInCall.isExecuted()).thenReturn(true);
+        when(signInCall.isCanceled()).thenReturn(false);
+
+        ConsentRequiredException exception = new ConsentRequiredException("msg", "endpoint", userSessionInfo);
+        // throw 412 every time
+        when(signInCall.execute())
+                .thenThrow(exception);
+
+        Observable<UserSessionInfo> userSessionInfoObservable = Observable.just(userSessionInfo);
+
+        SignIn signIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
+        when(authenticationApi.signIn(signIn))
+                .thenReturn(signInCall);
+
+        // indicate that locally, we think we are consented
+        doReturn(true)
+                .when(spyParticipantManager).isConsented();
+        doReturn(userSessionInfoObservable)
+                .when(spyParticipantManager).uploadLocalConsents();
+
+        // don't try uploading consent and retrying sign-in multiple times, i.e.
+        // the ConsentRequiredException should be propagated the second time it occurs
+        spyParticipantManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+                .assertError(exception);
+
+        verify(spyParticipantManager).isConsented();
+        // verify there was an attempt to upload all consents
+        verify(spyParticipantManager).uploadLocalConsents();
+
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
+        verify(accountDAO).setUserSessionInfo(userSessionInfo);
+        verify(accountDAO).setStudyParticipant(
+                argThat(participant -> EMAIL.equals(participant.getEmail())));
+
+        // no infinite loops
+        verify(signInCall, times(2)).execute();
         verify(authenticationApi).signIn(signIn);
     }
 
@@ -195,7 +288,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
-        participantManager.signOut().test().awaitTerminalEvent()
+        spyParticipantManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
 
         verify(accountDAO).setSignIn(null);
@@ -213,7 +306,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.requestResetPassword(email))
                 .thenReturn(messageCall);
 
-        participantManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyParticipantManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).requestResetPassword(email);
     }
@@ -221,7 +314,7 @@ public class AuthenticationManagerTest {
     @Test
     public void getApi() throws Exception {
         // TODO: fix test once there is no more Proxy
-        ForConsentedUsersApi api = participantManager.getApi();
+        ForConsentedUsersApi api = spyParticipantManager.getApi();
 
         assertTrue(api instanceof ProxiedForConsentedUsersApi);
     }
@@ -230,7 +323,7 @@ public class AuthenticationManagerTest {
     public void getEmail() throws Exception {
         when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
 
-        String email = participantManager.getEmail();
+        String email = spyParticipantManager.getEmail();
 
         assertEquals(EMAIL, email);
         verify(accountDAO).getSignIn();

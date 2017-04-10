@@ -138,7 +138,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @NonNull
-    public Completable giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
+    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
                                    @NonNull LocalDate birthdate,
                                    @NonNull String base64Image, @NonNull String imageMimeType,
                                    @Nullable SharingScope sharingScope) {
@@ -146,7 +146,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                 imageMimeType, sharingScope);
     }
 
-    public Completable giveConsent(String subpopulationGuid, ConsentSignature consentSignature) {
+    public Single<UserSessionInfo> giveConsent(String subpopulationGuid, ConsentSignature consentSignature) {
         return giveConsent(subpopulationGuid,
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
@@ -273,7 +273,8 @@ public abstract class BridgeDataProvider extends DataProvider {
                 consent.getBirthdate(),
                 consent.getImageData(),
                 consent.getImageMimeType(),
-                consent.getScope()).andThen(SUCCESS_DATA_RESPONSE)
+                consent.getScope())
+                .flatMapObservable(session -> SUCCESS_DATA_RESPONSE)
                 .compose(ObservableUtils.applyDefault());
     }
 
