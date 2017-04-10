@@ -324,8 +324,18 @@ public class AuthenticationManager {
     }
 
     public interface AuthenticationEventListener {
+        /**
+         * Notification of successful sign out. Called on a worker thread.
+         *
+         * @param email signed out user
+         */
         void onSignedOut(String email);
 
+        /**
+         * Notification of successful sign in. Called on a worker thread.
+         *
+         * @param email signed in user
+         */
         void onSignedIn(String email);
     }
 }
