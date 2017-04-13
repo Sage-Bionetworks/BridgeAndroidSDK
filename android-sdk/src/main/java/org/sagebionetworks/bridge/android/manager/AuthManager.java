@@ -490,7 +490,7 @@ public class AuthManager {
         return uploadConsent(subpopulationGuid, consent);
     }
 
-    private Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull ConsentSignature consent) {
+    Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull ConsentSignature consent) {
         return Single.just(consent)
                 .flatMap(consentSignature -> RxUtils.toBodySingle(
                         proxiedForConsentedUsersApi
@@ -598,7 +598,7 @@ public class AuthManager {
         return RxUtils.toBodySingle(
                 proxiedForConsentedUsersApi.withdrawAllConsents(
                         new Withdrawal().reason(reason)
-                )).compose(safeGetNewSessionOnSuccess())
+                ))
                 .toCompletable();
 
     }
@@ -617,30 +617,7 @@ public class AuthManager {
         return RxUtils.toBodySingle(
                 proxiedForConsentedUsersApi.withdrawConsentFromSubpopulation
                         (subpopulationGuid, new Withdrawal().reason(reason)))
-                .compose(safeGetNewSessionOnSuccess())
                 .toCompletable();
-    }
-
-    /**
-     * Used to retrieve recomputed UserSessionInfo from Bridge after completing calls which modify
-     * the participant's consent.
-     *
-     * @param <T> value type
-     * @return modified observable
-     */
-    private <T> Single.Transformer<T, T> safeGetNewSessionOnSuccess() {
-        return observable -> observable.doOnSuccess(
-                message -> {
-                    logger.info("Calling Bridge for latest session");
-
-                    getLatestUserSessionInfo()
-                            .toCompletable()
-                            .onErrorComplete(e -> {
-                                        logger.info("Couldn't update session from Bridge", e);
-                                        return true;
-                                    }
-                            ).await();
-                });
     }
 
     public interface AuthenticationEventListener {

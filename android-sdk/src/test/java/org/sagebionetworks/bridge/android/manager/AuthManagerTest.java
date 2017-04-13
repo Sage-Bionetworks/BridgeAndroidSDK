@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import org.joda.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -20,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -33,6 +35,7 @@ import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
 import rx.Observable;
+import rx.Single;
 
 import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
@@ -479,6 +482,53 @@ public class AuthManagerTest {
         assertEquals(Sets.newHashSet("A", "C"), result);
 
         verify(userSessionInfo, atLeastOnce()).getConsentStatuses();
+    }
+
+    @Test
+    public void giveConsent() throws Exception {
+        String name = "NAME";
+        LocalDate birthdate = LocalDate.now().minusYears(20);
+        String imgString = "base64image";
+        String mimeType = "mimeType";
+        SharingScope sharingScope = SharingScope.ALL_QUALIFIED_RESEARCHERS;
+
+        ConsentSignature sig = new ConsentSignature()
+                .name(name)
+                .birthdate(birthdate)
+                .imageData(imgString)
+                .imageMimeType(mimeType)
+                .scope(sharingScope);
+
+        // consent should get stored locally
+        doReturn(sig).when(spyAuthManager).giveConsentSync(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope);
+
+        // consent should then be uploaded
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(Single.just(userSessionInfo)).when(spyAuthManager).uploadConsent(SUBPOPULATION_GUID, sig);
+
+        spyAuthManager.giveConsent(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope)
+                .test()
+                .awaitTerminalEvent()
+                .assertValue(userSessionInfo);
+
+        verify(spyAuthManager).giveConsentSync(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope);
+
+        verify(spyAuthManager).uploadConsent(SUBPOPULATION_GUID, sig);
     }
     // endregion
 }
