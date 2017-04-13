@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +15,8 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -22,12 +25,14 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
 import rx.Observable;
 
+import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -43,11 +48,12 @@ import static org.mockito.Mockito.when;
 /**
  * Created by jyliu on 2/8/2017.
  */
-public class AuthenticationManagerTest {
+public class AuthManagerTest {
 
     private static final String STUDY_ID = "study-id";
     private static final String EMAIL = "email@test.com";
     private static final String PASSWORD = "P4ssw0rd";
+    private static final String SUBPOPULATION_GUID = "subpopulationGuid";
 
 
     @Mock
@@ -328,4 +334,78 @@ public class AuthenticationManagerTest {
         assertEquals(EMAIL, email);
         verify(accountDAO).getSignIn();
     }
+
+    // region Consent
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_ConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(true));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+
+        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertTrue(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_NotConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(false));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+
+        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertFalse(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_NoConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+
+        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertFalse(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_LocallyConsented() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(false));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(new ConsentSignature()).when(consentDAO).getConsent(SUBPOPULATION_GUID);
+
+        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertTrue(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+    // endregion
 }

@@ -110,7 +110,7 @@ public class ActivityManagerTest {
         activityManager.updateActivities(null);
     }
 
-    // TODO: Move these helper methods since they are duplicated in AuthenticationManagerTest
+    // TODO: Move these helper methods since they are duplicated in AuthManagerTest
     private <T> Call<T> successCall(T value) throws IOException {
         Response<T> response = Response.success(value);
 

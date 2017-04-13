@@ -382,7 +382,7 @@ public class AuthManager {
     public boolean isConsentedMostRecent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        ConsentStatus consentStatus = getConsentStatus(subpopulationGuid);
+        ConsentStatus consentStatus = getConsentStatusFromSession(subpopulationGuid);
         if (consentStatus == null) {
             return false;
         }
@@ -390,7 +390,7 @@ public class AuthManager {
     }
 
     @Nullable
-    private ConsentStatus getConsentStatus(@NonNull String subpopulationGuid) {
+    private ConsentStatus getConsentStatusFromSession(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
         UserSessionInfo userSessionInfo = getUserSessionInfo();
@@ -400,8 +400,8 @@ public class AuthManager {
 
     // if the participant's session indicates consent to this subpopulation, use that. otherwise,
     // treat presense of consent in DAO as having consented
-    private boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
-        ConsentStatus subpopulationStatus = getConsentStatus(subpopulationGuid);
+    boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
+        ConsentStatus subpopulationStatus = getConsentStatusFromSession(subpopulationGuid);
         if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
             return true;
         }
