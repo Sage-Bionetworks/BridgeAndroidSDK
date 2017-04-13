@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.BridgeConfig;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import rx.Completable;
 import rx.Observable;
@@ -418,15 +420,8 @@ public class AuthManager {
                 return true;
             }
 
-            // Bridge session doesn't specify any consents
-            if (userSessionInfo.getConsentStatuses() == null) {
-                return true;
-            }
-
-            for (Map.Entry<String, ConsentStatus> consentStatus
-                    : userSessionInfo.getConsentStatuses().entrySet()) {
-                if (consentStatus.getValue().getRequired()
-                        && !isConsentedInSessionOrLocal(userSessionInfo, consentStatus.getKey())) {
+            for (String subpopulation : getRequiredConsents(userSessionInfo)) {
+                if (!isConsentedInSessionOrLocal(userSessionInfo, subpopulation)) {
                     return false;
                 }
             }
@@ -435,6 +430,30 @@ public class AuthManager {
         // without a user session, we can't determine whether they're consented. this shouldn't
         // happen unless they're logged out of the application
         return false;
+    }
+
+    /**
+     * @param userSessionInfo the user's session
+     * @return set of all subpopulationGuids for which the user's consent is required
+     */
+    @NonNull
+    Set<String> getRequiredConsents(@NonNull UserSessionInfo userSessionInfo) {
+        checkNotNull(userSessionInfo);
+
+        Set<String> subpopulations = Sets.newHashSet();
+
+        if (userSessionInfo.getConsentStatuses() == null) {
+            return subpopulations;
+        }
+
+        for (Map.Entry<String, ConsentStatus> consentStatus
+                : userSessionInfo.getConsentStatuses().entrySet()) {
+            if (consentStatus.getValue().getRequired()) {
+                subpopulations.add(consentStatus.getKey());
+            }
+        }
+
+        return subpopulations;
     }
 
     /**

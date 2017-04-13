@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -407,5 +408,60 @@ public class AuthManagerTest {
         verify(spyAuthManager).getUserSessionInfo();
         verify(userSessionInfo).getConsentStatuses();
     }
+
+    @Test
+    public void isConsented() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+
+        doReturn(Sets.newHashSet("A", "B", "C"))
+                .when(spyAuthManager)
+                .getRequiredConsents(userSessionInfo);
+
+        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+
+        boolean result = spyAuthManager.isConsented();
+
+        assertTrue(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+
+        verify(spyAuthManager).getRequiredConsents(userSessionInfo);
+
+        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+    }
+
+    @Test
+    public void isConsented_MissingConsent() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+
+        doReturn(Sets.newHashSet("A", "B", "C"))
+                .when(spyAuthManager)
+                .getRequiredConsents(userSessionInfo);
+
+        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(false).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+
+        boolean result = spyAuthManager.isConsented();
+
+        assertFalse(result);
+
+        verify(spyAuthManager).getUserSessionInfo();
+
+        verify(spyAuthManager).getRequiredConsents(userSessionInfo);
+
+        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
+    }
+
     // endregion
 }
