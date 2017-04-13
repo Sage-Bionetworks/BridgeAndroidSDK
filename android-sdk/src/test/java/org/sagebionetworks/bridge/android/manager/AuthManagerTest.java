@@ -27,6 +27,7 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -463,5 +464,21 @@ public class AuthManagerTest {
         verify(spyAuthManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
     }
 
+    @Test
+    public void getRequiredConsents() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put("A", new ConsentStatus().required(true));
+        consentStatuses.put("B", new ConsentStatus().required(false));
+        consentStatuses.put("C", new ConsentStatus().required(true));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        Set<String> result = spyAuthManager.getRequiredConsents(userSessionInfo);
+
+        assertEquals(Sets.newHashSet("A", "C"), result);
+
+        verify(userSessionInfo, atLeastOnce()).getConsentStatuses();
+    }
     // endregion
 }
