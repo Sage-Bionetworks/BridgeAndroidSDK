@@ -38,7 +38,7 @@ public class ActivityManagerTest {
     @Mock
     private ForConsentedUsersApi activitiesApi;
     @Mock
-    private ParticipantManager participantManager;
+    private AuthManager authManager;
 
     private ActivityManager activityManager;
 
@@ -47,8 +47,8 @@ public class ActivityManagerTest {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(participantManager.getApi()).thenReturn(activitiesApi);
-        activityManager = new ActivityManager(participantManager);
+        when(authManager.getApi()).thenReturn(activitiesApi);
+        activityManager = new ActivityManager(authManager);
     }
 
     @Test

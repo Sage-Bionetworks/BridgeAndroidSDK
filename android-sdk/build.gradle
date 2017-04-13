@@ -61,7 +61,7 @@ dependencies {
 
     compile 'com.android.support:appcompat-v7:25.1.0'
     compile 'com.android.support:support-annotations:25.1.0'
-    compile 'org.sagebionetworks:BridgeDataUploadUtils:0.1.2', {
+    compile 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
     }

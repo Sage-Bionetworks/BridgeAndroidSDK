@@ -10,7 +10,6 @@ import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
-import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -77,8 +76,10 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
         uploadDAO = new UploadDAO(applicationContext);
 
-        participantManager = new ParticipantManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
-        activityManager = new ActivityManager(participantManager);
+        authManager = new AuthManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
+        participantManager = new ParticipantRecordManager(accountDAO, authManager);
+
+        activityManager = new ActivityManager(authManager);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -92,7 +93,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(participantManager, studyUploadEncryptor, uploadDAO);
+        uploadManager = new UploadManager(authManager, studyUploadEncryptor, uploadDAO);
     }
 
     @NonNull
@@ -102,7 +103,9 @@ public class BridgeManagerProvider {
     @NonNull
     private final ApiClientProvider apiClientProvider;
     @NonNull
-    private final ParticipantManager participantManager;
+    private final AuthManager authManager;
+    @NonNull
+    private final ParticipantRecordManager participantManager;
     @NonNull
     private final ActivityManager activityManager;
     @NonNull
@@ -134,8 +137,8 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public ParticipantManager getParticipantManager() {
-        return participantManager;
+    public AuthManager getAuthManager() {
+        return authManager;
     }
 
     @NonNull
@@ -166,5 +169,9 @@ public class BridgeManagerProvider {
     @NonNull
     public OkHttpClient getS3OkHttpClient() {
         return s3OkHttpClient;
+    }
+
+    public ParticipantRecordManager getParticipantManager() {
+        return participantManager;
     }
 }

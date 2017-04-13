@@ -37,14 +37,13 @@ import rx.Single;
 import rx.functions.Func1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 /**
- * Manages the participant for an application.
+ * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
-public class ParticipantManager {
-    private static final Logger logger = LoggerFactory.getLogger(ParticipantManager.class);
+public class AuthManager {
+    private static final Logger logger = LoggerFactory.getLogger(AuthManager.class);
 
     @NonNull
     private final AccountDAO accountDAO;
@@ -61,9 +60,8 @@ public class ParticipantManager {
     @NonNull
     private final ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
-
-    public ParticipantManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
-                              @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
+    public AuthManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
+                       @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
         checkNotNull(config);
         checkNotNull(accountDAO);
 
@@ -290,7 +288,7 @@ public class ParticipantManager {
      * Get access to bridge API for currently authenticated client.
      *
      * @return API returns access to bridge that always uses the credentials currently held by
-     * ParticipantManager
+     * AuthManager
      */
     @NonNull
     public ForConsentedUsersApi getApi() {
@@ -363,75 +361,8 @@ public class ParticipantManager {
         listeners.remove(listener);
     }
 
-    /**
-     * Update the current user's participant record.
-     * <p>
-     * Unlike most other calls in this API, you can send partially complete JSON to this endpoint
-     * and it will selectively update the participant's record, rather than treating missing
-     * properties as an instruction to delete those fields in the record.
-     * <p>
-     * This means that many existing APIs that sent a single update value, can direct those payloads
-     * to this endpoint and they will still work fine.
-     *
-     * @param studyParticipant Study participant (required)
-     * @return session
-     */
-    @NonNull
-    public Single<UserSessionInfo> updateParticipant(@NonNull StudyParticipant studyParticipant) {
-        checkNotNull(studyParticipant);
 
-        return toBodySingle(proxiedForConsentedUsersApi.updateUsersParticipantRecord(studyParticipant)).doOnSuccess(
-                userSessionInfo -> {
-                    logger.debug("Successfully updated participant");
-                    getLatestParticipant().toCompletable()
-                            .onErrorComplete(e -> {
-                                logger.warn("Could not retrieve updated participant", e);
-                                return true;
-                            });
-                });
-    }
-
-
-    // region Participant
-
-    /**
-     * @return Get cached information about participant.
-     */
-    @Nullable
-    public StudyParticipant getParticipant() {
-        return accountDAO.getStudyParticipant();
-    }
-
-    /**
-     * Calls Bridge for participant information. Updates local cache of participant.
-     *
-     * @return Current user's participant record
-     */
-    @NonNull
-    public Single<StudyParticipant> getLatestParticipant() {
-        return toBodySingle(proxiedForConsentedUsersApi.getUsersParticipantRecord())
-                .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
-    }
-
-    /**
-     * Make participant data available for download.
-     * <p>
-     * Request the uploaded data for this user, in a given time range (inclusive). Bridge will
-     * asynchronously gather the user's data for the given time range and email a secure link to the
-     * participant's registered email address.
-     *
-     * @param startDate The first day to include in reports that are returned (required)
-     * @param endDate   The last day to include in reports that are returned (required)
-     * @return completable
-     */
-    @NonNull
-    public Completable emailDataToParticipant(@NonNull LocalDate startDate,
-                                              @NonNull LocalDate endDate) {
-        checkNotNull(startDate);
-        checkNotNull(endDate);
-
-        return toBodySingle(proxiedForConsentedUsersApi.emailDataToUser(startDate, endDate)).toCompletable();
-    }
+    // region Consent
 
     /**
      * @param subpopulationGuid guid for the subpopulation of the consent
@@ -442,10 +373,6 @@ public class ParticipantManager {
 
         return isConsentedInSessionOrLocal(getUserSessionInfo(), subpopulationGuid);
     }
-
-    // endregion
-
-    // region Consent
 
     /**
      * @param subpopulationGuid guid for the subpopulation of the consent

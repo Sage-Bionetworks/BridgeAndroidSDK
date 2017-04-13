@@ -61,7 +61,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * made, e.g. whether the file has been uploaded, whether the validation succeeded, failed or a
  * duplicate archive was detected.
  */
-public class UploadManager implements ParticipantManager.AuthenticationEventListener {
+public class UploadManager implements AuthManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
 
@@ -77,10 +77,10 @@ public class UploadManager implements ParticipantManager.AuthenticationEventList
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false).build();
 
-    public UploadManager(ParticipantManager participantManager, AndroidStudyUploadEncryptor
+    public UploadManager(AuthManager authManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
-        this.api = participantManager.getApi();
-        participantManager.addEventListener(this);
+        this.api = authManager.getApi();
+        authManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
     }
@@ -101,7 +101,8 @@ public class UploadManager implements ParticipantManager.AuthenticationEventList
      * @return information about file produced from the archive
      */
     @NonNull
-    public Single<UploadFile> queueUpload(String filename, org.sagebionetworks.bridge.data.Archive archive) {
+    public Single<UploadFile> queueUpload(String filename, Archive archive) {
+        LOG.debug("Queueing archive: " + archive);
         return Single.fromCallable(() -> persist(filename, archive))
                 .subscribeOn(Schedulers.io());
     }

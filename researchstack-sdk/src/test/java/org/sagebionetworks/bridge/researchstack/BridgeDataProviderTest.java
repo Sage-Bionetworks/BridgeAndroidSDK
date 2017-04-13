@@ -23,7 +23,7 @@ import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.ParticipantManager;
+import org.sagebionetworks.bridge.android.manager.AuthManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
@@ -85,7 +85,7 @@ public class BridgeDataProviderTest {
     @Mock
     protected ResearchStackDAO researchStackDAO;
     @Mock
-    protected ParticipantManager participantManager;
+    protected AuthManager authManager;
 
     @Before
     public void setupTest() {
@@ -97,7 +97,7 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
         when(bridgeManagerProvider.getAccountDao()).thenReturn(accountDAO);
         when(bridgeManagerProvider.getConsentDao()).thenReturn(consentDAO);
-        when(bridgeManagerProvider.getParticipantManager()).thenReturn(participantManager);
+        when(bridgeManagerProvider.getAuthManager()).thenReturn(authManager);
 
         pinCodeConfig = mock(PinCodeConfig.class);
         fileAccess = mock(FileAccess.class);
@@ -136,13 +136,13 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testSignUp() throws IOException {
-        when(participantManager.signUp("email", "password"))
+        when(authManager.signUp("email", "password"))
                 .thenReturn(Completable.complete());
 
         dataProvider.signUp(context, "email", "name", "password").test()
                 .assertCompleted();
 
-        verify(participantManager).signUp("email", "password");
+        verify(authManager).signUp("email", "password");
     }
 
     @Test
@@ -153,11 +153,11 @@ public class BridgeDataProviderTest {
         when(sessionCall.clone()).thenReturn(sessionCall);
         when(sessionCall.execute()).thenReturn(Response.success(session));
 
-        when(participantManager.signIn("email", "password")).thenReturn(Single.just(session));
+        when(authManager.signIn("email", "password")).thenReturn(Single.just(session));
         Observable<DataResponse> completable = dataProvider.signIn(context, "email", "password");
         completable.test().assertCompleted();
 
-        verify(participantManager).signIn("email", "password");
+        verify(authManager).signIn("email", "password");
 
         // TODO: verify background tasks are triggered when session is established
         // verify(uploadHandler).uploadPendingFiles(forConsentedUsersApi);
@@ -166,7 +166,7 @@ public class BridgeDataProviderTest {
     @Test
     public void testSignOut() throws IOException {
 
-        when(participantManager.signOut()).thenReturn(Completable.complete());
+        when(authManager.signOut()).thenReturn(Completable.complete());
 
         Observable<DataResponse> responseObservable = dataProvider.signOut(context);
 
@@ -174,51 +174,51 @@ public class BridgeDataProviderTest {
                 .doOnNext(dataResponse -> assertTrue(dataResponse.isSuccess()))
                 .test().assertCompleted();
 
-        verify(participantManager).signOut();
+        verify(authManager).signOut();
     }
 
 
     @Test
     public void testResendEmailVerification() throws IOException {
-        when(participantManager.resendEmailVerification("email"))
+        when(authManager.resendEmailVerification("email"))
                 .thenReturn(Completable.complete());
 
         dataProvider.resendEmailVerification(context, "email").test()
                 .assertCompleted()
                 .assertValueCount(1);
 
-        verify(participantManager).resendEmailVerification("email");
+        verify(authManager).resendEmailVerification("email");
     }
 
     @Test
     public void testIsSignedUp() {
-        when(participantManager.getEmail()).thenReturn("Email");
+        when(authManager.getEmail()).thenReturn("Email");
 
         boolean isSignedUp = dataProvider.isSignedUp(context);
         assertTrue(isSignedUp);
 
-        verify(participantManager).getEmail();
+        verify(authManager).getEmail();
     }
 
 
     @Test
     public void testIsConsented() {
-        when(participantManager.isConsented()).thenReturn(true);
+        when(authManager.isConsented()).thenReturn(true);
 
         boolean isConsented = dataProvider.isConsented();
 
         assertTrue(isConsented);
-        verify(participantManager).isConsented();
+        verify(authManager).isConsented();
     }
 
     @Test
     public void testWithdrawConsent() {
         String reasonString = "reason";
-        when(participantManager.withdrawAll(reasonString)).thenReturn(Completable.complete());
+        when(authManager.withdrawAll(reasonString)).thenReturn(Completable.complete());
 
         dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
 
-        verify(participantManager).withdrawAll(reasonString);
+        verify(authManager).withdrawAll(reasonString);
     }
 
     @Ignore
@@ -252,25 +252,25 @@ public class BridgeDataProviderTest {
         UserSessionInfo session = mock(UserSessionInfo.class);
         String scope = "SPONSORS_AND_PARTNERS";
         when(session.getSharingScope()).thenReturn(SharingScope.valueOf(scope));
-        when(participantManager.getUserSessionInfo()).thenReturn(session);
+        when(authManager.getUserSessionInfo()).thenReturn(session);
 
         String scopeResult = dataProvider.getUserSharingScope(context);
 
         assertEquals(SharingScope.SPONSORS_AND_PARTNERS.toString(), scopeResult);
-        verify(participantManager).getUserSessionInfo();
+        verify(authManager).getUserSessionInfo();
         verify(session, atLeastOnce()).getSharingScope();
     }
 
     @Test
     public void testGetUserEmail() {
         String email = "email@example.com";
-        when(participantManager.getEmail()).thenReturn(email);
+        when(authManager.getEmail()).thenReturn(email);
 
         String emailResult = dataProvider.getUserEmail(context);
 
         assertEquals(email, emailResult);
 
-        verify(participantManager).getEmail();
+        verify(authManager).getEmail();
     }
 
     @Ignore
@@ -303,11 +303,11 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testForgotPassword() throws IOException {
-        when(participantManager.requestPasswordReset("email")).
+        when(authManager.requestPasswordReset("email")).
                 thenReturn(Completable.complete());
 
         dataProvider.forgotPassword(context, "email").test().assertCompleted();
 
-        verify(participantManager).requestPasswordReset("email");
+        verify(authManager).requestPasswordReset("email");
     }
 }

@@ -30,10 +30,10 @@ public class ActivityManager {
     private final ForConsentedUsersApi api;
 
 
-    public ActivityManager(@NonNull ParticipantManager participantManager) {
-        checkNotNull(participantManager);
+    public ActivityManager(@NonNull AuthManager authManager) {
+        checkNotNull(authManager);
 
-        this.api = participantManager.getApi();
+        this.api = authManager.getApi();
     }
 
 
