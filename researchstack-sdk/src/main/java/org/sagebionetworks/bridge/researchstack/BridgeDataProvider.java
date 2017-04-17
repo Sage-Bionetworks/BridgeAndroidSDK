@@ -484,8 +484,6 @@ public abstract class BridgeDataProvider extends DataProvider {
         SharingScope sharingScope = RestUtils.GSON.fromJson(scope, SharingScope.class);
         participant.setSharingScope(sharingScope);
 
-        participant.setSharingScope(SharingScope.valueOf(scope));
-
         setUserSharingScope(sharingScope)
                 .subscribe();
     }
