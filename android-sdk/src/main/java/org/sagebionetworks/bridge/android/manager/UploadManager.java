@@ -1,6 +1,11 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSink;
@@ -32,6 +37,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import retrofit2.Retrofit;
 import rx.Single;
+import rx.functions.Action1;
 
 /**
  * Created by jyliu on 1/30/2017.
@@ -44,12 +50,18 @@ public class UploadManager {
     private final ForConsentedUsersApi api;
     private final StudyUploadEncryptor encryptor;
     private final OkHttpClient s3OkhttpClient;
+    private final UploadFileDbHelper mDbHelper;
+    private Object uploadLock = new Object();
+    boolean isUploading = false;
 
     public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
-            encryptor, OkHttpClient s3OkhttpClient) {
+            encryptor, OkHttpClient s3OkhttpClient, UploadFileDbHelper dbHelper) {
         this.api = authenticationManager.getApi();
         this.encryptor = encryptor;
         this.s3OkhttpClient = s3OkhttpClient;
+        this.mDbHelper = dbHelper;
+
+        this.startUpload();
     }
 
     public Single<UploadValidationStatus> getStatus(String uploadId) {
@@ -138,11 +150,7 @@ public class UploadManager {
             os.close();
         }
 
-
         String md5Hash = BaseEncoding.base64().encode(md5.digest());
-
-
-        //TODO: write file metadata to db
 
         UploadFile uploadFile = new UploadFile();
         uploadFile.filename = filename;
@@ -169,10 +177,148 @@ public class UploadManager {
         return retrofit.create(S3Service.class);
     }
 
-    public static class UploadFile {
-        public String filename;
-        public String contentType;
-        public long fileLength;
-        public String md5Hash;
+
+    public void addArchive(String filename, Archive archive) {
+
+
+        UploadFile uploadFile;
+        try {
+            uploadFile = persist(filename, archive);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+//            throw e;
+        }
+
+        //start async task here
+
+        class ArchiveTask extends AsyncTask<Void, Void, Void> {
+
+            @Override
+            protected Void doInBackground(Void... params) {
+
+                //add upload file to Db
+                SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+                ContentValues values = new ContentValues();
+                values.put(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME, uploadFile.filename);
+                values.put(UploadFileContract.UploadFileSchema.COLUMN_NAME_CONTENT_TYPE, uploadFile.contentType);
+                values.put(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILE_LENGTH, uploadFile.fileLength);
+                values.put(UploadFileContract.UploadFileSchema.COLUMN_NAME_MD5_HASH, uploadFile.md5Hash);
+
+                long newRowId = db.insert(UploadFileContract.UploadFileSchema.TABLE_NAME, null, values);
+
+                return null;
+
+            }
+
+            protected void onPostExecute(Void result) {
+                startUpload();
+            }
+        }
+
+        new ArchiveTask().execute();
     }
+
+
+    private void startUpload() {
+        //start async task here
+        class UploadTask extends AsyncTask<Void, Void, Void> {
+
+            @Override
+            protected Void doInBackground(Void... params) {
+
+                UploadManager.this.tryToUpload();
+
+                return null;
+
+            }
+        }
+
+        new UploadTask().execute();
+    }
+
+    private void tryToUpload() {
+
+//        assert(this.isSignedIn());
+
+        synchronized (this.uploadLock) {
+
+            if (this.isUploading) {
+                return;
+            }
+
+            this.isUploading = true;
+
+            //get readable database
+            SQLiteDatabase db = mDbHelper.getReadableDatabase();
+            String[] projection = {
+                    UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME,
+                    UploadFileContract.UploadFileSchema.COLUMN_NAME_CONTENT_TYPE,
+                    UploadFileContract.UploadFileSchema.COLUMN_NAME_FILE_LENGTH,
+                    UploadFileContract.UploadFileSchema.COLUMN_NAME_MD5_HASH
+            };
+
+            String sortOrder = UploadFileContract.UploadFileSchema._ID + " ASC";
+
+            Cursor cursor = db.query(
+                    UploadFileContract.UploadFileSchema.TABLE_NAME,
+                    projection,
+                    null, //selection
+                    null, //selectionArgs
+                    null, //groupBy
+                    null, //having
+                    sortOrder,
+                    "1"
+            );
+
+            //get entry
+            if (!cursor.moveToNext()) {
+                this.isUploading = false;
+                return;
+            }
+            //create UploadFile
+
+            UploadFile uploadFile = new UploadFile();
+            uploadFile.filename = cursor.getString(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME));
+            uploadFile.contentType = cursor.getString(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_CONTENT_TYPE));
+            uploadFile.fileLength = cursor.getLong(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILE_LENGTH));
+            uploadFile.md5Hash = cursor.getString(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_MD5_HASH));
+
+            Single<UploadFile> uploadFileSingle = Single
+                    .fromCallable(() -> uploadFile).cache();
+
+            Single<UploadSession> uploadSessionSingle = uploadFileSingle
+                    .flatMap(this::requestUploadSession);
+
+            Single<UploadValidationStatus> validationStatusSingle = Single.zip(uploadFileSingle, uploadSessionSingle, this::uploadToS3).flatMap(i -> i);
+
+            validationStatusSingle.subscribe(new Action1<UploadValidationStatus>() {
+                @Override
+                public void call(UploadValidationStatus uploadValidationStatus) {
+                    //if status is good, remove
+
+                    //add upload file to Db
+                    SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+                    String selection = UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME + " LIKE ?";
+                    String[] selectionArgs = { uploadFile.filename };
+                    db.delete(UploadFileContract.UploadFileSchema.TABLE_NAME, selection, selectionArgs);
+
+                    //delete archive file
+                    File file = getFile(uploadFile.filename);
+                    boolean deleted = file.delete();
+
+                    synchronized (uploadLock) {
+                        isUploading = false;
+                    }
+
+                    UploadManager.this.startUpload();
+                }
+            });
+
+        }
+    }
+
+
 }
