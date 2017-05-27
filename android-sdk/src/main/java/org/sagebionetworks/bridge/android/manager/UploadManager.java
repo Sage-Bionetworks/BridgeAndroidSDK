@@ -221,7 +221,7 @@ public class UploadManager {
     }
 
 
-    private void startUpload() {
+    public void startUpload() {
         //start async task here
         class UploadTask extends AsyncTask<Void, Void, Void> {
 
@@ -314,6 +314,16 @@ public class UploadManager {
                     }
 
                     UploadManager.this.startUpload();
+                }
+            },
+            new Action1<Throwable>() {
+                @Override
+                public void call(Throwable error) {
+
+                    //we need to better understand the errors
+                    //that can happen
+                    error.printStackTrace();
+
                 }
             });
 
