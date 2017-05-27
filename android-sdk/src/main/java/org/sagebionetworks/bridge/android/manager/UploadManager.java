@@ -31,6 +31,8 @@ import java.net.URI;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -38,6 +40,8 @@ import okhttp3.RequestBody;
 import retrofit2.Retrofit;
 import rx.Single;
 import rx.functions.Action1;
+
+import static android.os.AsyncTask.THREAD_POOL_EXECUTOR;
 
 /**
  * Created by jyliu on 1/30/2017.
@@ -54,12 +58,18 @@ public class UploadManager {
     private Object uploadLock = new Object();
     boolean isUploading = false;
 
+    private ExecutorService archivePool;
+    private ExecutorService uploadPool;
+
     public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
             encryptor, OkHttpClient s3OkhttpClient, UploadFileDbHelper dbHelper) {
         this.api = authenticationManager.getApi();
         this.encryptor = encryptor;
         this.s3OkhttpClient = s3OkhttpClient;
         this.mDbHelper = dbHelper;
+
+        this.archivePool = Executors.newFixedThreadPool(1);
+        this.uploadPool = Executors.newFixedThreadPool(1);
 
         this.startUpload();
     }
@@ -95,7 +105,7 @@ public class UploadManager {
                 .toCompletable()
                 .doOnCompleted(() -> {
                     // TODO: update upload status in DB, delete file
-                    LOG.info("Upload succeeded for id: " + session.getId());
+                    LOG.info("Upload succeeded for upload file :" + uploadFile.filename);
                 }).doOnError(t -> {
                     LOG.info("Couldn't upload to s3", t);
                 }).andThen(
@@ -180,6 +190,7 @@ public class UploadManager {
 
     public void addArchive(String filename, Archive archive) {
 
+        LOG.info("Adding archive for " + filename);
 
         UploadFile uploadFile;
         try {
@@ -208,6 +219,8 @@ public class UploadManager {
 
                 long newRowId = db.insert(UploadFileContract.UploadFileSchema.TABLE_NAME, null, values);
 
+                LOG.info("Upload file archived for " + uploadFile.filename);
+
                 return null;
 
             }
@@ -217,7 +230,7 @@ public class UploadManager {
             }
         }
 
-        new ArchiveTask().execute();
+        new ArchiveTask().executeOnExecutor(this.archivePool);
     }
 
 
@@ -235,7 +248,7 @@ public class UploadManager {
             }
         }
 
-        new UploadTask().execute();
+        new UploadTask().executeOnExecutor(this.uploadPool);
     }
 
     private void tryToUpload() {
@@ -285,6 +298,8 @@ public class UploadManager {
             uploadFile.fileLength = cursor.getLong(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILE_LENGTH));
             uploadFile.md5Hash = cursor.getString(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_MD5_HASH));
 
+            LOG.info("starting upload for upload file :" + uploadFile.filename);
+
             Single<UploadFile> uploadFileSingle = Single
                     .fromCallable(() -> uploadFile).cache();
 
@@ -309,6 +324,8 @@ public class UploadManager {
                     File file = getFile(uploadFile.filename);
                     boolean deleted = file.delete();
 
+                    LOG.info("Completing upload for upload file :" + uploadFile.filename);
+
                     synchronized (uploadLock) {
                         isUploading = false;
                     }
@@ -324,11 +341,21 @@ public class UploadManager {
                     //that can happen
                     error.printStackTrace();
 
+                    //we want to retry uploads, but the risk is that if there is some kind of
+                    //malformed datapoint, it shouldn;t block the rest of the uploads
+
+                    synchronized (uploadLock) {
+                        isUploading = false;
+                    }
+
                 }
             });
 
         }
     }
 
+    void finishUpload(UploadFile uploadFile) {
+
+    }
 
 }
