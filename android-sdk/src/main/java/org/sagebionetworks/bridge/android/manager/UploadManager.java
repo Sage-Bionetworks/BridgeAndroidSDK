@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
@@ -354,7 +355,38 @@ public class UploadManager {
         }
     }
 
-    void finishUpload(UploadFile uploadFile) {
+    public void flush(Context context) {
+
+        //add upload file to Db
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+        String[] projection = {
+                UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME,
+                UploadFileContract.UploadFileSchema.COLUMN_NAME_CONTENT_TYPE,
+                UploadFileContract.UploadFileSchema.COLUMN_NAME_FILE_LENGTH,
+                UploadFileContract.UploadFileSchema.COLUMN_NAME_MD5_HASH
+        };
+
+        String sortOrder = UploadFileContract.UploadFileSchema._ID + " ASC";
+
+        Cursor cursor = db.query(
+                UploadFileContract.UploadFileSchema.TABLE_NAME,
+                projection,
+                null, //selection
+                null, //selectionArgs
+                null, //groupBy
+                null, //having
+                sortOrder
+        );
+
+        while (cursor.moveToNext()) {
+            String filename = cursor.getString(cursor.getColumnIndexOrThrow(UploadFileContract.UploadFileSchema.COLUMN_NAME_FILENAME));
+            //delete archive file
+            File file = getFile(filename);
+            boolean deleted = file.delete();
+        }
+
+        mDbHelper.resetDb(db);
 
     }
 
