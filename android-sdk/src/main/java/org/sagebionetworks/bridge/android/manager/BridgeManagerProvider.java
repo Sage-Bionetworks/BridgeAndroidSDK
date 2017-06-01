@@ -91,7 +91,14 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient);
+        UploadFileDbHelper dbHelper = new UploadFileDbHelper(applicationContext);
+
+        uploadManager = new UploadManager(
+                authenticationManager,
+                studyUploadEncryptor,
+                s3OkHttpClient,
+                dbHelper
+        );
     }
 
     @NonNull

@@ -71,6 +71,8 @@ dependencies {
     exclude group: 'com.google.android', module: 'android'
   }
 
+  compile 'com.squareup:tape:1.2.3'
+
   // logging to console, workaround for configuring logback
   testCompile 'org.slf4j:slf4j-simple:1.7.21'
   // avoid needing to setup timezone provider for unit tests
