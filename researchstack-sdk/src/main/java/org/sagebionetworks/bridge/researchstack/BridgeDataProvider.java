@@ -26,6 +26,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -474,19 +475,20 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void setUserSharingScope(Context context, String scope) {
         StudyParticipant participant = new StudyParticipant();
-        participant.setSharingScope(SharingScope.valueOf(scope));
+        SharingScope sharingScope = RestUtils.GSON.fromJson(scope, SharingScope.class);
+        participant.setSharingScope(sharingScope);
 
-        setUserSharingScope(scope)
+        setUserSharingScope(sharingScope)
                 .subscribe();
     }
 
     @NonNull
-    public Single<UserSessionInfo> setUserSharingScope(@Nullable String scope) {
+    public Single<UserSessionInfo> setUserSharingScope(@Nullable SharingScope scope) {
 
         return bridgeManagerProvider.getParticipantManager()
                 .updateParticipantRecord((StudyParticipant) new StudyParticipant()
                         .email(authManager.getEmail())
-                        .sharingScope(SharingScope.valueOf(scope)));
+                        .sharingScope(scope));
     }
 
     //endregion
