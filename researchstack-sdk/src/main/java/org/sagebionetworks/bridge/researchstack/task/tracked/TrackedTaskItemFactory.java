@@ -59,7 +59,7 @@ public class TrackedTaskItemFactory extends TaskItemFactory {
     }
 
     @Override
-    public Step createCustomStep(Context context, SurveyItem item) {
+    public Step createCustomStep(Context context, SurveyItem item, boolean isSubtaskStep) {
         Step step;
         if (item.getTypeIdentifier().equals(TRACKED_SELECTION_TYPE_GSON)) {
             if (!(item instanceof CompoundQuestionSurveyItem)) {
@@ -67,15 +67,15 @@ public class TrackedTaskItemFactory extends TaskItemFactory {
             }
             step = createCompoundStep(context, (CompoundQuestionSurveyItem)item);
         } else {
-            step = super.createSurveyStep(context, item);
+            step = super.createSurveyStep(context, item, isSubtaskStep);
         }
         addTrackedStepModel(step, item);
         return step;
     }
 
     @Override
-    public Step createSurveyStep(Context context, SurveyItem item) {
-        Step step = super.createSurveyStep(context, item);
+    public Step createSurveyStep(Context context, SurveyItem item, boolean isSubtaskStep) {
+        Step step = super.createSurveyStep(context, item, isSubtaskStep);
         addTrackedStepModel(step, item);
         return step;
     }
