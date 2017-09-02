@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import retrofit2.Call;
 import rx.Observable;
 import rx.Single;
+import rx.schedulers.Schedulers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -18,7 +19,8 @@ public class RxUtils {
     public static <T> Single<T> toBodySingle(@NonNull Call<T> call) {
         checkNotNull(call);
 
-        return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call))).toSingle();
+        return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call))).toSingle()
+                .subscribeOn(Schedulers.io());
     }
 
 }

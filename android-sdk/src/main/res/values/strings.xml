@@ -1,3 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+  <!--public-->
   <string name="app_name" tools:ignore="ResourceName">Bridge Android SDK</string>
+
+  <!--private-->
+  <string name="osb_account_type">org.sagebionetworks.bridge</string>
+  <string name="osb_account_type_label">Bridge Research</string>
 </resources>

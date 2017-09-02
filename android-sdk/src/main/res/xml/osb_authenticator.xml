@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<account-authenticator
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:accountType="@string/osb_account_type"
+    android:label="@string/osb_account_type_label"
+    android:icon="@mipmap/osb_account_type"
+    android:smallIcon="@mipmap/osb_account_type" />
