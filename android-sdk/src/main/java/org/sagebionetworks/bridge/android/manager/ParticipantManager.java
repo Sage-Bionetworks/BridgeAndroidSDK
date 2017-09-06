@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -16,7 +17,6 @@ import rx.Completable;
 import rx.Single;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 /**
  * Any authenticated user may use this class's methods. The user does not need to have consented to
@@ -32,14 +32,18 @@ public class ParticipantManager {
     private final ForConsentedUsersApi api;
     @NonNull
     private final AccountDAO accountDAO;
+    @NonNull
+    private final RxHelper rxHelper;
 
     public ParticipantManager(@NonNull AuthenticationManager authenticationManager,
-                              @NonNull AccountDAO accountDAO) {
+                              @NonNull AccountDAO accountDAO,
+                              @NonNull RxHelper rxHelper) {
         checkNotNull(authenticationManager);
         checkNotNull(accountDAO);
 
         this.api = authenticationManager.getApi();
         this.accountDAO = accountDAO;
+        this.rxHelper = rxHelper;
     }
 
 
@@ -60,7 +64,7 @@ public class ParticipantManager {
     public Single<UserSessionInfo> updateParticipant(@NonNull StudyParticipant studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return toBodySingle(api.updateUsersParticipantRecord(studyParticipant)).doOnSuccess(
+        return rxHelper.toBodySingle(api.updateUsersParticipantRecord(studyParticipant)).doOnSuccess(
                 userSessionInfo -> {
                     LOG.debug("Successfully updated participant");
                     getLatestParticipant().toCompletable()
@@ -86,7 +90,7 @@ public class ParticipantManager {
      */
     @NonNull
     public Single<StudyParticipant> getLatestParticipant() {
-        return toBodySingle(api.getUsersParticipantRecord())
+        return rxHelper.toBodySingle(api.getUsersParticipantRecord())
                 .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
     }
 
@@ -107,6 +111,6 @@ public class ParticipantManager {
         checkNotNull(startDate);
         checkNotNull(endDate);
 
-        return toBodySingle(api.emailDataToUser(startDate, endDate)).toCompletable();
+        return rxHelper.toBodySingle(api.emailDataToUser(startDate, endDate)).toCompletable();
     }
 }

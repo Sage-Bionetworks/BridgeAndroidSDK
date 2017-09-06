@@ -12,7 +12,7 @@ import android.os.Bundle;
 import com.google.common.base.Strings;
 
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
@@ -42,6 +42,7 @@ public class Authenticator extends AbstractAccountAuthenticator {
     private final Context context;
     private final String studyId;
     private final AccountManager am;
+    private final RxHelper rxHelper;
 
     public Authenticator(Context context) {
         super(context);
@@ -49,7 +50,11 @@ public class Authenticator extends AbstractAccountAuthenticator {
         this.context = context;
         this.am = AccountManager.get(context);
 
-        this.studyId = BridgeManagerProvider.getInstance().getBridgeConfig().getStudyId();
+        BridgeManagerProvider bridgeManagerProvider = BridgeManagerProvider.getInstance();
+
+        this.studyId = bridgeManagerProvider.getBridgeConfig().getStudyId();
+        this.rxHelper = bridgeManagerProvider.getRxHelper();
+
         this.authenticationApi = BridgeManagerProvider.getInstance()
                 .getApiClientProvider()
                 .getClient(AuthenticationApi.class);
@@ -76,7 +81,7 @@ public class Authenticator extends AbstractAccountAuthenticator {
         if (!Strings.isNullOrEmpty(email) & !Strings.isNullOrEmpty(password)) {
             LOGGER.debug("Signing in via email and password");
             // We have all the info to add ana ccount. Make network call and notify of response
-            RxUtils.toBodySingle(authenticationApi.signIn(
+            rxHelper.toBodySingle(authenticationApi.signIn(
                     new SignIn()
                             .email(email)
                             .password(password)

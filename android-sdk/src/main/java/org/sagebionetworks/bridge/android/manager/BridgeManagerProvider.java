@@ -9,6 +9,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -74,10 +75,11 @@ public class BridgeManagerProvider {
         accountDAO = new AccountDAO(applicationContext);
         consentDAO = new ConsentDAO(applicationContext);
 
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
-        participantManager = new ParticipantManager(authenticationManager, accountDAO);
-        consentManager = new ConsentManager(authenticationManager, consentDAO);
-        activityManager = new ActivityManager(authenticationManager);
+        rxHelper = new RxHelper();
+        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, rxHelper);
+        participantManager = new ParticipantManager(authenticationManager, accountDAO, rxHelper);
+        consentManager = new ConsentManager(authenticationManager, consentDAO, rxHelper);
+        activityManager = new ActivityManager(authenticationManager, rxHelper);
 
         try {
             studyUploadEncryptor = new StudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -91,7 +93,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient, rxHelper);
     }
 
     @NonNull
@@ -118,6 +120,8 @@ public class BridgeManagerProvider {
     private final UploadManager uploadManager;
     @NonNull
     private final OkHttpClient s3OkHttpClient;
+    @NonNull
+    private final RxHelper rxHelper;
 
     @NonNull
     public Context getApplicationContext() {
@@ -179,4 +183,6 @@ public class BridgeManagerProvider {
         return s3OkHttpClient;
     }
 
+    @NonNull
+    public RxHelper getRxHelper() { return rxHelper; }
 }

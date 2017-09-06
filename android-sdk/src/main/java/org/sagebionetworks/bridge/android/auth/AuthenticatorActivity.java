@@ -9,7 +9,7 @@ import android.widget.Toast;
 
 import org.sagebionetworks.bridge.android.R;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.slf4j.Logger;
@@ -25,16 +25,18 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticatorActivity.class);
 
     private AuthenticationApi authenticationApi;
+    private RxHelper rxHelper;
 
     @Override
     public void onCreate(Bundle saveInstanceState) {
         super.onCreate(saveInstanceState);
         setContentView(R.layout.osb_login);
 
-        this.authenticationApi = BridgeManagerProvider
-                .getInstance()
+        BridgeManagerProvider bridgeManagerProvider = BridgeManagerProvider.getInstance();
+        this.authenticationApi = bridgeManagerProvider
                 .getApiClientProvider()
                 .getClient(AuthenticationApi.class);
+        this.rxHelper = bridgeManagerProvider.getRxHelper();
 
         findViewById(R.id.submit).setOnClickListener(v -> submit());
     }
@@ -46,7 +48,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity {
 
         final String accountType = getIntent().getStringExtra(Authenticator.Keys.ACCOUNT_TYPE);
         final String tokenType = getIntent().getStringExtra(Authenticator.Keys.TOKEN_TYPE);
-        RxUtils.toBodySingle(authenticationApi.signIn(
+        rxHelper.toBodySingle(authenticationApi.signIn(
                 new SignIn()
                         .email(email)
                         .password(password)

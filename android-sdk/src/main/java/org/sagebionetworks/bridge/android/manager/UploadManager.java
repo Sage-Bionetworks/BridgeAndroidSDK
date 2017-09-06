@@ -10,7 +10,7 @@ import com.google.common.io.Files;
 import org.sagebionetworks.bridge.android.data.Archive;
 import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
-import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -41,19 +41,26 @@ public class UploadManager {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
 
+    @NonNull
     private final ForConsentedUsersApi api;
+    @NonNull
     private final StudyUploadEncryptor encryptor;
+    @NonNull
     private final OkHttpClient s3OkhttpClient;
+    @NonNull
+    private final RxHelper rxHelper;
 
-    public UploadManager(AuthenticationManager authenticationManager, StudyUploadEncryptor
-            encryptor, OkHttpClient s3OkhttpClient) {
+    public UploadManager(@NonNull AuthenticationManager authenticationManager, @NonNull StudyUploadEncryptor
+            encryptor, @NonNull OkHttpClient s3OkhttpClient, @NonNull RxHelper rxHelper) {
         this.api = authenticationManager.getApi();
         this.encryptor = encryptor;
         this.s3OkhttpClient = s3OkhttpClient;
+        this.rxHelper = rxHelper;
     }
 
+    @NonNull
     public Single<UploadValidationStatus> getStatus(String uploadId) {
-        return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
+        return rxHelper.toBodySingle(api.getUploadStatus(uploadId));
     }
 
     @NonNull
@@ -74,7 +81,7 @@ public class UploadManager {
 
         RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
 
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 getS3Service(session).uploadToS3(
                         session.getUrl(),
                         requestBody,
@@ -87,7 +94,7 @@ public class UploadManager {
                 }).doOnError(t -> {
                     LOG.info("Couldn't upload to s3", t);
                 }).andThen(
-                        RxUtils.toBodySingle(api.completeUploadSession(session.getId())
+                        rxHelper.toBodySingle(api.completeUploadSession(session.getId())
                         ).onErrorReturn((t) -> {
                             LOG.info("Failed to call upload complete, server will recover", t);
                             return session;
@@ -95,8 +102,9 @@ public class UploadManager {
                 .andThen(getStatus(session.getId()));
     }
 
+    @NonNull
     Single<UploadSession> requestUploadSession(UploadFile uploadFile) {
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 api.requestUploadSession(
                         new UploadRequest()
                                 .name(uploadFile.filename)
@@ -109,6 +117,7 @@ public class UploadManager {
                 });
     }
 
+    @NonNull
     UploadFile persist(String filename, Archive archive) throws NoSuchAlgorithmException, IOException {
         File file = getFile(filename);
 

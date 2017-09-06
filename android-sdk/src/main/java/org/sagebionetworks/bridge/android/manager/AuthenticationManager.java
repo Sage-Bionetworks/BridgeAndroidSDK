@@ -6,7 +6,7 @@ import android.support.annotation.Nullable;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
-import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -35,18 +35,23 @@ public class AuthenticationManager {
     private final AccountDAO accountDAO;
     @NonNull
     private final BridgeConfig config;
+    @NonNull
     private final AuthenticationApi authenticationApi;
+    @NonNull
+    private final RxHelper rxHelper;
     private ApiClientProvider apiClientProvider;
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
+
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
-                                 @NonNull AccountDAO accountDAO) {
+                                 @NonNull AccountDAO accountDAO, @NonNull RxHelper rxHelper) {
         checkNotNull(config);
         checkNotNull(accountDAO);
 
         this.config = config;
         this.accountDAO = accountDAO;
         this.apiClientProvider = apiClientProvider;
+        this.rxHelper = rxHelper;
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
     }
@@ -102,7 +107,7 @@ public class AuthenticationManager {
                 .consent(false)
                 .status(null);
 
-        return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
+        return rxHelper.toBodySingle(authenticationApi.signUp(signUp))
                 .doOnSuccess(message -> {
                     accountDAO.setSignIn(
                             new SignIn()
@@ -133,7 +138,7 @@ public class AuthenticationManager {
 
         logger.debug("resendEmailVerification called with email: " + email);
 
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 authenticationApi.resendEmailVerification(
                         new Email()
                                 .study(config.getStudyId())
@@ -163,7 +168,7 @@ public class AuthenticationManager {
                 .email(email)
                 .password(password);
 
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .doOnSuccess(userSessionInfo -> {
                     accountDAO.setSignIn(signIn);
@@ -183,7 +188,7 @@ public class AuthenticationManager {
                     }
                 });
     }
-    
+
     /**
      * On success, clears the participant's email, password and session from storage
      *
@@ -193,7 +198,7 @@ public class AuthenticationManager {
     public Completable signOut() {
         logger.debug("signOut called");
 
-        return RxUtils.toBodySingle(authenticationApi.signOut())
+        return rxHelper.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setUserSessionInfo(null);
@@ -213,7 +218,7 @@ public class AuthenticationManager {
 
         logger.debug("requestPasswordReset called with email: " + email);
 
-        return RxUtils.toBodySingle(authenticationApi.requestResetPassword(new Email().study
+        return rxHelper.toBodySingle(authenticationApi.requestResetPassword(new Email().study
                 (config.getStudyId()).email(email))).toCompletable();
     }
 
@@ -285,7 +290,7 @@ public class AuthenticationManager {
     public Single<UserSessionInfo> getLatestUserSessionInfo() {
         // no-op call to the participant update API, we'll getConsent a recomputed session
         // session interceptor will update itself with the session in the response
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 getApi().updateUsersParticipantRecord(new StudyParticipant()));
     }
 }

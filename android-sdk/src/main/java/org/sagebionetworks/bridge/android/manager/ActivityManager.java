@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
 
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -20,25 +21,26 @@ import rx.Completable;
 import rx.Single;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
-
 
 public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 
     @NonNull
     private final ForConsentedUsersApi api;
+    @NonNull
+    private final RxHelper rxHelper;
 
 
-    public ActivityManager(@NonNull AuthenticationManager authenticationManager) {
+    public ActivityManager(@NonNull AuthenticationManager authenticationManager, @NonNull RxHelper rxHelper) {
         checkNotNull(authenticationManager);
 
         this.api = authenticationManager.getApi();
+        this.rxHelper = rxHelper;
     }
 
 
     public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
-        return toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
+        return rxHelper.toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                 });
@@ -53,7 +55,7 @@ public class ActivityManager {
 
         checkNotNull(scheduledActivities);
 
-        return toBodySingle(api.updateScheduledActivities(scheduledActivities)).toCompletable();
+        return rxHelper.toBodySingle(api.updateScheduledActivities(scheduledActivities)).toCompletable();
     }
 
     private String getTimezoneOffset() {

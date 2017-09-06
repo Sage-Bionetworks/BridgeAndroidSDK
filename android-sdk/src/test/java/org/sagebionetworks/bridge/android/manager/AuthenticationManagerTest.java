@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.rx.MockRxHelper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
@@ -61,7 +62,7 @@ public class AuthenticationManagerTest {
         when(config.getStudyId()).thenReturn(STUDY_ID);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO);
+        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO, new MockRxHelper());
     }
 
     @Test
