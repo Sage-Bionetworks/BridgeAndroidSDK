@@ -6,9 +6,10 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.data.StudyUploadEncryptor;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
+import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
+import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -73,6 +74,7 @@ public class BridgeManagerProvider {
 
         accountDAO = new AccountDAO(applicationContext);
         consentDAO = new ConsentDAO(applicationContext);
+        uploadDAO = new UploadDAO(applicationContext);
 
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
         participantManager = new ParticipantManager(authenticationManager, accountDAO);
@@ -80,7 +82,7 @@ public class BridgeManagerProvider {
         activityManager = new ActivityManager(authenticationManager);
 
         try {
-            studyUploadEncryptor = new StudyUploadEncryptor(bridgeConfig.getPublicKey());
+            studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
         } catch (Exception e) {
             throw new RuntimeException("Could create StudyUploadEncryptor", e);
         }
@@ -91,7 +93,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, s3OkHttpClient);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
     }
 
     @NonNull
@@ -113,7 +115,9 @@ public class BridgeManagerProvider {
     @NonNull
     private final AccountDAO accountDAO;
     @NonNull
-    private final StudyUploadEncryptor studyUploadEncryptor;
+    private final UploadDAO uploadDAO;
+    @NonNull
+    private final AndroidStudyUploadEncryptor studyUploadEncryptor;
     @NonNull
     private final UploadManager uploadManager;
     @NonNull
@@ -170,7 +174,7 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public StudyUploadEncryptor getStudyUploadEncryptor() {
+    public AndroidStudyUploadEncryptor getStudyUploadEncryptor() {
         return studyUploadEncryptor;
     }
 
@@ -178,5 +182,4 @@ public class BridgeManagerProvider {
     public OkHttpClient getS3OkHttpClient() {
         return s3OkHttpClient;
     }
-
 }

@@ -78,7 +78,7 @@ public class AuthenticationManagerTest {
 
         Completable completable = authenticationManager.signUp(signUp);
 
-        completable.test().assertCompleted();
+        completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(argThat(signIn -> matches(signUp, signIn)));
@@ -92,7 +92,7 @@ public class AuthenticationManagerTest {
         Call messageCall = errorCall(new BridgeSDKException("Failed", 500));
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        authenticationManager.signUp(signUp).test().assertError(BridgeSDKException.class);
+        authenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
@@ -160,7 +160,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.resendEmailVerification(EMAIL).test().assertCompleted();
+        authenticationManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).resendEmailVerification(email);
     }
@@ -174,7 +174,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
-        authenticationManager.signIn(EMAIL, PASSWORD).test()
+        authenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
         verify(accountDAO).setSignIn(signIn);
@@ -192,7 +192,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
-        authenticationManager.signOut().test()
+        authenticationManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
 
         verify(accountDAO).setSignIn(null);
@@ -210,7 +210,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.requestResetPassword(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.requestPasswordReset(EMAIL).test().assertCompleted();
+        authenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).requestResetPassword(email);
     }

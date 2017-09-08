@@ -4,6 +4,8 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.google.common.collect.Lists;
+
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
@@ -18,6 +20,8 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import rx.Completable;
 import rx.Single;
@@ -36,8 +40,12 @@ public class AuthenticationManager {
     @NonNull
     private final BridgeConfig config;
     private final AuthenticationApi authenticationApi;
+    private final List<AuthenticationEventListener> listeners;
+
+
     private ApiClientProvider apiClientProvider;
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
+
 
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
                                  @NonNull AccountDAO accountDAO) {
@@ -49,6 +57,7 @@ public class AuthenticationManager {
         this.apiClientProvider = apiClientProvider;
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+        listeners = Lists.newArrayList();
     }
 
     /**
@@ -171,6 +180,9 @@ public class AuthenticationManager {
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
+                    for (AuthenticationEventListener listener : listeners) {
+                        listener.onSignedIn(email);
+                    }
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
@@ -183,7 +195,7 @@ public class AuthenticationManager {
                     }
                 });
     }
-    
+
     /**
      * On success, clears the participant's email, password and session from storage
      *
@@ -193,11 +205,25 @@ public class AuthenticationManager {
     public Completable signOut() {
         logger.debug("signOut called");
 
+        final String email;
+
+        SignIn signIn = accountDAO.getSignIn();
+        if (signIn != null) {
+            email = signIn.getEmail();
+        } else {
+            email = null;
+            logger.debug("Did not find saved SignIn credentials prior to calling sign out API");
+        }
+
         return RxUtils.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setUserSessionInfo(null);
                     accountDAO.setStudyParticipant(null);
+
+                    for (AuthenticationEventListener listener : listeners) {
+                        listener.onSignedOut(email);
+                    }
                 }).toCompletable();
     }
 
@@ -287,5 +313,29 @@ public class AuthenticationManager {
         // session interceptor will update itself with the session in the response
         return RxUtils.toBodySingle(
                 getApi().updateUsersParticipantRecord(new StudyParticipant()));
+    }
+
+    public void addEventListener(AuthenticationEventListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeEventListener(AuthenticationEventListener listener) {
+        listeners.remove(listener);
+    }
+
+    public interface AuthenticationEventListener {
+        /**
+         * Notification of successful sign out. Called on a worker thread.
+         *
+         * @param email signed out user
+         */
+        void onSignedOut(String email);
+
+        /**
+         * Notification of successful sign in. Called on a worker thread.
+         *
+         * @param email signed in user
+         */
+        void onSignedIn(String email);
     }
 }
