@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.android.auth;
+package org.sagebionetworks.bridge.android.authenticator;
 
 import android.accounts.AbstractAccountAuthenticator;
 import android.accounts.Account;
@@ -19,6 +19,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 
 /*
@@ -43,6 +45,8 @@ public class Authenticator extends AbstractAccountAuthenticator {
     private final String studyId;
     private final AccountManager am;
     private final RxHelper rxHelper;
+    private final String accountType;
+    private final String authTokenType;
 
     public Authenticator(Context context) {
         super(context);
@@ -54,6 +58,9 @@ public class Authenticator extends AbstractAccountAuthenticator {
 
         this.studyId = bridgeManagerProvider.getBridgeConfig().getStudyId();
         this.rxHelper = bridgeManagerProvider.getRxHelper();
+
+        this.accountType = bridgeManagerProvider.getBridgeConfig().getAccountType();
+        this.authTokenType = bridgeManagerProvider.getBridgeConfig().getAuthTokenType();
 
         this.authenticationApi = BridgeManagerProvider.getInstance()
                 .getApiClientProvider()
@@ -74,6 +81,8 @@ public class Authenticator extends AbstractAccountAuthenticator {
             String authTokenType,
             String[] requiredFeature,
             Bundle options) throws NetworkErrorException {
+        checkArgument(this.accountType.equals(accountType), "unknown accountType: %s", accountType);
+        checkArgument(this.authTokenType.equals(authTokenType), "unknown authTokenType: %s", authTokenType);
 
         String email = options.getString(Keys.ACCOUNT_EMAIL);
         String password = options.getString(Keys.ACCOUNT_PASSWORD);
@@ -140,13 +149,14 @@ public class Authenticator extends AbstractAccountAuthenticator {
     public Bundle getAuthToken(AccountAuthenticatorResponse response, Account account, String authTokenType, Bundle options) throws NetworkErrorException {
         LOGGER.debug("getAuthToken");
 
-        if (!AUTHTOKEN_TYPE_BRIDGE_SESSION.equals(authTokenType)) {
+        if (!this.authTokenType.equals(authTokenType)) {
             final Bundle result = new Bundle();
             result.putString(AccountManager.KEY_ERROR_MESSAGE, "invalid authTokenType");
             return result;
         }
 
         final AccountManager accountManager = AccountManager.get(context);
+
 
         // check if token is in AccountManager cache
         String authToken = accountManager.peekAuthToken(account, authTokenType);

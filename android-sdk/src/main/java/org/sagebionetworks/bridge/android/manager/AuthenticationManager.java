@@ -1,8 +1,13 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
+import android.os.Build;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
+import com.google.common.base.Strings;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -39,19 +44,26 @@ public class AuthenticationManager {
     private final AuthenticationApi authenticationApi;
     @NonNull
     private final RxHelper rxHelper;
+    @NonNull
+    private final AccountManager accountManager;
+
     private ApiClientProvider apiClientProvider;
     private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
 
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
-                                 @NonNull AccountDAO accountDAO, @NonNull RxHelper rxHelper) {
+                                 @NonNull AccountDAO accountDAO, @NonNull RxHelper rxHelper, @NonNull AccountManager accountManager) {
         checkNotNull(config);
+        checkNotNull(apiClientProvider);
         checkNotNull(accountDAO);
+        checkNotNull(rxHelper);
+        checkNotNull(accountManager);
 
         this.config = config;
         this.accountDAO = accountDAO;
         this.apiClientProvider = apiClientProvider;
         this.rxHelper = rxHelper;
+        this.accountManager = accountManager;
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
     }
@@ -71,6 +83,7 @@ public class AuthenticationManager {
     public Completable signUp(@NonNull final String email, @NonNull final String password) {
         checkNotNull(email);
         checkNotNull(password);
+
 
         logger.debug("signUp called with email: " + email);
 
@@ -107,13 +120,14 @@ public class AuthenticationManager {
                 .consent(false)
                 .status(null);
 
+        disassociateUser();
+
         return rxHelper.toBodySingle(authenticationApi.signUp(signUp))
                 .doOnSuccess(message -> {
-                    accountDAO.setSignIn(
-                            new SignIn()
-                                    .study(config.getStudyId())
-                                    .email(signUp.getEmail())
-                                    .password(signUp.getPassword()));
+                    SignIn signIn = new SignIn()
+                            .study(config.getStudyId())
+                            .email(signUp.getEmail())
+                            .password(signUp.getPassword());
 
                     StudyParticipant participant = new StudyParticipant();
                     participant.email(signUp.getEmail())
@@ -121,10 +135,7 @@ public class AuthenticationManager {
                             .lastName(signUp.getLastName())
                             .externalId(signUp.getExternalId());
 
-                    accountDAO.setStudyParticipant(participant);
-                }).doOnError(throwable -> {
-                    accountDAO.setSignIn(null);
-                    accountDAO.setStudyParticipant(null);
+                    associateUser(signIn, null, participant);
                 }).toCompletable();
     }
 
@@ -163,6 +174,8 @@ public class AuthenticationManager {
 
         logger.debug("signIn called with email: " + email);
 
+        disassociateUser();
+
         SignIn signIn = new SignIn()
                 .study(config.getStudyId())
                 .email(email)
@@ -171,20 +184,22 @@ public class AuthenticationManager {
         return rxHelper.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .doOnSuccess(userSessionInfo -> {
-                    accountDAO.setSignIn(signIn);
-                    accountDAO.setUserSessionInfo(userSessionInfo);
-                    accountDAO.setStudyParticipant(
+                    associateUser(
+                            signIn,
+                            userSessionInfo,
+                            // TODO: this should be unnecessary. verify and remove
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
-                        accountDAO.setSignIn(signIn);
-                        accountDAO.setUserSessionInfo(
-                                ((ConsentRequiredException) throwable).getSession());
-                        accountDAO.setStudyParticipant(
+                        associateUser(
+                                signIn,
+                                ((ConsentRequiredException) throwable).getSession(),
+                                // TODO: this should be unnecessary. verify and remove
                                 new StudyParticipant()
-                                        .email(signIn.getEmail()));
+                                        .email(signIn.getEmail())
+                        );
                     }
                 });
     }
@@ -200,9 +215,7 @@ public class AuthenticationManager {
 
         return rxHelper.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
-                    accountDAO.setSignIn(null);
-                    accountDAO.setUserSessionInfo(null);
-                    accountDAO.setStudyParticipant(null);
+                    disassociateUser();
                 }).toCompletable();
     }
 
@@ -243,11 +256,11 @@ public class AuthenticationManager {
 
     @NonNull
     ForConsentedUsersApi getRawApi() {
-        SignIn signIn = accountDAO.getSignIn();
+        SignIn signIn = getAssociatedUserSignIn();
         if (signIn == null) {
             return apiClientProvider.getClient(ForConsentedUsersApi.class);
         }
-        return apiClientProvider.getClient(ForConsentedUsersApi.class, accountDAO.getSignIn());
+        return apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
     }
 
     /**
@@ -255,8 +268,7 @@ public class AuthenticationManager {
      */
     @Nullable
     public String getEmail() {
-        SignIn signIn = accountDAO.getSignIn();
-        return signIn == null ? null : signIn.getEmail();
+        return accountDAO.getEmail();
     }
 
     /**
@@ -271,7 +283,7 @@ public class AuthenticationManager {
         // TODO: a way to distinguish if session is null because we haven't signed on, or if it
         // was invalidated
         UserSessionInfo session = apiClientProvider.getUserSessionInfoProvider()
-                .retrieveCachedSession(accountDAO.getSignIn());
+                .retrieveCachedSession(getAssociatedUserSignIn());
 
         if (session != null) {
             accountDAO.setUserSessionInfo(session);
@@ -292,5 +304,53 @@ public class AuthenticationManager {
         // session interceptor will update itself with the session in the response
         return rxHelper.toBodySingle(
                 getApi().updateUsersParticipantRecord(new StudyParticipant()));
+    }
+
+    private void associateUser(SignIn signIn, UserSessionInfo userSessionInfo, StudyParticipant studyParticipant) {
+        logger.debug("Associating user with email=[{}]", signIn.getEmail());
+
+        Account account = new Account(signIn.getEmail(), config.getAccountType());
+        accountManager.addAccountExplicitly(account, signIn.getPassword(), null);
+
+        accountDAO.setEmail(signIn.getEmail());
+        accountDAO.setUserSessionInfo(userSessionInfo);
+        accountDAO.setStudyParticipant(studyParticipant);
+    }
+
+    @Nullable
+    private SignIn getAssociatedUserSignIn() {
+        String email = getEmail();
+        if (Strings.isNullOrEmpty(email)) {
+            return null;
+        }
+
+        Account account = new Account(email, config.getAccountType());
+
+        String password = accountManager.getPassword(account);
+
+        return new SignIn()
+                .study(config.getStudyId())
+                .email(email)
+                .password(password);
+    }
+
+    private void disassociateUser() {
+        logger.debug("Disassociating user");
+
+        String email = getEmail();
+
+        if (!Strings.isNullOrEmpty(email)) {
+
+            Account account = new Account(getEmail(), config.getAccountType());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                accountManager.removeAccountExplicitly(account);
+            } else {
+                accountManager.removeAccount(account, null, null);
+            }
+        }
+
+        accountDAO.setEmail(null);
+        accountDAO.setUserSessionInfo(null);
+        accountDAO.setStudyParticipant(null);
     }
 }

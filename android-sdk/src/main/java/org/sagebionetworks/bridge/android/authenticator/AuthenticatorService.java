@@ -1,4 +1,4 @@
-package org.sagebionetworks.bridge.android.auth;
+package org.sagebionetworks.bridge.android.authenticator;
 
 
 import android.app.Service;

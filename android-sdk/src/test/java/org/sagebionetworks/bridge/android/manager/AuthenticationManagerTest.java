@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.accounts.AccountManager;
+
 import com.google.common.base.Objects;
 
 import org.junit.Before;
@@ -30,6 +32,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,6 +43,7 @@ import static org.mockito.Mockito.when;
 public class AuthenticationManagerTest {
 
     private static final String STUDY_ID = "study-id";
+    private static final String ACCOUNT_TYPE = "accountType";
     private static final String EMAIL = "email@test.com";
     private static final String PASSWORD = "P4ssw0rd";
 
@@ -52,6 +56,8 @@ public class AuthenticationManagerTest {
     private AuthenticationApi authenticationApi;
     @Mock
     private AccountDAO accountDAO;
+    @Mock
+    private AccountManager accountManager;
 
     private AuthenticationManager authenticationManager;
 
@@ -60,9 +66,11 @@ public class AuthenticationManagerTest {
         MockitoAnnotations.initMocks(this);
 
         when(config.getStudyId()).thenReturn(STUDY_ID);
+        when(config.getAccountType()).thenReturn(ACCOUNT_TYPE);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO, new MockRxHelper());
+        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO,
+                new MockRxHelper(), accountManager);
     }
 
     @Test
@@ -82,7 +90,11 @@ public class AuthenticationManagerTest {
         completable.test().assertCompleted();
 
         verify(authenticationApi).signUp(signUp);
-        verify(accountDAO).setSignIn(argThat(signIn -> matches(signUp, signIn)));
+        verify(accountDAO).setEmail(null);
+        verify(accountDAO, atLeastOnce()).setUserSessionInfo(null);
+        verify(accountDAO).setStudyParticipant(null);
+
+        verify(accountDAO).setEmail(signUp.getEmail());
         verify(accountDAO).setStudyParticipant(argThat(participant -> matches(signUp, participant)));
     }
 
@@ -96,7 +108,7 @@ public class AuthenticationManagerTest {
         authenticationManager.signUp(signUp).test().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
-        verify(accountDAO).setSignIn(null);
+        verify(accountDAO).setEmail(null);
         verify(accountDAO).setStudyParticipant(null);
     }
 
@@ -104,7 +116,7 @@ public class AuthenticationManagerTest {
     public void getRawApi_NullSignIn() throws Exception {
         ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
 
-        when(accountDAO.getSignIn()).thenReturn(null);
+//        when(accountDAO.getSignIn()).thenReturn(null);
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
@@ -112,7 +124,7 @@ public class AuthenticationManagerTest {
         assertNotNull(forConsentedUsersApi);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
-        verify(accountDAO).getSignIn();
+//        verify(accountDAO).getSignIn();
     }
 
     private boolean matches(SignUp signUp, SignIn signIn) {
@@ -122,7 +134,8 @@ public class AuthenticationManagerTest {
     }
 
     private boolean matches(SignUp signUp, StudyParticipant studyParticipant) {
-        return Objects.equal(signUp.getEmail(), studyParticipant.getEmail())
+        return (signUp != null) && (studyParticipant != null)
+                && Objects.equal(signUp.getEmail(), studyParticipant.getEmail())
                 && Objects.equal(signUp.getFirstName(), studyParticipant.getFirstName())
                 && Objects.equal(signUp.getLastName(), studyParticipant.getLastName())
                 && Objects.equal(signUp.getExternalId(), studyParticipant.getExternalId());
@@ -178,10 +191,14 @@ public class AuthenticationManagerTest {
         authenticationManager.signIn(EMAIL, PASSWORD).test()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        verify(accountDAO).setSignIn(signIn);
+        verify(accountDAO).setEmail(null);
+        verify(accountDAO).setUserSessionInfo(null);
+        verify(accountDAO).setStudyParticipant(null);
+
+        verify(accountDAO).setEmail(EMAIL);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
-                argThat(participant -> EMAIL.equals(participant.getEmail())));
+                argThat(participant -> participant != null && EMAIL.equals(participant.getEmail())));
 
         verify(authenticationApi).signIn(signIn);
     }
@@ -196,7 +213,7 @@ public class AuthenticationManagerTest {
         authenticationManager.signOut().test()
                 .assertCompleted();
 
-        verify(accountDAO).setSignIn(null);
+        verify(accountDAO).setEmail(null);
         verify(accountDAO).setStudyParticipant(null);
         verify(accountDAO).setUserSessionInfo(null);
     }
@@ -226,11 +243,11 @@ public class AuthenticationManagerTest {
 
     @Test
     public void getEmail() throws Exception {
-        when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
+        when(accountDAO.getEmail()).thenReturn(EMAIL);
 
         String email = authenticationManager.getEmail();
 
         assertEquals(EMAIL, email);
-        verify(accountDAO).getSignIn();
+        verify(accountDAO).getEmail();
     }
 }

@@ -4,5 +4,6 @@
 
   <!--private-->
   <string name="osb_account_type">org.sagebionetworks.bridge</string>
+  <string name="osb_token_type">Bridge-Session</string>
   <string name="osb_account_type_label">Bridge Research</string>
 </resources>

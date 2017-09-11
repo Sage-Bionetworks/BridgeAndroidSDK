@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.accounts.AccountManager;
 import android.app.Application;
 import android.content.Context;
 import android.support.annotation.AnyThread;
@@ -76,7 +77,8 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
 
         rxHelper = new RxHelper();
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, rxHelper);
+        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider,
+                accountDAO, rxHelper, AccountManager.get(applicationContext));
         participantManager = new ParticipantManager(authenticationManager, accountDAO, rxHelper);
         consentManager = new ConsentManager(authenticationManager, consentDAO, rxHelper);
         activityManager = new ActivityManager(authenticationManager, rxHelper);
