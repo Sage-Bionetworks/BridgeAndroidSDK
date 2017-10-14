@@ -1,4 +1,4 @@
-include ':backbone'
+include ':backbone', ':researchsuite-sdk'
 project(':backbone').projectDir = file('ResearchStack/backbone')
 include ':skin'
 project(':skin').projectDir = file('ResearchStack/skin')
