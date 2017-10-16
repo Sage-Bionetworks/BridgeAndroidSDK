@@ -25,5 +25,5 @@ import android.arch.persistence.room.RoomDatabase;
  */
 @Database(entities = {TaskEntity.class}, version = 1)
 public abstract class ActivityDatabase extends RoomDatabase {
-    public abstract TaskDAO taskDAO();
+    public abstract TaskDAO getTaskDAO();
 }

@@ -1,86 +1,92 @@
 apply plugin: 'project-report'
 
 allprojects {
-    version = '0.0.13'
-    group = 'org.sagebionetworks.bridge'
+  version = '0.0.13'
+  group = 'org.sagebionetworks.bridge'
 
-    repositories {
-        jcenter()
-        maven { url 'http://repo-maven.sagebridge.org/' }
-        maven { url "https://jitpack.io" }
-        maven { url "https://dl.bintray.com/sage-bionetworks/researchsuite-release" }
-        mavenLocal()
-        maven {
-            url 'https://maven.google.com/'
-            name 'Google'
-        }
+  repositories {
+    jcenter()
+    maven { url 'http://repo-maven.sagebridge.org/' }
+    maven { url "https://jitpack.io" }
+    maven { url "https://dl.bintray.com/sage-bionetworks/researchsuite-release" }
+    mavenLocal()
+    maven {
+      url 'https://maven.google.com/'
+      name 'Google'
     }
+  }
 }
 
 buildscript {
-    repositories {
-        jcenter()
-        maven {
-            url 'https://maven.google.com/'
-            name 'Google'
-        }
+  repositories {
+    jcenter()
+    maven {
+      url 'https://maven.google.com/'
+      name 'Google'
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.3'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:2.3.3'
+    classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+    classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
 
-        classpath 'me.tatarka:gradle-retrolambda:3.2.3'
-        // workaround lint bug concerning lombok
-        classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a2'
+    classpath 'me.tatarka:gradle-retrolambda:3.2.3'
+    // workaround lint bug concerning lombok
+    classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a2'
 
-        classpath "com.neenbedankt.gradle.plugins:android-apt:1.4"
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
-    }
-    // Exclude the version that the android plugin depends on.
-    configurations.classpath.exclude group: 'com.android.tools.external.lombok'
+    classpath "com.neenbedankt.gradle.plugins:android-apt:1.4"
+    // NOTE: Do not place your application dependencies here; they belong
+    // in the individual module build.gradle files
+  }
+  // Exclude the version that the android plugin depends on.
+  configurations.classpath.exclude group: 'com.android.tools.external.lombok'
 }
 
 subprojects {
-    afterEvaluate { project ->
+  afterEvaluate { project ->
 
-        // These two projects are JARed and DOCed using their own build.gradle files
-        if (!project.projectDir.absolutePath.contains("backbone") && !project.projectDir.absolutePath.contains("skin")) {
+    // These two projects are JARed and DOCed using their own build.gradle files
+    if (!project.projectDir.absolutePath.contains("backbone") && !project.projectDir.absolutePath.contains("skin")) {
 
-            task sourcesJar(type: Jar) {
-                from android.sourceSets.main.java.srcDirs
-                classifier = 'sources'
-            }
+      task sourcesJar(type: Jar) {
+        from android.sourceSets.main.java.srcDirs
+        classifier = 'sources'
+      }
 
-            task javadoc(type: Javadoc) {
-                source = android.sourceSets.main.java.srcDirs
-                classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-                classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
-                classpath += configurations.compile
-                // Exclude generated files
-                exclude '**/BuildConfig.java'
-                exclude '**/R.java'
-            }
+      task javadoc(type: Javadoc) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
+        classpath += configurations.compile
+        classpath += files(android.libraryVariants.collect { variant ->
+          variant.javaCompiler.classpath.files
+        })
 
-            task javadocJar(type: Jar, dependsOn: javadoc) {
-                classifier = 'javadoc'
-                from javadoc.destinationDir
-            }
-            artifacts {
-                archives javadocJar
-                archives sourcesJar
-            }
 
-            task findConventions << {
-                println project.getConvention()
-            }
+        // Exclude generated files
+        exclude '**/BuildConfig.java'
+        exclude '**/R.java'
+      }
 
+      task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+      }
+      artifacts {
+        archives javadocJar
+        archives sourcesJar
+      }
+
+      task findConventions {
+        doLast {
+          println project.getConvention()
         }
+      }
     }
+  }
 
 }
 
 task clean(type: Delete) {
-    delete rootProject.buildDir
+  delete rootProject.buildDir
 }

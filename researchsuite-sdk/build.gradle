@@ -33,10 +33,10 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.1.0'
 
     compile 'org.sagebionetworks.researchsuite:api:0.0.3'
+    compile 'com.google.guava:guava:23.2-android'
 
     compile "android.arch.persistence.room:runtime:1.0.0-beta2"
     annotationProcessor "android.arch.persistence.room:compiler:1.0.0-beta2"
-
 
     testCompile 'junit:junit:4.12'
     androidTestCompile('com.android.support.test.espresso:espresso-core:3.0.1', {
