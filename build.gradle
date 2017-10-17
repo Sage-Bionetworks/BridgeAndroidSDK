@@ -1,7 +1,7 @@
 apply plugin: 'project-report'
 
 allprojects {
-  version = '0.0.12'
+  version = '0.0.13'
   group = 'org.sagebionetworks.bridge'
 
   repositories {
