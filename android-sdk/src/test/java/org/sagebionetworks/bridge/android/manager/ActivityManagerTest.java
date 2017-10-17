@@ -38,7 +38,7 @@ public class ActivityManagerTest {
     @Mock
     private ForConsentedUsersApi activitiesApi;
     @Mock
-    private AuthManager authManager;
+    private AuthenticationManager authenticationManager;
 
     private ActivityManager activityManager;
 
@@ -47,8 +47,8 @@ public class ActivityManagerTest {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authManager.getApi()).thenReturn(activitiesApi);
-        activityManager = new ActivityManager(authManager);
+        when(authenticationManager.getApi()).thenReturn(activitiesApi);
+        activityManager = new ActivityManager(authenticationManager);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class ActivityManagerTest {
         activityManager.updateActivities(null);
     }
 
-    // TODO: Move these helper methods since they are duplicated in AuthManagerTest
+    // TODO: Move these helper methods since they are duplicated in AuthenticationManagerTest
     private <T> Call<T> successCall(T value) throws IOException {
         Response<T> response = Response.success(value);
 

@@ -44,8 +44,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
-public class AuthManager {
-    private static final Logger logger = LoggerFactory.getLogger(AuthManager.class);
+public class AuthenticationManager {
+    private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
     @NonNull
     private final AccountDAO accountDAO;
@@ -62,8 +62,9 @@ public class AuthManager {
     @NonNull
     private final ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
-    public AuthManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
-                       @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
+    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider
+            apiClientProvider,
+                                 @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
         checkNotNull(config);
         checkNotNull(accountDAO);
 
@@ -194,7 +195,7 @@ public class AuthManager {
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .toObservable()
-                .retryWhen(retrySignInForCOnsentOnce())
+                .retryWhen(retrySignInForConsentOnce())
                 .toSingle()
                 .doOnSuccess(userSessionInfo -> {
                     accountDAO.setUserSessionInfo(userSessionInfo);
@@ -218,12 +219,24 @@ public class AuthManager {
                 });
     }
 
-    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>> retrySignInForCOnsentOnce() {
+    /**
+     * Function that transforms a Throwable Observable to an Observable for use in
+     * Observable#retryWhen
+     * <p>
+     * The resulting behavior is that if the first Throwable is a ConsentRequiredException, and
+     * locally, the participant is consented, the consent will be uploaded, and upon success, the
+     * calling Observable will be resubscribed to (and retried).
+     *
+     * @return a retry function that will attempt a to upload Consent one time
+     */
+    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
+    retrySignInForConsentOnce() {
         return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
             private int retryAttempt = 0;
 
             @Override
-            public Observable<UserSessionInfo> call(Observable<? extends Throwable> throwableObservable) {
+            public Observable<UserSessionInfo> call(Observable<? extends Throwable>
+                                                            throwableObservable) {
                 return throwableObservable.flatMap(throwable -> {
                     retryAttempt++;
 
@@ -290,7 +303,7 @@ public class AuthManager {
      * Get access to bridge API for currently authenticated client.
      *
      * @return API returns access to bridge that always uses the credentials currently held by
-     * AuthManager
+     * AuthenticationManager
      */
     @NonNull
     public ForConsentedUsersApi getApi() {
@@ -475,9 +488,11 @@ public class AuthManager {
      * @return completable
      */
     @NonNull
-    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
+    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String
+            name,
                                                @NonNull LocalDate birthdate,
-                                               @Nullable String base64Image, @Nullable String imageMimeType,
+                                               @Nullable String base64Image, @Nullable String
+                                                       imageMimeType,
                                                @NonNull SharingScope sharingScope) {
         ConsentSignature consent = giveConsentSync(
                 subpopulationGuid,
@@ -490,7 +505,8 @@ public class AuthManager {
         return uploadConsent(subpopulationGuid, consent);
     }
 
-    Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull ConsentSignature consent) {
+    Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull
+            ConsentSignature consent) {
         return Single.just(consent)
                 .flatMap(consentSignature -> RxUtils.toBodySingle(
                         proxiedForConsentedUsersApi
@@ -566,7 +582,8 @@ public class AuthManager {
     public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(proxiedForConsentedUsersApi.getConsentSignature(subpopulationGuid))
+        return RxUtils.toBodySingle(proxiedForConsentedUsersApi.getConsentSignature
+                (subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
                         return Single.just(consentDAO.getConsent(subpopulationGuid));

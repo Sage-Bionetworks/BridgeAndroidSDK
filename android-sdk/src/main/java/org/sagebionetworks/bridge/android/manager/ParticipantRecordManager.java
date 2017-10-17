@@ -30,9 +30,9 @@ public class ParticipantRecordManager {
     private final ForConsentedUsersApi consentedUsersApi;
 
     public ParticipantRecordManager(@NonNull AccountDAO accountDAO,
-                                    @NonNull AuthManager authManager) {
+                                    @NonNull AuthenticationManager authenticationManager) {
         this.accountDAO = accountDAO;
-        this.consentedUsersApi = authManager.getApi();
+        this.consentedUsersApi = authenticationManager.getApi();
     }
 
     /**

@@ -76,10 +76,10 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
         uploadDAO = new UploadDAO(applicationContext);
 
-        authManager = new AuthManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
-        participantManager = new ParticipantRecordManager(accountDAO, authManager);
+        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
+        participantManager = new ParticipantRecordManager(accountDAO, authenticationManager);
 
-        activityManager = new ActivityManager(authManager);
+        activityManager = new ActivityManager(authenticationManager);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -93,7 +93,7 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authManager, studyUploadEncryptor, uploadDAO);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
     }
 
     @NonNull
@@ -103,7 +103,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final ApiClientProvider apiClientProvider;
     @NonNull
-    private final AuthManager authManager;
+    private final AuthenticationManager authenticationManager;
     @NonNull
     private final ParticipantRecordManager participantManager;
     @NonNull
@@ -137,8 +137,8 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public AuthManager getAuthManager() {
-        return authManager;
+    public AuthenticationManager getAuthenticationManager() {
+        return authenticationManager;
     }
 
     @NonNull

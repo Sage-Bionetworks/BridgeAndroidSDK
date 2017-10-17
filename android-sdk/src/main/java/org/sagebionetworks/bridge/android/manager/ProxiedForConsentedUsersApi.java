@@ -33,15 +33,15 @@ import retrofit2.http.Query;
 
 /**
  * Proxies ForConsentedUserApi calls so it uses retrieves authenticated client from
- * AuthManager
+ * AuthenticationManager
  * to make the call.
  * TODO: push refreshing of credentials into rest-client's authentication handler
  */
 class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
-    private final AuthManager authManager;
+    private final AuthenticationManager authenticationManager;
 
-    ProxiedForConsentedUsersApi(AuthManager authManager) {
-        this.authManager = authManager;
+    ProxiedForConsentedUsersApi(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
     }
 
     @Override
@@ -191,6 +191,6 @@ class ProxiedForConsentedUsersApi implements ForConsentedUsersApi {
     }
 
     private ForConsentedUsersApi getRawApi() {
-        return authManager.getRawApi();
+        return authenticationManager.getRawApi();
     }
 }

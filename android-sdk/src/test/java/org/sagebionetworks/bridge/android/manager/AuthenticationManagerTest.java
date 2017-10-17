@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
 /**
  * Created by jyliu on 2/8/2017.
  */
-public class AuthManagerTest {
+public class AuthenticationManagerTest {
 
     private static final String STUDY_ID = "study-id";
     private static final String EMAIL = "email@test.com";
@@ -72,7 +72,7 @@ public class AuthManagerTest {
     @Mock
     private ConsentDAO consentDAO;
 
-    private AuthManager spyAuthManager;
+    private AuthenticationManager spyAuthenticationManager;
 
     @Before
     public void beforeTest() {
@@ -81,7 +81,7 @@ public class AuthManagerTest {
         when(config.getStudyId()).thenReturn(STUDY_ID);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        spyAuthManager = spy(new AuthManager(config, apiClientProvider, accountDAO, consentDAO));
+        spyAuthenticationManager = spy(new AuthenticationManager(config, apiClientProvider, accountDAO, consentDAO));
     }
 
     @Test
@@ -96,7 +96,7 @@ public class AuthManagerTest {
         Call<Message> messageCall = successCall(message);
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        Completable completable = spyAuthManager.signUp(signUp);
+        Completable completable = spyAuthenticationManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
@@ -112,7 +112,7 @@ public class AuthManagerTest {
         Call messageCall = errorCall(new BridgeSDKException("Failed", 500));
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        spyAuthManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
+        spyAuthenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
@@ -127,7 +127,7 @@ public class AuthManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
-        ForConsentedUsersApi result = spyAuthManager.getRawApi();
+        ForConsentedUsersApi result = spyAuthenticationManager.getRawApi();
         assertNotNull(forConsentedUsersApi);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
@@ -180,7 +180,7 @@ public class AuthManagerTest {
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
 
-        spyAuthManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyAuthenticationManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).resendEmailVerification(email);
     }
@@ -194,7 +194,7 @@ public class AuthManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
-        spyAuthManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
@@ -227,16 +227,16 @@ public class AuthManagerTest {
 
         // indicate that locally, we think we are consented
         doReturn(true)
-                .when(spyAuthManager).isConsented();
+                .when(spyAuthenticationManager).isConsented();
         doReturn(userSessionInfoObservable)
-                .when(spyAuthManager).uploadLocalConsents();
+                .when(spyAuthenticationManager).uploadLocalConsents();
 
-        spyAuthManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        verify(spyAuthManager).isConsented();
+        verify(spyAuthenticationManager).isConsented();
         // verify there was an attempt to upload all consents
-        verify(spyAuthManager).uploadLocalConsents();
+        verify(spyAuthenticationManager).uploadLocalConsents();
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -269,18 +269,18 @@ public class AuthManagerTest {
 
         // indicate that locally, we think we are consented
         doReturn(true)
-                .when(spyAuthManager).isConsented();
+                .when(spyAuthenticationManager).isConsented();
         doReturn(userSessionInfoObservable)
-                .when(spyAuthManager).uploadLocalConsents();
+                .when(spyAuthenticationManager).uploadLocalConsents();
 
         // don't try uploading consent and retrying sign-in multiple times, i.e.
         // the ConsentRequiredException should be propagated the second time it occurs
-        spyAuthManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertError(exception);
 
-        verify(spyAuthManager).isConsented();
+        verify(spyAuthenticationManager).isConsented();
         // verify there was an attempt to upload all consents
-        verify(spyAuthManager).uploadLocalConsents();
+        verify(spyAuthenticationManager).uploadLocalConsents();
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -299,7 +299,7 @@ public class AuthManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
-        spyAuthManager.signOut().test().awaitTerminalEvent()
+        spyAuthenticationManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
 
         verify(accountDAO).setSignIn(null);
@@ -317,7 +317,7 @@ public class AuthManagerTest {
         when(authenticationApi.requestResetPassword(email))
                 .thenReturn(messageCall);
 
-        spyAuthManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyAuthenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).requestResetPassword(email);
     }
@@ -325,7 +325,7 @@ public class AuthManagerTest {
     @Test
     public void getApi() throws Exception {
         // TODO: fix test once there is no more Proxy
-        ForConsentedUsersApi api = spyAuthManager.getApi();
+        ForConsentedUsersApi api = spyAuthenticationManager.getApi();
 
         assertTrue(api instanceof ProxiedForConsentedUsersApi);
     }
@@ -334,7 +334,7 @@ public class AuthManagerTest {
     public void getEmail() throws Exception {
         when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
 
-        String email = spyAuthManager.getEmail();
+        String email = spyAuthenticationManager.getEmail();
 
         assertEquals(EMAIL, email);
         verify(accountDAO).getSignIn();
@@ -350,13 +350,13 @@ public class AuthManagerTest {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
         doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
 
         assertTrue(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
         verify(userSessionInfo).getConsentStatuses();
     }
 
@@ -368,13 +368,13 @@ public class AuthManagerTest {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
         doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
 
         assertFalse(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
         verify(userSessionInfo).getConsentStatuses();
     }
 
@@ -384,13 +384,13 @@ public class AuthManagerTest {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
         doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
 
         assertFalse(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
         verify(userSessionInfo).getConsentStatuses();
     }
 
@@ -402,14 +402,14 @@ public class AuthManagerTest {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
         doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
         doReturn(new ConsentSignature()).when(consentDAO).getConsent(SUBPOPULATION_GUID);
 
-        boolean result = spyAuthManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
 
         assertTrue(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
         verify(userSessionInfo).getConsentStatuses();
     }
 
@@ -417,54 +417,54 @@ public class AuthManagerTest {
     public void isConsented() throws Exception {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
         doReturn(Sets.newHashSet("A", "B", "C"))
-                .when(spyAuthManager)
+                .when(spyAuthenticationManager)
                 .getRequiredConsents(userSessionInfo);
 
-        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
 
-        boolean result = spyAuthManager.isConsented();
+        boolean result = spyAuthenticationManager.isConsented();
 
         assertTrue(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
 
-        verify(spyAuthManager).getRequiredConsents(userSessionInfo);
+        verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
 
-        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
     }
 
     @Test
     public void isConsented_MissingConsent() throws Exception {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
 
-        doReturn(userSessionInfo).when(spyAuthManager).getUserSessionInfo();
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
         doReturn(Sets.newHashSet("A", "B", "C"))
-                .when(spyAuthManager)
+                .when(spyAuthenticationManager)
                 .getRequiredConsents(userSessionInfo);
 
-        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        doReturn(false).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        doReturn(true).when(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(false).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
 
-        boolean result = spyAuthManager.isConsented();
+        boolean result = spyAuthenticationManager.isConsented();
 
         assertFalse(result);
 
-        verify(spyAuthManager).getUserSessionInfo();
+        verify(spyAuthenticationManager).getUserSessionInfo();
 
-        verify(spyAuthManager).getRequiredConsents(userSessionInfo);
+        verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
 
-        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        verify(spyAuthManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        verify(spyAuthManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthenticationManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
     }
 
     @Test
@@ -477,7 +477,7 @@ public class AuthManagerTest {
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
         doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
 
-        Set<String> result = spyAuthManager.getRequiredConsents(userSessionInfo);
+        Set<String> result = spyAuthenticationManager.getRequiredConsents(userSessionInfo);
 
         assertEquals(Sets.newHashSet("A", "C"), result);
 
@@ -500,7 +500,7 @@ public class AuthManagerTest {
                 .scope(sharingScope);
 
         // consent should get stored locally
-        doReturn(sig).when(spyAuthManager).giveConsentSync(SUBPOPULATION_GUID,
+        doReturn(sig).when(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
                 name,
                 birthdate,
                 imgString,
@@ -509,9 +509,9 @@ public class AuthManagerTest {
 
         // consent should then be uploaded
         UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
-        doReturn(Single.just(userSessionInfo)).when(spyAuthManager).uploadConsent(SUBPOPULATION_GUID, sig);
+        doReturn(Single.just(userSessionInfo)).when(spyAuthenticationManager).uploadConsent(SUBPOPULATION_GUID, sig);
 
-        spyAuthManager.giveConsent(SUBPOPULATION_GUID,
+        spyAuthenticationManager.giveConsent(SUBPOPULATION_GUID,
                 name,
                 birthdate,
                 imgString,
@@ -521,14 +521,14 @@ public class AuthManagerTest {
                 .awaitTerminalEvent()
                 .assertValue(userSessionInfo);
 
-        verify(spyAuthManager).giveConsentSync(SUBPOPULATION_GUID,
+        verify(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
                 name,
                 birthdate,
                 imgString,
                 mimeType,
                 sharingScope);
 
-        verify(spyAuthManager).uploadConsent(SUBPOPULATION_GUID, sig);
+        verify(spyAuthenticationManager).uploadConsent(SUBPOPULATION_GUID, sig);
     }
     // endregion
 }
