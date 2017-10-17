@@ -18,9 +18,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 /**
- * Created by jyliu on 4/12/2017.
+ * Any authenticated user may use this class's methods. The user does not need to have consented to
+ * the study in order to manage their participant record.
  */
-
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 
@@ -69,7 +69,8 @@ public class ParticipantRecordManager {
      * @return session
      */
     @NonNull
-    public Single<UserSessionInfo> updateParticipantRecord(@NonNull StudyParticipant studyParticipant) {
+    public Single<UserSessionInfo> updateParticipantRecord(@NonNull StudyParticipant
+                                                                       studyParticipant) {
         checkNotNull(studyParticipant);
 
         return toBodySingle(consentedUsersApi.updateUsersParticipantRecord(studyParticipant))

@@ -66,7 +66,9 @@ public class AuthenticationManager {
             apiClientProvider,
                                  @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
         checkNotNull(config);
+        checkNotNull(apiClientProvider);
         checkNotNull(accountDAO);
+        checkNotNull(consentDAO);
 
         this.config = config;
         this.accountDAO = accountDAO;
