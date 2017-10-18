@@ -10,7 +10,6 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
-import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
@@ -84,7 +83,7 @@ public class BridgeManagerProvider {
                 accountDAO, rxHelper, AccountManager.get(applicationContext));
         participantManager = new ParticipantManager(authenticationManager, accountDAO, rxHelper);
         consentManager = new ConsentManager(authenticationManager, consentDAO, rxHelper);
-        activityManager = new ActivityManager(authenticationManager, rxHelper);
+        scheduledActivityManager = new ScheduledActivityManager(authenticationManager, rxHelper);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -115,7 +114,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final ConsentManager consentManager;
     @NonNull
-    private final ActivityManager activityManager;
+    private final ScheduledActivityManager scheduledActivityManager;
     @NonNull
     private final ConsentDAO consentDAO;
     @NonNull
@@ -162,8 +161,8 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public ActivityManager getActivityManager() {
-        return activityManager;
+    public ScheduledActivityManager getScheduledActivityManager() {
+        return scheduledActivityManager;
     }
 
     @NonNull

@@ -22,8 +22,8 @@ import rx.Single;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class ActivityManager {
-    private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
+public class ScheduledActivityManager {
+    private static final Logger LOG = LoggerFactory.getLogger(ScheduledActivityManager.class);
 
     @NonNull
     private final ForConsentedUsersApi api;
@@ -31,31 +31,38 @@ public class ActivityManager {
     private final RxHelper rxHelper;
 
 
-    public ActivityManager(@NonNull AuthenticationManager authenticationManager, @NonNull RxHelper rxHelper) {
+    public ScheduledActivityManager(@NonNull AuthenticationManager authenticationManager,
+                                    @NonNull RxHelper rxHelper) {
         checkNotNull(authenticationManager);
+        checkNotNull(rxHelper);
 
         this.api = authenticationManager.getApi();
         this.rxHelper = rxHelper;
     }
 
 
-    public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
-        return rxHelper.toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
+    public Single<ScheduledActivityList> getScheduledActivities(String offset, int daysAhead, int
+            minimumPerSchedule) {
+        return rxHelper.toBodySingle(
+                api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)
+        ).doOnSuccess(
                 scheduleActivityList -> {
-                    LOG.debug("Got scheduled activity list");
+                    LOG.debug("Got scheduled activity list: " + scheduleActivityList);
                 });
-
     }
 
-    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
-        return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
+    public Single<ScheduledActivityList> getScheduledActivities(int daysAhead, int
+            minimumPerSchedule) {
+        return getScheduledActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
     }
 
-    public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
+    public Completable updateScheduledActivities(@NonNull List<ScheduledActivity>
+                                                         scheduledActivities) {
 
         checkNotNull(scheduledActivities);
 
-        return rxHelper.toBodySingle(api.updateScheduledActivities(scheduledActivities)).toCompletable();
+        return rxHelper.toBodySingle(api.updateScheduledActivities(scheduledActivities))
+                .toCompletable();
     }
 
     private String getTimezoneOffset() {
@@ -64,7 +71,7 @@ public class ActivityManager {
         Date currentLocalTime = calendar.getTime();
         DateFormat date = new SimpleDateFormat("Z");
         String localTime = date.format(currentLocalTime);
-        String offset = localTime.substring(0, 3) + ":"+ localTime.substring(3, 5);
+        String offset = localTime.substring(0, 3) + ":" + localTime.substring(3, 5);
 
         return offset;
     }
