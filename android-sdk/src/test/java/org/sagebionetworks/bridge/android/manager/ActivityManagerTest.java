@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.rx.MockRxHelper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
@@ -21,7 +22,6 @@ import retrofit2.Response;
 import rx.Completable;
 import rx.Single;
 
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,7 +41,7 @@ public class ActivityManagerTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
-    private ActivityManager activityManager;
+    private ScheduledActivityManager scheduledActivityManager;
 
 
     @Before
@@ -49,7 +49,7 @@ public class ActivityManagerTest {
         MockitoAnnotations.initMocks(this);
 
         when(authenticationManager.getApi()).thenReturn(activitiesApi);
-        activityManager = new ActivityManager(authenticationManager);
+        scheduledActivityManager = new ScheduledActivityManager(authenticationManager, new MockRxHelper());
     }
 
     @Test
@@ -60,7 +60,7 @@ public class ActivityManagerTest {
         Call<ScheduledActivityList> activityCall = successCall(list);
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
+        Single<ScheduledActivityList> single = scheduledActivityManager.getScheduledActivities(offset, 0, 0);
         single.test().awaitTerminalEvent().assertCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
@@ -73,7 +73,7 @@ public class ActivityManagerTest {
         Call<ScheduledActivityList> activityCall = errorCall(new BridgeSDKException("Failed", 500));
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
+        Single<ScheduledActivityList> single = scheduledActivityManager.getScheduledActivities(offset, 0, 0);
         single.test().awaitTerminalEvent().assertNotCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
@@ -87,7 +87,7 @@ public class ActivityManagerTest {
         Call<Message> activityCall = successCall(message);
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
-        Completable completable = activityManager.updateActivities(activityList);
+        Completable completable = scheduledActivityManager.updateScheduledActivities(activityList);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
@@ -100,7 +100,7 @@ public class ActivityManagerTest {
         Call<Message> activityCall = errorCall(new BridgeSDKException("Failed", 500));
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
-        Completable completable = activityManager.updateActivities(activityList);
+        Completable completable = scheduledActivityManager.updateScheduledActivities(activityList);
         completable.test().awaitTerminalEvent().assertNotCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
@@ -108,7 +108,7 @@ public class ActivityManagerTest {
 
     @Test(expected = NullPointerException.class)
     public void updateActivities_null() throws IOException {
-        activityManager.updateActivities(null);
+        scheduledActivityManager.updateScheduledActivities(null);
     }
 
     // TODO: Move these helper methods since they are duplicated in AuthenticationManagerTest

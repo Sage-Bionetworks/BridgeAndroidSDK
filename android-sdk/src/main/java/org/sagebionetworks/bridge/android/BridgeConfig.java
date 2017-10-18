@@ -93,6 +93,16 @@ public class BridgeConfig {
     }
 
     @NonNull
+    public String getAccountType() {
+        return applicationContext.getResources().getString(R.string.osb_account_type);
+    }
+
+    @NonNull
+    public String getAuthTokenType() {
+        return applicationContext.getResources().getString(R.string.osb_token_type);
+    }
+
+    @NonNull
     public int getAppVersion() {
         return BuildConfig.VERSION_CODE;
     }

@@ -2,10 +2,11 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.XmlRes;
 
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
-import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
@@ -36,16 +37,22 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ConsentManager {
     private static final Logger LOG = LoggerFactory.getLogger(ConsentManager.class);
 
-
+@NonNull
     private final AuthenticationManager authenticationManager;
+    @NonNull
     private final ForConsentedUsersApi forConsentedUsersApi;
+    @NonNull
     private final ConsentDAO consentDAO;
+    @NonNull
+    private final RxHelper rxHelper;
 
 
-    public ConsentManager(@NonNull AuthenticationManager authenticationManager, ConsentDAO consentDAO) {
+    public ConsentManager(@NonNull AuthenticationManager authenticationManager, @NonNull ConsentDAO consentDAO,
+                          @NonNull RxHelper rxHelper) {
         this.authenticationManager = authenticationManager;
         this.forConsentedUsersApi = authenticationManager.getApi();
         this.consentDAO = consentDAO;
+        this.rxHelper = rxHelper;
     }
 
     /**
@@ -153,7 +160,7 @@ public class ConsentManager {
                 sharingScope);
 
         return Single.just(consent)
-                .flatMapCompletable(consentSignature -> RxUtils.toBodySingle(
+                .flatMapCompletable(consentSignature -> rxHelper.toBodySingle(
                         forConsentedUsersApi
                                 .createConsentSignature(
                                         subpopulationGuid,
@@ -218,7 +225,7 @@ public class ConsentManager {
     public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid))
+        return rxHelper.toBodySingle(forConsentedUsersApi.getConsentSignature(subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
                         return Single.just(consentDAO.getConsent(subpopulationGuid));
@@ -247,7 +254,7 @@ public class ConsentManager {
     @NonNull
     public Completable withdrawAll(@Nullable String reason) {
 
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 forConsentedUsersApi.withdrawAllConsents(
                         new Withdrawal().reason(reason)
                 )).compose(safeGetNewSessionOnSuccess())
@@ -266,7 +273,7 @@ public class ConsentManager {
     public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(
+        return rxHelper.toBodySingle(
                 forConsentedUsersApi.withdrawConsentFromSubpopulation
                         (subpopulationGuid, new Withdrawal().reason(reason)))
                 .compose(safeGetNewSessionOnSuccess())

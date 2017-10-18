@@ -7,6 +7,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
+import org.sagebionetworks.bridge.android.rx.MockRxHelper;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
@@ -15,6 +17,7 @@ import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import java.io.File;
 import java.io.IOException;
 
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
@@ -57,6 +60,10 @@ public class UploadManagerTest {
     private File archive;
     @Mock
     private S3Service s3Service;
+    @Mock
+    private OkHttpClient s3OkHttpClient;
+
+    private RxHelper rxHelper = new MockRxHelper();
 
     private UploadManager spyUploadManager;
 
@@ -71,7 +78,9 @@ public class UploadManagerTest {
 
         when(authenticationManager.getApi()).thenReturn(api);
 
-        spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO));
+        spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor,
+                uploadDAO, s3OkHttpClient,
+                rxHelper));
 
         uploadFile = new UploadManager.UploadFile();
         uploadFile.filename = FILENAME;
@@ -110,7 +119,8 @@ public class UploadManagerTest {
     @Test
     public void testProcessUploadFile_NoCachedSession() throws Exception {
         when(uploadDAO.getUploadSession(FILENAME)).thenReturn(null);
-        doReturn(Completable.complete()).when(spyUploadManager).processUploadForCachedSession(uploadFile, null);
+        doReturn(Completable.complete()).when(spyUploadManager).processUploadForCachedSession
+                (uploadFile, null);
 
         Completable completable = spyUploadManager.processUploadFile(uploadFile);
         completable.test().awaitTerminalEvent().assertCompleted();
@@ -122,7 +132,8 @@ public class UploadManagerTest {
     @Test
     public void testProcessUploadFile_HasCachedSession() throws Exception {
         when(uploadDAO.getUploadSession(FILENAME)).thenReturn(uploadSession);
-        doReturn(Completable.complete()).when(spyUploadManager).processUploadForCachedSession(uploadFile, uploadSession);
+        doReturn(Completable.complete()).when(spyUploadManager).processUploadForCachedSession
+                (uploadFile, uploadSession);
 
         Completable completable = spyUploadManager.processUploadFile(uploadFile);
         completable.test().awaitTerminalEvent().assertCompleted();
@@ -134,29 +145,35 @@ public class UploadManagerTest {
     @Test
     public void testProcessUploadForCachedSession_NoCachedSession() throws Exception {
         doReturn(Single.just(uploadSession)).when(spyUploadManager).getUploadSession(uploadFile);
-        doReturn(Single.just(uploadValidationStatus)).when(spyUploadManager).getUploadValidationStatus(UPLOAD_ID);
-        doReturn(Completable.complete()).when(spyUploadManager).processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+        doReturn(Single.just(uploadValidationStatus)).when(spyUploadManager)
+                .getUploadValidationStatus(UPLOAD_ID);
+        doReturn(Completable.complete()).when(spyUploadManager).processUploadForValidationStatus
+                (uploadFile, uploadSession, uploadValidationStatus);
 
         Completable completable = spyUploadManager.processUploadForCachedSession(uploadFile, null);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(spyUploadManager).getUploadSession(uploadFile);
         verify(spyUploadManager).getUploadValidationStatus(UPLOAD_ID);
-        verify(spyUploadManager).processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+        verify(spyUploadManager).processUploadForValidationStatus(uploadFile, uploadSession,
+                uploadValidationStatus);
     }
 
     @Test
     public void testProcessUploadForCachedSession_HasCachedSession() throws Exception {
-        doReturn(Single.just(uploadValidationStatus)).when(spyUploadManager).getUploadValidationStatus(UPLOAD_ID);
+        doReturn(Single.just(uploadValidationStatus)).when(spyUploadManager)
+                .getUploadValidationStatus(UPLOAD_ID);
         doReturn(Completable.complete()).when(spyUploadManager)
-                .processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+                .processUploadForValidationStatus(uploadFile, uploadSession,
+                        uploadValidationStatus);
 
         Completable completable = spyUploadManager
                 .processUploadForCachedSession(uploadFile, uploadSession);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(spyUploadManager).getUploadValidationStatus(UPLOAD_ID);
-        verify(spyUploadManager).processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+        verify(spyUploadManager).processUploadForValidationStatus(uploadFile, uploadSession,
+                uploadValidationStatus);
     }
 
     @Test
@@ -166,7 +183,8 @@ public class UploadManagerTest {
         doReturn(Completable.complete()).when(spyUploadManager).dequeueUpload(FILENAME);
 
         Completable completable = spyUploadManager
-                .processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+                .processUploadForValidationStatus(uploadFile, uploadSession,
+                        uploadValidationStatus);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(spyUploadManager).dequeueUpload(FILENAME);
@@ -179,7 +197,8 @@ public class UploadManagerTest {
         doReturn(Completable.complete()).when(spyUploadManager).dequeueUpload(FILENAME);
 
         Completable completable = spyUploadManager
-                .processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+                .processUploadForValidationStatus(uploadFile, uploadSession,
+                        uploadValidationStatus);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(spyUploadManager).dequeueUpload(FILENAME);
@@ -189,10 +208,12 @@ public class UploadManagerTest {
     public void testProcessUploadForValidationStatus_Requested() {
         uploadValidationStatus.status(REQUESTED);
 
-        doReturn(Completable.complete()).when(spyUploadManager).uploadToS3(uploadFile, uploadSession);
+        doReturn(Completable.complete()).when(spyUploadManager).uploadToS3(uploadFile,
+                uploadSession);
 
         Completable completable = spyUploadManager
-                .processUploadForValidationStatus(uploadFile, uploadSession, uploadValidationStatus);
+                .processUploadForValidationStatus(uploadFile, uploadSession,
+                        uploadValidationStatus);
         completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(spyUploadManager).uploadToS3(uploadFile, uploadSession);
@@ -200,11 +221,15 @@ public class UploadManagerTest {
 
     @Test
     public void testUploadToS3_ExpiredSession() throws IOException {
-        uploadSession.setExpires(DateTime.now());
+        uploadSession.setExpires(DateTime.now().minus(100));
 
         Call successCall = mock(Call.class);
         when(successCall.clone()).thenReturn(successCall);
         when(successCall.execute()).thenReturn(Response.success(null));
+
+        Call successUploadCall = mock(Call.class);
+        when(successUploadCall.clone()).thenReturn(successUploadCall);
+        when(successUploadCall.execute()).thenReturn(Response.success(new UploadSession()));
 
         UploadSession freshSession = new UploadSession()
                 .id(UPLOAD_ID)
@@ -213,9 +238,10 @@ public class UploadManagerTest {
         doReturn(Single.just(freshSession)).when(spyUploadManager).getUploadSession(uploadFile);
         doReturn(archive).when(spyUploadManager).getFile(FILENAME);
         doReturn(s3Service).when(spyUploadManager).getS3Service(freshSession);
-        doReturn(successCall).when(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5), eq(UPLOAD_CONTENT_TYPE));
+        doReturn(successCall).when(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5),
+                eq(UPLOAD_CONTENT_TYPE));
 
-        doReturn(successCall).when(api).completeUploadSession(UPLOAD_ID);
+        doReturn(successUploadCall).when(api).completeUploadSession(UPLOAD_ID);
 
         Completable completable = spyUploadManager.uploadToS3(uploadFile, uploadSession);
         completable.test().awaitTerminalEvent().assertCompleted();

@@ -12,7 +12,6 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.onboarding.OnboardingManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -21,7 +20,6 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.ResearchStack;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
@@ -48,7 +46,6 @@ import java.util.Map;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -507,7 +504,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.info("loadTasksAndSchedules()");
 
         // TODO: figure out the correct arguments to pass here
-        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getActivityManager().getActivities(4, 0)
+        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getScheduledActivityManager().getScheduledActivities(4, 0)
                 .toBlocking()
                 .value();
 

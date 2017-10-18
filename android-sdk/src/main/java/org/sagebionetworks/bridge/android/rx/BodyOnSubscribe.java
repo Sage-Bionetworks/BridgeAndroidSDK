@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.sagebionetworks.bridge.android.util.retrofit;
+package org.sagebionetworks.bridge.android.rx;
 
 import retrofit2.Response;
 import retrofit2.adapter.rxjava.HttpException;
@@ -23,7 +23,7 @@ import rx.exceptions.CompositeException;
 import rx.exceptions.Exceptions;
 import rx.plugins.RxJavaPlugins;
 
-final class BodyOnSubscribe<T> implements OnSubscribe<T> {
+public final class BodyOnSubscribe<T> implements OnSubscribe<T> {
     private final OnSubscribe<Response<T>> upstream;
 
     BodyOnSubscribe(OnSubscribe<Response<T>> upstream) {

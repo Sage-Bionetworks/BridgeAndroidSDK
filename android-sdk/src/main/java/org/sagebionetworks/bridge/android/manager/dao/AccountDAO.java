@@ -17,6 +17,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final String KEY_SESSION_INFO = "session";
     private static final String KEY_STUDY_PARTICIPANT = "participant";
     private static final String KEY_SIGN_IN = "signIn";
+    private static final String KEY_EMAIL = "email";
 
     public AccountDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
@@ -32,12 +33,11 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     }
 
     @Nullable
-    public SignIn getSignIn() {
-        return getValue(KEY_SIGN_IN, SignIn.class);
+    public String getEmail() {
+        return getValue(KEY_EMAIL, String.class);
     }
-
-    public void setSignIn(@Nullable SignIn signIn) {
-        setValue(KEY_SIGN_IN, signIn, SignIn.class);
+    public void setEmail(@Nullable String email) {
+        setValue(KEY_EMAIL, email, String.class);
     }
 
     @Nullable

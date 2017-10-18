@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.accounts.AccountManager;
 import android.app.Application;
 import android.content.Context;
 import android.support.annotation.AnyThread;
@@ -9,6 +10,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
+import org.sagebionetworks.bridge.android.rx.RxHelper;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
@@ -76,10 +78,12 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
         uploadDAO = new UploadDAO(applicationContext);
 
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
-        participantManager = new ParticipantManager(authenticationManager, accountDAO);
-        consentManager = new ConsentManager(authenticationManager, consentDAO);
-        activityManager = new ActivityManager(authenticationManager);
+        rxHelper = new RxHelper();
+        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider,
+                accountDAO, rxHelper, AccountManager.get(applicationContext));
+        participantManager = new ParticipantManager(authenticationManager, accountDAO, rxHelper);
+        consentManager = new ConsentManager(authenticationManager, consentDAO, rxHelper);
+        scheduledActivityManager = new ScheduledActivityManager(authenticationManager, rxHelper);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -93,7 +97,8 @@ public class BridgeManagerProvider {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO,
+                s3OkHttpClient, rxHelper);
     }
 
     @NonNull
@@ -109,7 +114,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final ConsentManager consentManager;
     @NonNull
-    private final ActivityManager activityManager;
+    private final ScheduledActivityManager scheduledActivityManager;
     @NonNull
     private final ConsentDAO consentDAO;
     @NonNull
@@ -122,6 +127,8 @@ public class BridgeManagerProvider {
     private final UploadManager uploadManager;
     @NonNull
     private final OkHttpClient s3OkHttpClient;
+    @NonNull
+    private final RxHelper rxHelper;
 
     @NonNull
     public Context getApplicationContext() {
@@ -154,8 +161,8 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public ActivityManager getActivityManager() {
-        return activityManager;
+    public ScheduledActivityManager getScheduledActivityManager() {
+        return scheduledActivityManager;
     }
 
     @NonNull
@@ -181,5 +188,10 @@ public class BridgeManagerProvider {
     @NonNull
     public OkHttpClient getS3OkHttpClient() {
         return s3OkHttpClient;
+    }
+
+    @NonNull
+    public RxHelper getRxHelper() {
+        return rxHelper;
     }
 }
