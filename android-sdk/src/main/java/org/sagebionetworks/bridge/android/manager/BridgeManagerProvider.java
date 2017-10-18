@@ -76,9 +76,9 @@ public class BridgeManagerProvider {
         consentDAO = new ConsentDAO(applicationContext);
         uploadDAO = new UploadDAO(applicationContext);
 
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO);
-        participantManager = new ParticipantManager(authenticationManager, accountDAO);
-        consentManager = new ConsentManager(authenticationManager, consentDAO);
+        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
+        participantManager = new ParticipantRecordManager(accountDAO, authenticationManager);
+
         activityManager = new ActivityManager(authenticationManager);
 
         try {
@@ -105,9 +105,7 @@ public class BridgeManagerProvider {
     @NonNull
     private final AuthenticationManager authenticationManager;
     @NonNull
-    private final ParticipantManager participantManager;
-    @NonNull
-    private final ConsentManager consentManager;
+    private final ParticipantRecordManager participantManager;
     @NonNull
     private final ActivityManager activityManager;
     @NonNull
@@ -144,16 +142,6 @@ public class BridgeManagerProvider {
     }
 
     @NonNull
-    public ParticipantManager getParticipantManager() {
-        return participantManager;
-    }
-
-    @NonNull
-    public ConsentManager getConsentManager() {
-        return consentManager;
-    }
-
-    @NonNull
     public ActivityManager getActivityManager() {
         return activityManager;
     }
@@ -181,5 +169,9 @@ public class BridgeManagerProvider {
     @NonNull
     public OkHttpClient getS3OkHttpClient() {
         return s3OkHttpClient;
+    }
+
+    public ParticipantRecordManager getParticipantManager() {
+        return participantManager;
     }
 }

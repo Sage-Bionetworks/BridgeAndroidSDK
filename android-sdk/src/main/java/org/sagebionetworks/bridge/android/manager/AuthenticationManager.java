@@ -5,31 +5,43 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
+import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import rx.Completable;
+import rx.Observable;
 import rx.Single;
+import rx.functions.Func1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Manages Bridge authentication state for an application.
+ * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
 public class AuthenticationManager {
@@ -38,25 +50,32 @@ public class AuthenticationManager {
     @NonNull
     private final AccountDAO accountDAO;
     @NonNull
+    private final ConsentDAO consentDAO;
+    @NonNull
     private final BridgeConfig config;
+    @NonNull
     private final AuthenticationApi authenticationApi;
+    @NonNull
     private final List<AuthenticationEventListener> listeners;
+    @NonNull
+    private final ApiClientProvider apiClientProvider;
+    @NonNull
+    private final ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
-
-    private ApiClientProvider apiClientProvider;
-    private ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
-
-
-    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider apiClientProvider,
-                                 @NonNull AccountDAO accountDAO) {
+    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider
+            apiClientProvider,
+                                 @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
         checkNotNull(config);
+        checkNotNull(apiClientProvider);
         checkNotNull(accountDAO);
+        checkNotNull(consentDAO);
 
         this.config = config;
         this.accountDAO = accountDAO;
+        this.consentDAO = consentDAO;
         this.apiClientProvider = apiClientProvider;
-
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+        this.proxiedForConsentedUsersApi = new ProxiedForConsentedUsersApi(this);
         listeners = Lists.newArrayList();
     }
 
@@ -172,10 +191,15 @@ public class AuthenticationManager {
                 .email(email)
                 .password(password);
 
+        // store sign in, so we have signIn as a key to retrieve session in case of 412
+        accountDAO.setSignIn(signIn);
+
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
+                .toObservable()
+                .retryWhen(retrySignInForConsentOnce())
+                .toSingle()
                 .doOnSuccess(userSessionInfo -> {
-                    accountDAO.setSignIn(signIn);
                     accountDAO.setUserSessionInfo(userSessionInfo);
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
@@ -186,14 +210,48 @@ public class AuthenticationManager {
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
-                        accountDAO.setSignIn(signIn);
                         accountDAO.setUserSessionInfo(
                                 ((ConsentRequiredException) throwable).getSession());
                         accountDAO.setStudyParticipant(
                                 new StudyParticipant()
                                         .email(signIn.getEmail()));
+                    } else {
+                        accountDAO.setSignIn(null);
                     }
                 });
+    }
+
+    /**
+     * Function that transforms a Throwable Observable to an Observable for use in
+     * Observable#retryWhen
+     * <p>
+     * The resulting behavior is that if the first Throwable is a ConsentRequiredException, and
+     * locally, the participant is consented, the consent will be uploaded, and upon success, the
+     * calling Observable will be resubscribed to (and retried).
+     *
+     * @return a retry function that will attempt a to upload Consent one time
+     */
+    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
+    retrySignInForConsentOnce() {
+        return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
+            private int retryAttempt = 0;
+
+            @Override
+            public Observable<UserSessionInfo> call(Observable<? extends Throwable>
+                                                            throwableObservable) {
+                return throwableObservable.flatMap(throwable -> {
+                    retryAttempt++;
+
+                    if (!(throwable instanceof ConsentRequiredException)
+                            || retryAttempt > 1
+                            || !isConsented()) {
+                        Observable<UserSessionInfo> obs = Observable.error(throwable);
+                        return obs;
+                    }
+                    return uploadLocalConsents();
+                });
+            }
+        };
     }
 
     /**
@@ -253,15 +311,12 @@ public class AuthenticationManager {
     public ForConsentedUsersApi getApi() {
         logger.debug("getApi called");
 
-        if (proxiedForConsentedUsersApi != null) {
-            return proxiedForConsentedUsersApi;
-        }
-
-        proxiedForConsentedUsersApi = new ProxiedForConsentedUsersApi(this);
-
         return proxiedForConsentedUsersApi;
     }
 
+    /**
+     * @return api access for currently logged in participant
+     */
     @NonNull
     ForConsentedUsersApi getRawApi() {
         SignIn signIn = accountDAO.getSignIn();
@@ -272,7 +327,7 @@ public class AuthenticationManager {
     }
 
     /**
-     * @return the email currently associated with auth manager.
+     * @return the email currently associated with logged in participant
      */
     @Nullable
     public String getEmail() {
@@ -323,19 +378,272 @@ public class AuthenticationManager {
         listeners.remove(listener);
     }
 
+
+    // region Consent
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return true if consent to participate was made for this consent
+     */
+    public boolean isConsented(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        return isConsentedInSessionOrLocal(getUserSessionInfo(), subpopulationGuid);
+    }
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return true if the consent to participate was made against the most recently published
+     * version of this consent
+     */
+    public boolean isConsentedMostRecent(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        ConsentStatus consentStatus = getConsentStatusFromSession(subpopulationGuid);
+        if (consentStatus == null) {
+            return false;
+        }
+        return consentStatus.getSignedMostRecentConsent();
+    }
+
+    @Nullable
+    private ConsentStatus getConsentStatusFromSession(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        UserSessionInfo userSessionInfo = getUserSessionInfo();
+        return userSessionInfo == null ? null : userSessionInfo.getConsentStatuses()
+                .get(subpopulationGuid);
+    }
+
+    // if the participant's session indicates consent to this subpopulation, use that. otherwise,
+    // treat presense of consent in DAO as having consented
+    boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
+        ConsentStatus subpopulationStatus = getConsentStatusFromSession(subpopulationGuid);
+        if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
+            return true;
+        }
+        return consentDAO.getConsent(subpopulationGuid) != null;
+    }
+
+    /**
+     * @return true if all required consents have been signed
+     */
+    public boolean isConsented() {
+        UserSessionInfo userSessionInfo = getUserSessionInfo();
+        if (userSessionInfo != null) {
+            if (userSessionInfo.getConsented()) {
+                return true;
+            }
+
+            for (String subpopulation : getRequiredConsents(userSessionInfo)) {
+                if (!isConsentedInSessionOrLocal(userSessionInfo, subpopulation)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // without a user session, we can't determine whether they're consented. this shouldn't
+        // happen unless they're logged out of the application
+        return false;
+    }
+
+    /**
+     * @param userSessionInfo the user's session
+     * @return set of all subpopulationGuids for which the user's consent is required
+     */
+    @NonNull
+    Set<String> getRequiredConsents(@NonNull UserSessionInfo userSessionInfo) {
+        checkNotNull(userSessionInfo);
+
+        Set<String> subpopulations = Sets.newHashSet();
+
+        if (userSessionInfo.getConsentStatuses() == null) {
+            return subpopulations;
+        }
+
+        for (Map.Entry<String, ConsentStatus> consentStatus
+                : userSessionInfo.getConsentStatuses().entrySet()) {
+            if (consentStatus.getValue().getRequired()) {
+                subpopulations.add(consentStatus.getKey());
+            }
+        }
+
+        return subpopulations;
+    }
+
+    /**
+     * @return true if all *required* consents have been signed and the versions signed are the most
+     * up-to-date versions of those consents
+     */
+    public boolean isConsentedMostRecent() {
+        UserSessionInfo userSessionInfo = getUserSessionInfo();
+        return userSessionInfo == null ? false : userSessionInfo.getSignedMostRecentConsent();
+    }
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent (required)
+     * @param name              participant's full name (required)
+     * @param birthdate         participant's date of birth (required)
+     * @param base64Image       participant's signature, encoded
+     * @param imageMimeType     mime type of participant's signature
+     * @param sharingScope      participant's sharing scope for the study (required)
+     * @return completable
+     */
+    @NonNull
+    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String
+            name,
+                                               @NonNull LocalDate birthdate,
+                                               @Nullable String base64Image, @Nullable String
+                                                       imageMimeType,
+                                               @NonNull SharingScope sharingScope) {
+        ConsentSignature consent = giveConsentSync(
+                subpopulationGuid,
+                name,
+                birthdate,
+                base64Image,
+                imageMimeType,
+                sharingScope);
+
+        return uploadConsent(subpopulationGuid, consent);
+    }
+
+    Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull
+            ConsentSignature consent) {
+        return Single.just(consent)
+                .flatMap(consentSignature -> RxUtils.toBodySingle(
+                        proxiedForConsentedUsersApi
+                                .createConsentSignature(
+                                        subpopulationGuid,
+                                        consentSignature))
+                        .doOnError(e ->
+                                logger.info("Couldn't upload consent to Bridge, " +
+                                        "subpopulationGuid: " + subpopulationGuid, e)
+                        )
+                );
+    }
+
+    public Observable<UserSessionInfo> uploadLocalConsents() {
+        Observable<String> subpopulations = Observable.from(consentDAO.listConsents()).cache();
+        return subpopulations
+                .map(subpop -> consentDAO.getConsent(subpop))
+                .zipWith(subpopulations, (consentSignature, subpopulation) -> {
+                    return uploadConsent(subpopulation, consentSignature);
+                })
+                .flatMap(i -> i.toObservable());
+    }
+
+    /**
+     * Gives consent synchronously without making network call on current thread. Upload to Bridge
+     * will happen in the background, eventually.
+     *
+     * @param subpopulationGuid guid for the subpopulation of the consent (required)
+     * @param name              participant's full name (required)
+     * @param birthdate         participant's date of birth (required)
+     * @param base64Image       participant's signature, encoded
+     * @param imageMimeType     mime type of participant's signature
+     * @param sharingScope      participant's sharing scope for the study (required)
+     * @return the resulting consentSignature
+     */
+    public ConsentSignature giveConsentSync(@NonNull String subpopulationGuid, @NonNull String name,
+                                            @NonNull LocalDate birthdate,
+                                            @Nullable String base64Image,
+                                            @Nullable String imageMimeType,
+                                            @NonNull SharingScope sharingScope) {
+        checkNotNull(subpopulationGuid);
+        checkNotNull(name);
+        checkNotNull(birthdate);
+        checkNotNull(sharingScope);
+
+        final ConsentSignature consentSignature = new ConsentSignature()
+                .name(name)
+                .birthdate(birthdate)
+                .imageData(base64Image)
+                .imageMimeType(imageMimeType)
+                .scope(sharingScope);
+
+        storeConsentSignatureLocally(subpopulationGuid, consentSignature);
+
+        return consentSignature;
+    }
+
+    private void storeConsentSignatureLocally(@NonNull String subpopulationGuid,
+                                              @NonNull ConsentSignature consentSignature) {
+        checkNotNull(subpopulationGuid);
+        checkNotNull(consentSignature);
+
+        logger.debug("Saving consent locally, subpopulationGuid: " + subpopulationGuid);
+
+        consentDAO.putConsent(subpopulationGuid, consentSignature);
+    }
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return participant's previously given consent
+     */
+    @NonNull
+    public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        return RxUtils.toBodySingle(proxiedForConsentedUsersApi.getConsentSignature
+                (subpopulationGuid))
+                .onErrorResumeNext(throwable -> {
+                    if (throwable instanceof EntityNotFoundException) {
+                        return Single.just(consentDAO.getConsent(subpopulationGuid));
+                    }
+                    return Single.error(throwable);
+                });
+    }
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return participant's previously given consent from local cache
+     */
+    @Nullable
+    public ConsentSignature getConsentSync(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        return consentDAO.getConsent(subpopulationGuid);
+    }
+
+    /**
+     * Withdraws all previous consents.
+     *
+     * @param reason reason for withdrawal
+     * @return completable
+     */
+    @NonNull
+    public Completable withdrawAll(@Nullable String reason) {
+
+        return RxUtils.toBodySingle(
+                proxiedForConsentedUsersApi.withdrawAllConsents(
+                        new Withdrawal().reason(reason)
+                ))
+                .toCompletable();
+
+    }
+
+    /**
+     * Withdraws specified consent
+     *
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @param reason            reason for withdrawal
+     * @return completable
+     */
+    @NonNull
+    public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
+        checkNotNull(subpopulationGuid);
+
+        return RxUtils.toBodySingle(
+                proxiedForConsentedUsersApi.withdrawConsentFromSubpopulation
+                        (subpopulationGuid, new Withdrawal().reason(reason)))
+                .toCompletable();
+    }
+
     public interface AuthenticationEventListener {
-        /**
-         * Notification of successful sign out. Called on a worker thread.
-         *
-         * @param email signed out user
-         */
         void onSignedOut(String email);
 
-        /**
-         * Notification of successful sign in. Called on a worker thread.
-         *
-         * @param email signed in user
-         */
         void onSignedIn(String email);
     }
+
+    //endregion
 }

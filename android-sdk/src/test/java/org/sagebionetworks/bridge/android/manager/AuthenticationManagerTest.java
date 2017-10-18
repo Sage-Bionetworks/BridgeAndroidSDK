@@ -1,35 +1,52 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
+import org.joda.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
+import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
+import rx.Observable;
+import rx.Single;
 
+import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +58,7 @@ public class AuthenticationManagerTest {
     private static final String STUDY_ID = "study-id";
     private static final String EMAIL = "email@test.com";
     private static final String PASSWORD = "P4ssw0rd";
+    private static final String SUBPOPULATION_GUID = "subpopulationGuid";
 
 
     @Mock
@@ -51,8 +69,10 @@ public class AuthenticationManagerTest {
     private AuthenticationApi authenticationApi;
     @Mock
     private AccountDAO accountDAO;
+    @Mock
+    private ConsentDAO consentDAO;
 
-    private AuthenticationManager authenticationManager;
+    private AuthenticationManager spyAuthenticationManager;
 
     @Before
     public void beforeTest() {
@@ -61,7 +81,7 @@ public class AuthenticationManagerTest {
         when(config.getStudyId()).thenReturn(STUDY_ID);
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
 
-        authenticationManager = new AuthenticationManager(config, apiClientProvider, accountDAO);
+        spyAuthenticationManager = spy(new AuthenticationManager(config, apiClientProvider, accountDAO, consentDAO));
     }
 
     @Test
@@ -76,7 +96,7 @@ public class AuthenticationManagerTest {
         Call<Message> messageCall = successCall(message);
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        Completable completable = authenticationManager.signUp(signUp);
+        Completable completable = spyAuthenticationManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
@@ -92,7 +112,7 @@ public class AuthenticationManagerTest {
         Call messageCall = errorCall(new BridgeSDKException("Failed", 500));
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
-        authenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
+        spyAuthenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(null);
@@ -107,7 +127,7 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
-        ForConsentedUsersApi result = authenticationManager.getRawApi();
+        ForConsentedUsersApi result = spyAuthenticationManager.getRawApi();
         assertNotNull(forConsentedUsersApi);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
@@ -160,7 +180,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyAuthenticationManager.resendEmailVerification(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).resendEmailVerification(email);
     }
@@ -174,14 +194,101 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
-        authenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        verify(accountDAO).setSignIn(signIn);
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
 
+        verify(authenticationApi).signIn(signIn);
+    }
+
+    @Test
+    public void signIn_UploadLocalConsentAndRetrySignIn() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        Call<UserSessionInfo> signInCall = mock(Call.class);
+        when(signInCall.clone()).thenReturn(signInCall);
+        when(signInCall.isExecuted()).thenReturn(true);
+        when(signInCall.isCanceled()).thenReturn(false);
+
+        // throw 412 first execution, success on second execution
+        when(signInCall.execute())
+                .thenThrow(new ConsentRequiredException("msg", "endpoint", userSessionInfo))
+                .thenReturn(Response.success(userSessionInfo));
+
+        Observable<UserSessionInfo> userSessionInfoObservable = Observable.just(userSessionInfo);
+
+        SignIn signIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
+        when(authenticationApi.signIn(signIn))
+                .thenReturn(signInCall);
+
+        // indicate that locally, we think we are consented
+        doReturn(true)
+                .when(spyAuthenticationManager).isConsented();
+        doReturn(userSessionInfoObservable)
+                .when(spyAuthenticationManager).uploadLocalConsents();
+
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+                .assertValue(userSessionInfo).assertCompleted();
+
+        verify(spyAuthenticationManager).isConsented();
+        // verify there was an attempt to upload all consents
+        verify(spyAuthenticationManager).uploadLocalConsents();
+
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
+        verify(accountDAO).setUserSessionInfo(userSessionInfo);
+        verify(accountDAO).setStudyParticipant(
+                argThat(participant -> EMAIL.equals(participant.getEmail())));
+
+        verify(signInCall, times(2)).execute();
+        verify(authenticationApi).signIn(signIn);
+    }
+
+    @Test
+    public void signIn_UploadLocalConsentRetrySignInOnce() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        Call<UserSessionInfo> signInCall = mock(Call.class);
+        when(signInCall.clone()).thenReturn(signInCall);
+        when(signInCall.isExecuted()).thenReturn(true);
+        when(signInCall.isCanceled()).thenReturn(false);
+
+        ConsentRequiredException exception = new ConsentRequiredException("msg", "endpoint", userSessionInfo);
+        // throw 412 every time
+        when(signInCall.execute())
+                .thenThrow(exception);
+
+        Observable<UserSessionInfo> userSessionInfoObservable = Observable.just(userSessionInfo);
+
+        SignIn signIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
+        when(authenticationApi.signIn(signIn))
+                .thenReturn(signInCall);
+
+        // indicate that locally, we think we are consented
+        doReturn(true)
+                .when(spyAuthenticationManager).isConsented();
+        doReturn(userSessionInfoObservable)
+                .when(spyAuthenticationManager).uploadLocalConsents();
+
+        // don't try uploading consent and retrying sign-in multiple times, i.e.
+        // the ConsentRequiredException should be propagated the second time it occurs
+        spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
+                .assertError(exception);
+
+        verify(spyAuthenticationManager).isConsented();
+        // verify there was an attempt to upload all consents
+        verify(spyAuthenticationManager).uploadLocalConsents();
+
+        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
+        verify(accountDAO).setUserSessionInfo(userSessionInfo);
+        verify(accountDAO).setStudyParticipant(
+                argThat(participant -> EMAIL.equals(participant.getEmail())));
+
+        // no infinite loops
+        verify(signInCall, times(2)).execute();
         verify(authenticationApi).signIn(signIn);
     }
 
@@ -192,7 +299,7 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
-        authenticationManager.signOut().test().awaitTerminalEvent()
+        spyAuthenticationManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
 
         verify(accountDAO).setSignIn(null);
@@ -210,7 +317,7 @@ public class AuthenticationManagerTest {
         when(authenticationApi.requestResetPassword(email))
                 .thenReturn(messageCall);
 
-        authenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
+        spyAuthenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
         verify(authenticationApi).requestResetPassword(email);
     }
@@ -218,7 +325,7 @@ public class AuthenticationManagerTest {
     @Test
     public void getApi() throws Exception {
         // TODO: fix test once there is no more Proxy
-        ForConsentedUsersApi api = authenticationManager.getApi();
+        ForConsentedUsersApi api = spyAuthenticationManager.getApi();
 
         assertTrue(api instanceof ProxiedForConsentedUsersApi);
     }
@@ -227,9 +334,201 @@ public class AuthenticationManagerTest {
     public void getEmail() throws Exception {
         when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
 
-        String email = authenticationManager.getEmail();
+        String email = spyAuthenticationManager.getEmail();
 
         assertEquals(EMAIL, email);
         verify(accountDAO).getSignIn();
     }
+
+    // region Consent
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_ConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(true));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertTrue(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_NotConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(false));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertFalse(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_NoConsentedInSession() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertFalse(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsentedForSubpopulationInSessionOrLocal_LocallyConsented() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put(SUBPOPULATION_GUID, new ConsentStatus().consented(false));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+        doReturn(new ConsentSignature()).when(consentDAO).getConsent(SUBPOPULATION_GUID);
+
+        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+
+        assertTrue(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+        verify(userSessionInfo).getConsentStatuses();
+    }
+
+    @Test
+    public void isConsented() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+
+        doReturn(Sets.newHashSet("A", "B", "C"))
+                .when(spyAuthenticationManager)
+                .getRequiredConsents(userSessionInfo);
+
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+
+        boolean result = spyAuthenticationManager.isConsented();
+
+        assertTrue(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+
+        verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
+
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+    }
+
+    @Test
+    public void isConsented_MissingConsent() throws Exception {
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+
+        doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
+
+        doReturn(Sets.newHashSet("A", "B", "C"))
+                .when(spyAuthenticationManager)
+                .getRequiredConsents(userSessionInfo);
+
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        doReturn(false).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+
+        boolean result = spyAuthenticationManager.isConsented();
+
+        assertFalse(result);
+
+        verify(spyAuthenticationManager).getUserSessionInfo();
+
+        verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
+
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
+        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
+        verify(spyAuthenticationManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
+    }
+
+    @Test
+    public void getRequiredConsents() {
+        Map<String, ConsentStatus> consentStatuses = Maps.newHashMap();
+        consentStatuses.put("A", new ConsentStatus().required(true));
+        consentStatuses.put("B", new ConsentStatus().required(false));
+        consentStatuses.put("C", new ConsentStatus().required(true));
+
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(consentStatuses).when(userSessionInfo).getConsentStatuses();
+
+        Set<String> result = spyAuthenticationManager.getRequiredConsents(userSessionInfo);
+
+        assertEquals(Sets.newHashSet("A", "C"), result);
+
+        verify(userSessionInfo, atLeastOnce()).getConsentStatuses();
+    }
+
+    @Test
+    public void giveConsent() throws Exception {
+        String name = "NAME";
+        LocalDate birthdate = LocalDate.now().minusYears(20);
+        String imgString = "base64image";
+        String mimeType = "mimeType";
+        SharingScope sharingScope = SharingScope.ALL_QUALIFIED_RESEARCHERS;
+
+        ConsentSignature sig = new ConsentSignature()
+                .name(name)
+                .birthdate(birthdate)
+                .imageData(imgString)
+                .imageMimeType(mimeType)
+                .scope(sharingScope);
+
+        // consent should get stored locally
+        doReturn(sig).when(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope);
+
+        // consent should then be uploaded
+        UserSessionInfo userSessionInfo = mock(UserSessionInfo.class);
+        doReturn(Single.just(userSessionInfo)).when(spyAuthenticationManager).uploadConsent(SUBPOPULATION_GUID, sig);
+
+        spyAuthenticationManager.giveConsent(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope)
+                .test()
+                .awaitTerminalEvent()
+                .assertValue(userSessionInfo);
+
+        verify(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
+                name,
+                birthdate,
+                imgString,
+                mimeType,
+                sharingScope);
+
+        verify(spyAuthenticationManager).uploadConsent(SUBPOPULATION_GUID, sig);
+    }
+    // endregion
 }

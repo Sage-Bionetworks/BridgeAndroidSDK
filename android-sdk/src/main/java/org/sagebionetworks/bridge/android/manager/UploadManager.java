@@ -101,7 +101,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
      * @return information about file produced from the archive
      */
     @NonNull
-    public Single<UploadFile> queueUpload(String filename, org.sagebionetworks.bridge.data.Archive archive) {
+    public Single<UploadFile> queueUpload(String filename, Archive archive) {
+        LOG.debug("Queueing archive: " + archive);
         return Single.fromCallable(() -> persist(filename, archive))
                 .subscribeOn(Schedulers.io());
     }
@@ -329,7 +330,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                             })
                             .onErrorReturn((t) -> {
                                 LOG.info("Failed to call upload complete, server will recover", t);
-                                return session;
+                                return null; // return doesn't matter, becomes completable
                             })
                             .subscribe();
 

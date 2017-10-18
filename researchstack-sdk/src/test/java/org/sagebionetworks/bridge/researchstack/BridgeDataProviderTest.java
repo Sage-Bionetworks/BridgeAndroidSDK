@@ -3,7 +3,6 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.os.Looper;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -16,7 +15,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
-import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
@@ -27,8 +25,6 @@ import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.ConsentManager;
-import org.sagebionetworks.bridge.android.manager.ParticipantManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
@@ -90,10 +86,6 @@ public class BridgeDataProviderTest {
     protected ResearchStackDAO researchStackDAO;
     @Mock
     protected AuthenticationManager authenticationManager;
-    @Mock
-    protected ParticipantManager studyParticipantManager;
-    @Mock
-    protected ConsentManager consentManager;
 
     @Before
     public void setupTest() {
@@ -106,8 +98,6 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getAccountDao()).thenReturn(accountDAO);
         when(bridgeManagerProvider.getConsentDao()).thenReturn(consentDAO);
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
-        when(bridgeManagerProvider.getParticipantManager()).thenReturn(studyParticipantManager);
-        when(bridgeManagerProvider.getConsentManager()).thenReturn(consentManager);
 
         pinCodeConfig = mock(PinCodeConfig.class);
         fileAccess = mock(FileAccess.class);
@@ -213,22 +203,22 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testIsConsented() {
-        when(consentManager.isConsented()).thenReturn(true);
+        when(authenticationManager.isConsented()).thenReturn(true);
 
         boolean isConsented = dataProvider.isConsented();
 
         assertTrue(isConsented);
-        verify(consentManager).isConsented();
+        verify(authenticationManager).isConsented();
     }
 
     @Test
     public void testWithdrawConsent() {
         String reasonString = "reason";
-        when(consentManager.withdrawAll(reasonString)).thenReturn(Completable.complete());
+        when(authenticationManager.withdrawAll(reasonString)).thenReturn(Completable.complete());
 
         dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
 
-        verify(consentManager).withdrawAll(reasonString);
+        verify(authenticationManager).withdrawAll(reasonString);
     }
 
     @Ignore

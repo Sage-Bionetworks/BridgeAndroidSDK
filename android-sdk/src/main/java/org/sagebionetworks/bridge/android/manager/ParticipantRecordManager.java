@@ -1,6 +1,5 @@
 package org.sagebionetworks.bridge.android.manager;
 
-import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -21,25 +20,38 @@ import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySin
 /**
  * Any authenticated user may use this class's methods. The user does not need to have consented to
  * the study in order to manage their participant record.
- * <p>
- * TODO: offline syncing
  */
-@AnyThread
-public class ParticipantManager {
-    private static final Logger LOG = LoggerFactory.getLogger(ParticipantManager.class);
+public class ParticipantRecordManager {
+    private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 
-    @NonNull
-    private final ForConsentedUsersApi api;
     @NonNull
     private final AccountDAO accountDAO;
+    @NonNull
+    private final ForConsentedUsersApi consentedUsersApi;
 
-    public ParticipantManager(@NonNull AuthenticationManager authenticationManager,
-                              @NonNull AccountDAO accountDAO) {
-        checkNotNull(authenticationManager);
-        checkNotNull(accountDAO);
-
-        this.api = authenticationManager.getApi();
+    public ParticipantRecordManager(@NonNull AccountDAO accountDAO,
+                                    @NonNull AuthenticationManager authenticationManager) {
         this.accountDAO = accountDAO;
+        this.consentedUsersApi = authenticationManager.getApi();
+    }
+
+    /**
+     * @return Get cached information about participant.
+     */
+    @Nullable
+    public StudyParticipant getCachedParticipantRecord() {
+        return accountDAO.getStudyParticipant();
+    }
+
+    /**
+     * Calls Bridge for participant information. Updates local cache of participant.
+     *
+     * @return Current user's participant record
+     */
+    @NonNull
+    public Single<StudyParticipant> getParticipantRecord() {
+        return toBodySingle(consentedUsersApi.getUsersParticipantRecord())
+                .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
     }
 
 
@@ -57,37 +69,20 @@ public class ParticipantManager {
      * @return session
      */
     @NonNull
-    public Single<UserSessionInfo> updateParticipant(@NonNull StudyParticipant studyParticipant) {
+    public Single<UserSessionInfo> updateParticipantRecord(@NonNull StudyParticipant
+                                                                       studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return toBodySingle(api.updateUsersParticipantRecord(studyParticipant)).doOnSuccess(
-                userSessionInfo -> {
-                    LOG.debug("Successfully updated participant");
-                    getLatestParticipant().toCompletable()
-                            .onErrorComplete(e -> {
-                                LOG.warn("Could not retrieve updated participant", e);
-                                return true;
-                            });
-                });
-    }
-
-    /**
-     * @return Get cached information about participant.
-     */
-    @Nullable
-    public StudyParticipant getParticipant() {
-        return accountDAO.getStudyParticipant();
-    }
-
-    /**
-     * Calls Bridge for participant information. Updates local cache of participant.
-     *
-     * @return Current user's participant record
-     */
-    @NonNull
-    public Single<StudyParticipant> getLatestParticipant() {
-        return toBodySingle(api.getUsersParticipantRecord())
-                .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
+        return toBodySingle(consentedUsersApi.updateUsersParticipantRecord(studyParticipant))
+                .doOnSuccess(
+                        userSessionInfo -> {
+                            logger.debug("Successfully updated participant");
+                            getParticipantRecord().toCompletable()
+                                    .onErrorComplete(e -> {
+                                        logger.warn("Could not retrieve updated participant", e);
+                                        return true;
+                                    });
+                        });
     }
 
     /**
@@ -107,6 +102,6 @@ public class ParticipantManager {
         checkNotNull(startDate);
         checkNotNull(endDate);
 
-        return toBodySingle(api.emailDataToUser(startDate, endDate)).toCompletable();
+        return toBodySingle(consentedUsersApi.emailDataToUser(startDate, endDate)).toCompletable();
     }
 }

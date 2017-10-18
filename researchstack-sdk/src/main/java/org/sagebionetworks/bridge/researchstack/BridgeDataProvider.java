@@ -12,7 +12,6 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.onboarding.OnboardingManager;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -21,13 +20,11 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.ResearchStack;
 import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.ConsentManager;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
@@ -48,7 +45,6 @@ import java.util.Map;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -68,7 +64,6 @@ public abstract class BridgeDataProvider extends DataProvider {
     private final BridgeManagerProvider bridgeManagerProvider;
     private final BridgeConfig bridgeConfig;
     private final AuthenticationManager authenticationManager;
-    private final ConsentManager consentManager;
 
     //used by tests to mock service
     BridgeDataProvider(ResearchStackDAO researchStackDAO, StorageAccessWrapper storageAccessWrapper,
@@ -82,8 +77,6 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
-        this.consentManager = bridgeManagerProvider.getConsentManager();
-
     }
 
     public BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider) {
@@ -92,7 +85,6 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
-        this.consentManager = bridgeManagerProvider.getConsentManager();
 
         this.storageAccessWrapper = new StorageAccessWrapper();
 
@@ -128,13 +120,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
-        return consentManager.withdrawConsent(subpopulationGuid, reason);
+        return authenticationManager.withdrawConsent(subpopulationGuid, reason);
     }
 
 
     @NonNull
     public Completable withdrawAllConsents(@Nullable String reason) {
-        return consentManager.withdrawAll(reason);
+        return authenticationManager.withdrawAll(reason);
     }
 
     /**
@@ -143,19 +135,19 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public boolean isConsented() {
         logger.debug("Called isConsented");
-        return consentManager.isConsented();
+        return authenticationManager.isConsented();
     }
 
     @NonNull
-    public Completable giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
+    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String name,
                                    @NonNull LocalDate birthdate,
                                    @NonNull String base64Image, @NonNull String imageMimeType,
                                    @Nullable SharingScope sharingScope) {
-        return consentManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
+        return authenticationManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
                 imageMimeType, sharingScope);
     }
 
-    public Completable giveConsent(String subpopulationGuid, ConsentSignature consentSignature) {
+    public Single<UserSessionInfo> giveConsent(String subpopulationGuid, ConsentSignature consentSignature) {
         return giveConsent(subpopulationGuid,
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
@@ -168,7 +160,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Single<ConsentSignature> getConsent(@NonNull String subpopulation) {
         checkNotNull(subpopulation);
 
-        return consentManager.getConsentSignature(subpopulation);
+        return authenticationManager.getConsentSignature(subpopulation);
     }
 
     // TODO: getConsent rid of Consent methods below on the interface. let ConsentManager handle the
@@ -177,7 +169,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
 
-        return createConsentSignatureBody(consentManager.getConsentSync(bridgeConfig.getStudyId()));
+        return createConsentSignatureBody(authenticationManager.getConsentSync(bridgeConfig.getStudyId()));
     }
 
     @Override
@@ -262,7 +254,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     private void giveConsentSync(ConsentSignature consentSignature) {
-        consentManager.giveConsentSync(bridgeConfig.getStudyId(),
+        authenticationManager.giveConsentSync(bridgeConfig.getStudyId(),
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
                 consentSignature.getImageData(),
@@ -282,7 +274,8 @@ public abstract class BridgeDataProvider extends DataProvider {
                 consent.getBirthdate(),
                 consent.getImageData(),
                 consent.getImageMimeType(),
-                consent.getScope()).andThen(SUCCESS_DATA_RESPONSE)
+                consent.getScope())
+                .flatMapObservable(session -> SUCCESS_DATA_RESPONSE)
                 .compose(ObservableUtils.applyDefault());
     }
 
@@ -493,7 +486,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Single<UserSessionInfo> setUserSharingScope(@Nullable SharingScope scope) {
 
         return bridgeManagerProvider.getParticipantManager()
-                .updateParticipant((StudyParticipant) new StudyParticipant()
+                .updateParticipantRecord((StudyParticipant) new StudyParticipant()
                         .email(authenticationManager.getEmail())
                         .sharingScope(scope));
     }
