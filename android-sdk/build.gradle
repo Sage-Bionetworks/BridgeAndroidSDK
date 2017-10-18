@@ -2,83 +2,87 @@ apply plugin: 'com.android.library'
 apply plugin: 'me.tatarka.retrolambda'
 
 android {
-  compileSdkVersion 25
-  buildToolsVersion "25.0.2"
+    compileSdkVersion 25
+    buildToolsVersion "25.0.2"
 
-  // allow inter-project inclusion of this library's debug build
+    // allow inter-project inclusion of this library's debug build
     // doesn't play well with deployment scripts
-  // publishNonDefault true
+    // publishNonDefault true
 
-  defaultConfig {
-    minSdkVersion 16
-    targetSdkVersion 25
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 25
 
-    // versionCode and versionName are used by the SDK to identify the app to Bridge server
-    versionCode 1
-    versionName "version 1.0.2, build 1"
-  }
-
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        // versionCode and versionName are used by the SDK to identify the app to Bridge server
+        versionCode 1
+        versionName "version 1.0.2, build 1"
     }
-  }
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
-  }
 
-  packagingOptions {
-    // joda-time workaround https://github.com/dlew/joda-time-android#troubleshooting
-    exclude 'META-INF/LICENSE'
-    exclude 'META-INF/NOTICE'
-  }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 
-  lintOptions {
-    abortOnError false
-  }
+    packagingOptions {
+        // joda-time workaround https://github.com/dlew/joda-time-android#troubleshooting
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+    }
 
-  resourcePrefix 'osb_'
+    lintOptions {
+        abortOnError false
+    }
+
+    resourcePrefix 'osb_'
 }
 
 dependencies {
-  compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(dir: 'libs', include: ['*.jar'])
 
-  compile 'com.madgag.spongycastle:core:1.54.0.0'
-  compile 'com.madgag.spongycastle:prov:1.54.0.0'
-  compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+    compile 'com.madgag.spongycastle:core:1.54.0.0'
+    compile 'com.madgag.spongycastle:prov:1.54.0.0'
+    compile 'com.madgag.spongycastle:pkix:1.54.0.0'
 
-  compile 'net.danlew:android.joda:2.9.4.2'
-  compile 'com.squareup.retrofit2:retrofit:2.1.0'
-  compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
+    compile 'net.danlew:android.joda:2.9.4.2'
+    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
 
-  compile 'io.reactivex:rxjava:1.2.5'
-  compile 'io.reactivex:rxandroid:1.2.1'
+    compile 'io.reactivex:rxjava:1.2.5'
+    compile 'io.reactivex:rxandroid:1.2.1'
 
     compile 'com.jakewharton.rxbinding:rxbinding:0.4.0'
     compile 'com.jakewharton.rxbinding:rxbinding-appcompat-v7:0.4.0'
 
     compile 'com.android.support:appcompat-v7:25.1.0'
-  compile 'com.android.support:support-annotations:25.1.0'
-  compile 'org.sagebionetworks.bridge:rest-client:0.12.34', {
-    exclude group: 'joda-time', module: 'joda-time'
-  }
+    compile 'com.android.support:support-annotations:25.1.0'
+    compile 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
+        exclude group: 'joda-time', module: 'joda-time'
+        exclude group: 'org.bouncycastle'
+    }
+    compile 'org.sagebionetworks.bridge:rest-client:0.12.34', {
+        exclude group: 'joda-time', module: 'joda-time'
+    }
 
-  compile 'org.slf4j:slf4j-api:1.7.21'
-  compile 'com.github.tony19:logback-android-core:1.1.1-6'
-  compile 'com.github.tony19:logback-android-classic:1.1.1-6', {
-    exclude group: 'com.google.android', module: 'android'
-  }
+    compile 'org.slf4j:slf4j-api:1.7.21'
+    compile 'com.github.tony19:logback-android-core:1.1.1-6'
+    compile 'com.github.tony19:logback-android-classic:1.1.1-6', {
+        exclude group: 'com.google.android', module: 'android'
+    }
 
-  // logging to console, workaround for configuring logback
-  testCompile 'org.slf4j:slf4j-simple:1.7.21'
-  // avoid needing to setup timezone provider for unit tests
-  testCompile 'joda-time:joda-time:2.9.4'
+    // logging to console, workaround for configuring logback
+    testCompile 'org.slf4j:slf4j-simple:1.7.21'
+    // avoid needing to setup timezone provider for unit tests
+    testCompile 'joda-time:joda-time:2.9.4'
 
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.robolectric:robolectric:3.2.2'
-  testCompile 'org.mockito:mockito-core:2.7.5'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.robolectric:robolectric:3.2.2'
+    testCompile 'org.mockito:mockito-core:2.7.5'
 }
 // TODO: fix path when included as submodule
 //apply from: "$rootDir/gradle/artifact-deploy.gradle"

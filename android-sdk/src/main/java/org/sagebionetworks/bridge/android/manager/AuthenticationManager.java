@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -23,6 +24,8 @@ import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import rx.Completable;
 import rx.Single;
@@ -42,6 +45,8 @@ public class AuthenticationManager {
     private final BridgeConfig config;
     @NonNull
     private final AuthenticationApi authenticationApi;
+    @NonNull
+    private final List<AuthenticationEventListener> listeners;
     @NonNull
     private final RxHelper rxHelper;
     @NonNull
@@ -66,6 +71,7 @@ public class AuthenticationManager {
         this.accountManager = accountManager;
 
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+        listeners = Lists.newArrayList();
     }
 
     /**
@@ -190,6 +196,9 @@ public class AuthenticationManager {
                             // TODO: this should be unnecessary. verify and remove
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
+                    for (AuthenticationEventListener listener : listeners) {
+                        listener.onSignedIn(email);
+                    }
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
@@ -213,9 +222,18 @@ public class AuthenticationManager {
     public Completable signOut() {
         logger.debug("signOut called");
 
+        final String email = accountDAO.getEmail();
+        if (email == null) {
+            logger.debug("Did not find saved SignIn credentials prior to calling sign out API");
+        }
+
         return rxHelper.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
                     disassociateUser();
+
+                    for (AuthenticationEventListener listener : listeners) {
+                        listener.onSignedOut(email);
+                    }
                 }).toCompletable();
     }
 
@@ -306,6 +324,30 @@ public class AuthenticationManager {
                 getApi().updateUsersParticipantRecord(new StudyParticipant()));
     }
 
+    public void addEventListener(AuthenticationEventListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeEventListener(AuthenticationEventListener listener) {
+        listeners.remove(listener);
+    }
+
+    public interface AuthenticationEventListener {
+        /**
+         * Notification of successful sign out. Called on a worker thread.
+         *
+         * @param email signed out user
+         */
+        void onSignedOut(String email);
+
+        /**
+         * Notification of successful sign in. Called on a worker thread.
+         *
+         * @param email signed in user
+         */
+        void onSignedIn(String email);
+    }
+    
     private void associateUser(SignIn signIn, UserSessionInfo userSessionInfo, StudyParticipant studyParticipant) {
         logger.debug("Associating user with email=[{}]", signIn.getEmail());
 

@@ -34,11 +34,11 @@ import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.factory.TappingTaskFactory;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.notification.TaskAlertReceiver;
-import org.sagebionetworks.bridge.android.data.Archive;
+import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
+import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -50,6 +50,8 @@ import java.util.UUID;
 
 import rx.Completable;
 import rx.Single;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -79,7 +81,7 @@ import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWa
  * Created by TheMDP on 3/3/17.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(TaskAlertReceiver.class)
+@PrepareForTest({TaskAlertReceiver.class, AndroidSchedulers.class})
 public class TaskHelperTest {
 
     private static final String JSON_CONTENT_TYPE = "application/json";
@@ -100,6 +102,8 @@ public class TaskHelperTest {
     UploadManager uploadManager;
     @Mock
     BridgeManagerProvider bridgeManagerProvider;
+    @Mock
+    BridgeConfig bridgeConfig;
 
     @Before
     public void setupTest() {
@@ -107,6 +111,7 @@ public class TaskHelperTest {
 
         when(bridgeManagerProvider.getUploadManager()).thenReturn(uploadManager);
         when(bridgeManagerProvider.getApplicationContext()).thenReturn(applicationContext);
+        when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
 
         taskHelper = new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
                 bridgeManagerProvider);
@@ -122,29 +127,41 @@ public class TaskHelperTest {
         when(taskResult.getIdentifier()).thenReturn(taskId);
         when(taskResult.getEndDate()).thenReturn(endDate);
 
-        Archive archive = mock(Archive.class);
-        Archive.Builder archiveBuilder = mock(Archive.Builder.class);
-        when(archiveBuilder.build()).thenReturn(archive);
+        String appVersionName = "appversion";
+        String phoneInfo = "Android";
+        when(bridgeConfig.getAppVersionName()).thenReturn(appVersionName);
+        when(bridgeConfig.getDeviceName()).thenReturn(phoneInfo);
 
-        Archive.WithBridgeConfig withBridgeConfig = mock(Archive.WithBridgeConfig.class);
-        when(withBridgeConfig.withBridgeConfig(any())).thenReturn(archiveBuilder);
+       Archive archive = mock(Archive.class);
+        Archive.Builder archiveBuilder = mock(Archive.Builder.class);
+        when(archiveBuilder.withAppVersionName(appVersionName)).thenReturn(archiveBuilder);
+        when(archiveBuilder.withPhoneInfo(phoneInfo)).thenReturn(archiveBuilder);
+        when(archiveBuilder.build()).thenReturn(archive);
 
         when(appPrefs.isTaskReminderEnabled()).thenReturn(true);
         taskHelper.putTaskChron(taskId, taskChron);
 
+        mockStatic(AndroidSchedulers.class);
+        when(AndroidSchedulers.mainThread()).thenReturn(Schedulers.immediate());
+
         ArgumentCaptor<TaskNotification> taskNotificationCaptor = ArgumentCaptor
                 .forClass(TaskNotification.class);
 
-        when(uploadManager.upload(any(), eq(archive)))
-                .thenReturn(Single.just(new UploadValidationStatus()));
+        when(uploadManager.queueUpload(any(), eq(archive)))
+                .thenReturn(Single.just(new UploadManager.UploadFile()));
+        when(uploadManager.processUploadFile(any())).thenReturn(Completable.complete());
 
         Intent notificationCreateIntent = mock(Intent.class);
         mockStatic(TaskAlertReceiver.class);
         when(TaskAlertReceiver.createCreateIntent(any())).thenReturn(notificationCreateIntent);
 
-        taskHelper.uploadTaskResult(taskResult, withBridgeConfig);
+        taskHelper.uploadTaskResult(taskResult, archiveBuilder);
 
-        verify(uploadManager).upload(any(), eq(archive));
+        verify(archiveBuilder).withPhoneInfo(phoneInfo);
+        verify(archiveBuilder).withAppVersionName(appVersionName);
+
+        verify(uploadManager).queueUpload(any(), eq(archive));
+        verify(uploadManager).processUploadFile(any());
 
         verify(notificationHelper).saveTaskNotification(taskNotificationCaptor.capture());
         verify(applicationContext).sendBroadcast(notificationCreateIntent);

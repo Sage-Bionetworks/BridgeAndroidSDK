@@ -62,7 +62,7 @@ public class ActivityManagerTest {
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
         Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
-        single.test().assertCompleted();
+        single.test().awaitTerminalEvent().assertCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
     }
@@ -75,7 +75,7 @@ public class ActivityManagerTest {
         when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
 
         Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
-        single.test().assertNotCompleted();
+        single.test().awaitTerminalEvent().assertNotCompleted();
 
         verify(activitiesApi).getScheduledActivities(offset, 0, 0);
     }
@@ -89,7 +89,7 @@ public class ActivityManagerTest {
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
         Completable completable = activityManager.updateActivities(activityList);
-        completable.test().assertCompleted();
+        completable.test().awaitTerminalEvent().assertCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
     }
@@ -102,7 +102,7 @@ public class ActivityManagerTest {
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
         Completable completable = activityManager.updateActivities(activityList);
-        completable.test().assertNotCompleted();
+        completable.test().awaitTerminalEvent().assertNotCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
     }
