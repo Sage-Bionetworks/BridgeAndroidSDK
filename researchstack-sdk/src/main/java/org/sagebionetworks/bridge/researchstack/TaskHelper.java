@@ -276,7 +276,11 @@ public class TaskHelper {
         return null;
     }
 
-    private static String bridgifyIdentifier(String identifier) {
+    /**
+     * @param identifier identifier for the result
+     * @return the filename to use for the bridge result
+     */
+    public String bridgifyIdentifier(String identifier) {
         return identifier.replace(".", "_");
     }
 

@@ -90,11 +90,12 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         NotificationHelper notificationHelper = NotificationHelper.
                 getInstance(bridgeManagerProvider.getApplicationContext());
-        this.taskHelper = new TaskHelper(
-                storageAccessWrapper, ResourceManager.getInstance(),
-                AppPrefs.getInstance(), notificationHelper, bridgeManagerProvider);
+        this.taskHelper = createTaskHelper(notificationHelper, storageAccessWrapper, bridgeManagerProvider);
     }
 
+    public TaskHelper createTaskHelper(NotificationHelper notif, StorageAccessWrapper wrapper, BridgeManagerProvider provider) {
+        return new TaskHelper(wrapper, ResourceManager.getInstance(), AppPrefs.getInstance(), notif, provider);
+    }
 
     @Override
     public Observable<DataResponse> initialize(Context context) {
