@@ -8,16 +8,25 @@ allprojects {
     jcenter()
     maven { url 'http://repo-maven.sagebridge.org/' }
     maven { url "https://jitpack.io" }
+    maven { url "https://dl.bintray.com/sage-bionetworks/researchsuite-release" }
     mavenLocal()
+    maven {
+      url 'https://maven.google.com/'
+      name 'Google'
+    }
   }
 }
 
 buildscript {
   repositories {
     jcenter()
+    maven {
+      url 'https://maven.google.com/'
+      name 'Google'
+    }
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:2.2.3'
+    classpath 'com.android.tools.build:gradle:2.3.3'
     classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
     classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
 
@@ -49,6 +58,11 @@ subprojects {
         classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
         classpath += fileTree(dir: "$buildDir/intermediates/exploded-aar/", include: "**/classes.jar")
         classpath += configurations.compile
+        classpath += files(android.libraryVariants.collect { variant ->
+          variant.javaCompiler.classpath.files
+        })
+
+
         // Exclude generated files
         exclude '**/BuildConfig.java'
         exclude '**/R.java'
@@ -63,10 +77,11 @@ subprojects {
         archives sourcesJar
       }
 
-      task findConventions << {
-        println project.getConvention()
+      task findConventions {
+        doLast {
+          println project.getConvention()
+        }
       }
-
     }
   }
 

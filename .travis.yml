@@ -11,6 +11,10 @@ android:
     - build-tools-25.0.2
     - android-25
 
+    # Room, researchsuite-sdk
+    - android-26
+    - build-tools-26.0.2
+
     # RS components
     - build-tools-25
     - android-25
