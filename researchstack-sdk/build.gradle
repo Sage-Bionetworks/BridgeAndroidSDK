@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply plugin: 'me.tatarka.retrolambda'
-apply plugin: 'com.neenbedankt.android-apt' // must come after retrolambda
 
 repositories {
   // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
@@ -50,7 +49,7 @@ dependencies {
   compile 'com.android.support:multidex:1.0.1'
 
   compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
-  apt 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
+  annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 
   testCompile 'junit:junit:4.12'
   testCompile 'org.robolectric:robolectric:3.0'
