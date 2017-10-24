@@ -6,6 +6,9 @@ allprojects {
 
   repositories {
     jcenter()
+    maven {
+      url "https://maven.google.com"
+    }
     maven { url 'http://repo-maven.sagebridge.org/' }
     maven { url "https://jitpack.io" }
     mavenLocal()
@@ -61,11 +64,6 @@ subprojects {
         archives javadocJar
         archives sourcesJar
       }
-
-      task findConventions << {
-        println project.getConvention()
-      }
-
     }
   }
 

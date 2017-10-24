@@ -8,15 +8,15 @@ repositories {
 
 // todo make pom include sage s3 repo for rest-client
 android {
-  compileSdkVersion 25
-  buildToolsVersion '25.0.2'
+  compileSdkVersion 26
+  buildToolsVersion '26.0.2'
 
   // allow inter-project inclusion of this library's debug build
   // publishNonDefault true
 
   defaultConfig {
     minSdkVersion 16
-    targetSdkVersion 25
+    targetSdkVersion 26
     versionCode 1
     versionName "1.0"
     multiDexEnabled true
@@ -45,7 +45,7 @@ dependencies {
   }
   compile project(":android-sdk")
 
-  compile 'com.android.support:appcompat-v7:25.1.0'
+  compile 'com.android.support:appcompat-v7:26.1.0'
   compile 'com.android.support:multidex:1.0.1'
 
   compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
