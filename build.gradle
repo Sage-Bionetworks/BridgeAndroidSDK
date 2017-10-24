@@ -6,6 +6,9 @@ allprojects {
 
   repositories {
     jcenter()
+    maven {
+      url "https://maven.google.com"
+    }
     maven { url 'http://repo-maven.sagebridge.org/' }
     maven { url "https://jitpack.io" }
     mavenLocal()
@@ -17,7 +20,7 @@ buildscript {
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:2.2.3'
+    classpath 'com.android.tools.build:gradle:2.3.3'
     classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
     classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
 
@@ -25,12 +28,20 @@ buildscript {
     // workaround lint bug concerning lombok
     classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a2'
 
-    classpath "com.neenbedankt.gradle.plugins:android-apt:1.4"
     // NOTE: Do not place your application dependencies here; they belong
     // in the individual module build.gradle files
   }
   // Exclude the version that the android plugin depends on.
   configurations.classpath.exclude group: 'com.android.tools.external.lombok'
+}
+
+// Turn off doclint in java 8, see: http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html
+if (JavaVersion.current().isJava8Compatible()) {
+  allprojects {
+    tasks.withType(Javadoc) {
+      options.addStringOption('Xdoclint:none', '-quiet')
+    }
+  }
 }
 
 subprojects {
@@ -62,11 +73,6 @@ subprojects {
         archives javadocJar
         archives sourcesJar
       }
-
-      task findConventions << {
-        println project.getConvention()
-      }
-
     }
   }
 
