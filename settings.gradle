@@ -1,5 +1,5 @@
 include ':backbone'
-project(':backbone').projectDir = file('ResearchStack/backbone')
+project(':backbone').projectDir = file('../ResearchStack/backbone')
 include ':skin'
-project(':skin').projectDir = file('ResearchStack/skin')
+project(':skin').projectDir = file('../ResearchStack/skin')
 include ':researchstack-sdk', ':android-sdk'

@@ -35,19 +35,15 @@ android {
         exclude 'META-INF/NOTICE'
     }
 
-    lintOptions {
-        abortOnError false
-    }
-
     resourcePrefix 'osb_'
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
 
-    compile 'com.madgag.spongycastle:core:1.54.0.0'
-    compile 'com.madgag.spongycastle:prov:1.54.0.0'
-    compile 'com.madgag.spongycastle:pkix:1.54.0.0'
+    compile 'com.madgag.spongycastle:core:1.58.0.0'
+    compile 'com.madgag.spongycastle:prov:1.58.0.0'
+    compile 'com.madgag.spongycastle:bcpkix-jdk15on:1.58.0.0'
 
     compile 'net.danlew:android.joda:2.9.4.2'
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
@@ -64,6 +60,7 @@ dependencies {
     compile 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
+        exclude group: 'com.madgag.spongycastle' //pkix renamed to bcpkix-jdk15on, causes dupes
     }
     compile 'org.sagebionetworks.bridge:rest-client:0.12.43', {
         exclude group: 'joda-time', module: 'joda-time'
@@ -84,5 +81,4 @@ dependencies {
     testCompile 'org.robolectric:robolectric:3.5'
     testCompile 'org.mockito:mockito-core:2.7.5'
 }
-// TODO: fix path when included as submodule
-//apply from: "$rootDir/gradle/artifact-deploy.gradle"
+apply from: "../gradle/artifact-deploy.gradle"
