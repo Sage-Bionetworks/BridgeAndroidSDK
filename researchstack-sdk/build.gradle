@@ -37,11 +37,10 @@ dependencies {
   api project (':skin'), {
     exclude group: 'joda-time', module: 'joda-time'
   }
-  implementation project(":android-sdk")
+  api project(":android-sdk") // to export BridgeApplication
 
   implementation 'com.android.support:appcompat-v7:26.1.0'
 
-  implementation 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
   annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 
   testImplementation  'junit:junit:4.12'
