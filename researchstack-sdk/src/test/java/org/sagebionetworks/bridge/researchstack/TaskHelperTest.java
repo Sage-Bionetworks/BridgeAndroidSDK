@@ -3,7 +3,6 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 
-import org.apache.commons.lang3.time.DateUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -257,7 +256,7 @@ public class TaskHelperTest {
                         new File(AccelerometerRecorderIdentifier + File.separator + UUID.randomUUID().toString()),
                         JSON_CONTENT_TYPE);
                 result.setContentType(JSON_CONTENT_TYPE);
-                result.setStartDate(new Date(System.currentTimeMillis() - DateUtils.MILLIS_PER_SECOND));
+                result.setStartDate(new Date(System.currentTimeMillis() - 100));
                 result.setEndDate(new Date(System.currentTimeMillis()));
                 stepResult.getResults().put(result.getIdentifier(), result);
             }
@@ -361,7 +360,7 @@ public class TaskHelperTest {
                         new File(recorderId + File.separator + UUID.randomUUID().toString()),
                         JSON_CONTENT_TYPE);
                 result.setContentType(JSON_CONTENT_TYPE);
-                result.setStartDate(new Date(System.currentTimeMillis() - DateUtils.MILLIS_PER_SECOND));
+                result.setStartDate(new Date(System.currentTimeMillis() - 100));
                 result.setEndDate(new Date(System.currentTimeMillis()));
                 stepResult.getResults().put(result.getIdentifier(), result);
             }
@@ -370,7 +369,7 @@ public class TaskHelperTest {
             result.setTimeLimit(duration);
             result.setDuration(duration);
             result.setDistanceInMeters(distanceInMeters);
-            result.setStartDate(new Date(System.currentTimeMillis() - DateUtils.MILLIS_PER_SECOND));
+            result.setStartDate(new Date(System.currentTimeMillis() - 100));
             result.setEndDate(new Date(System.currentTimeMillis()));
             stepResult.getResults().put(result.getIdentifier(), result);
 

@@ -3,12 +3,12 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 
+import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
@@ -108,7 +108,7 @@ public class TaskHelper {
 
             if (result == null) {
                 schedules.add(schedule);
-            } else if (StringUtils.isNotEmpty(schedule.scheduleString)) {
+            } else if (!Strings.isNullOrEmpty(schedule.scheduleString)) {
                 Date date = ScheduleHelper.nextSchedule(schedule.scheduleString, result.getEndDate());
                 if (date.before(new Date())) {
                     schedules.add(schedule);
@@ -132,7 +132,7 @@ public class TaskHelper {
 
     public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
         // currently we only support task json files, override this method to taskClassName
-        if (StringUtils.isEmpty(task.taskFileName)) {
+        if (Strings.isNullOrEmpty(task.taskFileName)) {
             return null;
         }
 

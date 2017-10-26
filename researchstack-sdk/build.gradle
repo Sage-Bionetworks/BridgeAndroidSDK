@@ -1,5 +1,4 @@
 apply plugin: 'com.android.library'
-apply plugin: 'me.tatarka.retrolambda'
 
 repositories {
   // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
@@ -10,9 +9,6 @@ repositories {
 android {
   compileSdkVersion 26
   buildToolsVersion '26.0.2'
-
-  // allow inter-project inclusion of this library's debug build
-  // publishNonDefault true
 
   defaultConfig {
     minSdkVersion 16
@@ -36,23 +32,23 @@ android {
 }
 
 dependencies {
-  compile fileTree(include: ['*.jar'], dir: 'libs')
-  compile project (':skin'), {
+  implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+  api project (':skin'), {
     exclude group: 'joda-time', module: 'joda-time'
   }
-  compile project(":android-sdk")
+  implementation project(":android-sdk")
 
-  compile 'com.android.support:appcompat-v7:26.1.0'
-  compile 'com.android.support:multidex:1.0.1'
+  implementation 'com.android.support:appcompat-v7:26.1.0'
 
-  compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
+  implementation 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
   annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.robolectric:robolectric:3.0'
-  testCompile 'org.mockito:mockito-core:1.10.19'
-  testCompile 'org.powermock:powermock-api-mockito:1.6.6'
-  testCompile 'org.powermock:powermock-module-junit4:1.6.6'
+  testImplementation  'junit:junit:4.12'
+  testImplementation  'org.robolectric:robolectric:3.5'
+  testImplementation  'org.mockito:mockito-core:1.10.19'
+  testImplementation  'org.powermock:powermock-api-mockito:1.6.6'
+  testImplementation  'org.powermock:powermock-module-junit4:1.6.6'
 }
 
 apply from: "../gradle/artifact-deploy.gradle"
