@@ -37,6 +37,7 @@ import static org.sagebionetworks.bridge.rest.model.UploadStatus.SUCCEEDED;
 /**
  * Created by jyliu on 3/22/2017.
  */
+@SuppressWarnings("rawtypes")
 public class UploadManagerTest {
 
     private static final String FILENAME = "archive.zip";
@@ -215,7 +216,7 @@ public class UploadManagerTest {
         doReturn(s3Service).when(spyUploadManager).getS3Service(freshSession);
         doReturn(successCall).when(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5), eq(UPLOAD_CONTENT_TYPE));
 
-        doReturn(successCall).when(api).completeUploadSession(UPLOAD_ID);
+        doReturn(successCall).when(api).completeUploadSession(eq(UPLOAD_ID), any());
 
         Completable completable = spyUploadManager.uploadToS3(uploadFile, uploadSession);
         completable.test().awaitTerminalEvent().assertCompleted();
@@ -223,5 +224,6 @@ public class UploadManagerTest {
         verify(spyUploadManager).getUploadSession(uploadFile);
         verify(spyUploadManager).getS3Service(freshSession);
         verify(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5), any());
+        verify(api).completeUploadSession(UPLOAD_ID, false);
     }
 }

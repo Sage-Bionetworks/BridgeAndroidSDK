@@ -324,7 +324,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     LOG.info("S3 upload succeeded for id: " + session.getId());
 
                     // call upload complete on a computation thread
-                    RxUtils.toBodySingle(api.completeUploadSession(session.getId()))
+                    RxUtils.toBodySingle(api.completeUploadSession(session.getId(), false))
                             .doOnSuccess(val -> {
                                 LOG.info("Call to upload complete succeeded");
                             })

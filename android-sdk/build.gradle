@@ -65,7 +65,7 @@ dependencies {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
     }
-    compile 'org.sagebionetworks.bridge:rest-client:0.12.43', {
+    compile 'org.sagebionetworks.bridge:rest-client:0.13.20', {
         exclude group: 'joda-time', module: 'joda-time'
     }
 
