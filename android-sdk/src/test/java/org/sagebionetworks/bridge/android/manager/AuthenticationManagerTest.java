@@ -204,8 +204,15 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
+        ForConsentedUsersApi mockSignedInApi = mock(ForConsentedUsersApi.class);
+        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
+                .thenReturn(mockSignedInApi);
+
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
+
+        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
+        assertSame(mockSignedInApi, apiResult);
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -213,6 +220,7 @@ public class AuthenticationManagerTest {
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
 
         verify(authenticationApi).signIn(signIn);
+        verify(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn));
     }
 
     @Test
@@ -309,9 +317,15 @@ public class AuthenticationManagerTest {
 
         when(authenticationApi.signOut()).thenReturn(messageCall);
 
+        ForConsentedUsersApi mockUnauthenticatedApi = mock(ForConsentedUsersApi.class);
+        when(apiClientProvider.getClient(ForConsentedUsersApi.class)).thenReturn(mockUnauthenticatedApi);
+
         spyAuthenticationManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
+        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
+        assertSame(mockUnauthenticatedApi, apiResult);
 
+        verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
         verify(accountDAO).setSignIn(null);
         verify(accountDAO).setStudyParticipant(null);
         verify(accountDAO).setUserSessionInfo(null);
@@ -333,7 +347,7 @@ public class AuthenticationManagerTest {
     }
 
     @Test
-    public void getApi_NullSignIn() throws Exception {
+    public void getApi_NewInstanceWithNullSignIn() throws Exception {
         ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
 
         when(accountDAO.getSignIn()).thenReturn(null);
@@ -350,7 +364,7 @@ public class AuthenticationManagerTest {
     }
 
     @Test
-    public void getApi_WithSignIn() throws Exception {
+    public void getApi_NewInstanceWithSignIn() throws Exception {
         ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
 
         SignIn signIn = new SignIn();
@@ -358,8 +372,7 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
                 .thenReturn(forConsentedUsersApi);
         initSpyAuthenticationManager();
-
-
+        
         ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
         assertSame(forConsentedUsersApi, result);
 
