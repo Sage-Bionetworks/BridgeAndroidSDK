@@ -14,6 +14,7 @@ import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -70,7 +71,7 @@ public class UploadManagerTest {
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApi()).thenReturn(api);
+        when(authenticationManager.getApiReference()).thenReturn(new AtomicReference<>(api));
 
         spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO));
 

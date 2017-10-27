@@ -15,6 +15,8 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.StorageAccess;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
@@ -58,6 +60,7 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PreferenceManager.class, Looper.class})
 public class BridgeDataProviderTest {
+
     private DataProvider dataProvider;
     @Mock
     private ApiClientProvider apiClientProvider;
@@ -234,6 +237,13 @@ public class BridgeDataProviderTest {
         TaskResult consentResult = mock(TaskResult.class);
         dataProvider.saveConsent(context, consentResult);
 
+    }
+
+    @Test
+    public void saveLocalConsent_scopeOnly() throws Exception {
+        ConsentSignatureBody body = new ConsentSignatureBody();
+        body.scope = SharingScope.ALL_QUALIFIED_RESEARCHERS.toString();
+        dataProvider.saveLocalConsent(context, body);
     }
 
     @Test

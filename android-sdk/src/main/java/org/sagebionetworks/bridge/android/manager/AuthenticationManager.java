@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
 import rx.Observable;
@@ -60,6 +61,8 @@ public class AuthenticationManager {
     private final List<AuthenticationEventListener> listeners;
     @NonNull
     private final ApiClientProvider apiClientProvider;
+    @NonNull
+    private final AtomicReference<ForConsentedUsersApi> forConsentedUsersApiAtomicReference;
 
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider
             apiClientProvider,
@@ -73,7 +76,15 @@ public class AuthenticationManager {
         this.accountDAO = accountDAO;
         this.consentDAO = consentDAO;
         this.apiClientProvider = apiClientProvider;
+
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+
+        SignIn signIn = accountDAO.getSignIn();
+        ForConsentedUsersApi api = signIn == null ?
+                apiClientProvider.getClient(ForConsentedUsersApi.class) :
+                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
+
+        this.forConsentedUsersApiAtomicReference = new AtomicReference<>(api);
         listeners = Lists.newArrayList();
     }
 
@@ -130,11 +141,15 @@ public class AuthenticationManager {
 
         return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
                 .doOnSuccess(message -> {
-                    accountDAO.setSignIn(
-                            new SignIn()
-                                    .study(config.getStudyId())
-                                    .email(signUp.getEmail())
-                                    .password(signUp.getPassword()));
+                    SignIn signIn = new SignIn()
+                            .study(config.getStudyId())
+                            .email(signUp.getEmail())
+                            .password(signUp.getPassword());
+
+                    accountDAO.setSignIn(signIn);
+                    forConsentedUsersApiAtomicReference.set(
+                            apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+                    );
 
                     StudyParticipant participant = new StudyParticipant();
                     participant.email(signUp.getEmail())
@@ -198,6 +213,9 @@ public class AuthenticationManager {
                 .retryWhen(retrySignInForConsentOnce())
                 .toSingle()
                 .doOnSuccess(userSessionInfo -> {
+                    forConsentedUsersApiAtomicReference.set(
+                            apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+                    );
                     accountDAO.setUserSessionInfo(userSessionInfo);
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
@@ -208,6 +226,9 @@ public class AuthenticationManager {
                 }).doOnError(throwable -> {
                     // a 412 is a successful signin
                     if (throwable instanceof ConsentRequiredException) {
+                        forConsentedUsersApiAtomicReference.set(
+                                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+                        );
                         accountDAO.setUserSessionInfo(
                                 ((ConsentRequiredException) throwable).getSession());
                         accountDAO.setStudyParticipant(
@@ -271,15 +292,20 @@ public class AuthenticationManager {
             logger.debug("Did not find saved SignIn credentials prior to calling sign out API");
         }
 
+        // once signOut method is called, prevent usage of API, regardless of success of bridge call
+        forConsentedUsersApiAtomicReference.set(
+                apiClientProvider.getClient(ForConsentedUsersApi.class)
+        );
+
+        for (AuthenticationEventListener listener : listeners) {
+            listener.onSignedOut(email);
+        }
+
         return RxUtils.toBodySingle(authenticationApi.signOut())
                 .doOnSuccess(message -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setUserSessionInfo(null);
                     accountDAO.setStudyParticipant(null);
-
-                    for (AuthenticationEventListener listener : listeners) {
-                        listener.onSignedOut(email);
-                    }
                 }).toCompletable();
     }
 
@@ -302,18 +328,14 @@ public class AuthenticationManager {
     /**
      * Get access to bridge API for currently authenticated client.
      *
-     * @return API returns access to bridge that always uses the credentials currently held by
-     * AuthenticationManager
+     * @return returns an AtomicReference that returns API instance which updates automatically to
+     * use the current credentials bound to this class
      */
     @NonNull
-    public ForConsentedUsersApi getApi() {
-        logger.debug("getApi called");
+    public AtomicReference<ForConsentedUsersApi> getApiReference() {
+        logger.debug("getApiReference called");
 
-        SignIn signIn = accountDAO.getSignIn();
-        if (signIn == null) {
-            return apiClientProvider.getClient(ForConsentedUsersApi.class);
-        }
-        return apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
+        return forConsentedUsersApiAtomicReference;
     }
 
     /**
@@ -336,7 +358,8 @@ public class AuthenticationManager {
 
         // TODO: a way to distinguish if session is null because we haven't signed on, or if it
         // was invalidated
-        UserSessionInfoProvider sessionProvider = apiClientProvider.getUserSessionInfoProvider(accountDAO.getSignIn());
+        UserSessionInfoProvider sessionProvider = apiClientProvider.getUserSessionInfoProvider
+                (accountDAO.getSignIn());
         if (sessionProvider != null) {
             UserSessionInfo session = sessionProvider.getSession();
 
@@ -359,7 +382,8 @@ public class AuthenticationManager {
         // no-op call to the participant update API, we'll getConsent a recomputed session
         // session interceptor will update itself with the session in the response
         return RxUtils.toBodySingle(
-                getApi().updateUsersParticipantRecord(new StudyParticipant()));
+                getApiReference().get()
+                        .updateUsersParticipantRecord(new StudyParticipant()));
     }
 
     public void addEventListener(AuthenticationEventListener listener) {
@@ -503,7 +527,7 @@ public class AuthenticationManager {
             ConsentSignature consent) {
         return Single.just(consent)
                 .flatMap(consentSignature -> RxUtils.toBodySingle(
-                        getApi()
+                        getApiReference().get()
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
@@ -575,8 +599,9 @@ public class AuthenticationManager {
     public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(getApi().getConsentSignature
-                (subpopulationGuid))
+        return RxUtils.toBodySingle(getApiReference().get()
+                .getConsentSignature
+                        (subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
                         return Single.just(consentDAO.getConsent(subpopulationGuid));
@@ -606,7 +631,7 @@ public class AuthenticationManager {
     public Completable withdrawAll(@Nullable String reason) {
 
         return RxUtils.toBodySingle(
-                getApi().withdrawAllConsents(
+                getApiReference().get().withdrawAllConsents(
                         new Withdrawal().reason(reason)
                 ))
                 .toCompletable();
@@ -625,7 +650,7 @@ public class AuthenticationManager {
         checkNotNull(subpopulationGuid);
 
         return RxUtils.toBodySingle(
-                getApi().withdrawConsentFromSubpopulation
+                getApiReference().get().withdrawConsentFromSubpopulation
                         (subpopulationGuid, new Withdrawal().reason(reason)))
                 .toCompletable();
     }
