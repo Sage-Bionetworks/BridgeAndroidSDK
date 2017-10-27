@@ -13,6 +13,7 @@ import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.UserSessionInfoProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
@@ -59,8 +60,6 @@ public class AuthenticationManager {
     private final List<AuthenticationEventListener> listeners;
     @NonNull
     private final ApiClientProvider apiClientProvider;
-    @NonNull
-    private final ProxiedForConsentedUsersApi proxiedForConsentedUsersApi;
 
     public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider
             apiClientProvider,
@@ -75,7 +74,6 @@ public class AuthenticationManager {
         this.consentDAO = consentDAO;
         this.apiClientProvider = apiClientProvider;
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
-        this.proxiedForConsentedUsersApi = new ProxiedForConsentedUsersApi(this);
         listeners = Lists.newArrayList();
     }
 
@@ -311,19 +309,11 @@ public class AuthenticationManager {
     public ForConsentedUsersApi getApi() {
         logger.debug("getApi called");
 
-        return proxiedForConsentedUsersApi;
-    }
-
-    /**
-     * @return api access for currently logged in participant
-     */
-    @NonNull
-    ForConsentedUsersApi getRawApi() {
         SignIn signIn = accountDAO.getSignIn();
         if (signIn == null) {
             return apiClientProvider.getClient(ForConsentedUsersApi.class);
         }
-        return apiClientProvider.getClient(ForConsentedUsersApi.class, accountDAO.getSignIn());
+        return apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
     }
 
     /**
@@ -346,12 +336,14 @@ public class AuthenticationManager {
 
         // TODO: a way to distinguish if session is null because we haven't signed on, or if it
         // was invalidated
-        UserSessionInfo session = apiClientProvider.getUserSessionInfoProvider()
-                .retrieveCachedSession(accountDAO.getSignIn());
+        UserSessionInfoProvider sessionProvider = apiClientProvider.getUserSessionInfoProvider(accountDAO.getSignIn());
+        if (sessionProvider != null) {
+            UserSessionInfo session = sessionProvider.getSession();
 
-        if (session != null) {
-            accountDAO.setUserSessionInfo(session);
-            return session;
+            if (session != null) {
+                accountDAO.setUserSessionInfo(session);
+                return session;
+            }
         }
 
         return accountDAO.getUserSessionInfo();
@@ -507,11 +499,11 @@ public class AuthenticationManager {
         return uploadConsent(subpopulationGuid, consent);
     }
 
-    Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull
+    private Single<UserSessionInfo> uploadConsent(@NonNull String subpopulationGuid, @NonNull
             ConsentSignature consent) {
         return Single.just(consent)
                 .flatMap(consentSignature -> RxUtils.toBodySingle(
-                        proxiedForConsentedUsersApi
+                        getApi()
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
@@ -525,11 +517,10 @@ public class AuthenticationManager {
     public Observable<UserSessionInfo> uploadLocalConsents() {
         Observable<String> subpopulations = Observable.from(consentDAO.listConsents()).cache();
         return subpopulations
-                .map(subpop -> consentDAO.getConsent(subpop))
-                .zipWith(subpopulations, (consentSignature, subpopulation) -> {
-                    return uploadConsent(subpopulation, consentSignature);
-                })
-                .flatMap(i -> i.toObservable());
+                .map(consentDAO::getConsent)
+                .zipWith(subpopulations, (consentSignature, subpopulation) ->
+                        uploadConsent(subpopulation, consentSignature))
+                .flatMap(Single::toObservable);
     }
 
     /**
@@ -584,7 +575,7 @@ public class AuthenticationManager {
     public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(proxiedForConsentedUsersApi.getConsentSignature
+        return RxUtils.toBodySingle(getApi().getConsentSignature
                 (subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof EntityNotFoundException) {
@@ -615,7 +606,7 @@ public class AuthenticationManager {
     public Completable withdrawAll(@Nullable String reason) {
 
         return RxUtils.toBodySingle(
-                proxiedForConsentedUsersApi.withdrawAllConsents(
+                getApi().withdrawAllConsents(
                         new Withdrawal().reason(reason)
                 ))
                 .toCompletable();
@@ -634,7 +625,7 @@ public class AuthenticationManager {
         checkNotNull(subpopulationGuid);
 
         return RxUtils.toBodySingle(
-                proxiedForConsentedUsersApi.withdrawConsentFromSubpopulation
+                getApi().withdrawConsentFromSubpopulation
                         (subpopulationGuid, new Withdrawal().reason(reason)))
                 .toCompletable();
     }
