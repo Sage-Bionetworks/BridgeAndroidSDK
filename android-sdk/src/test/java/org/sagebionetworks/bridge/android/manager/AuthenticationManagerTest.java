@@ -220,7 +220,7 @@ public class AuthenticationManagerTest {
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
 
         verify(authenticationApi).signIn(signIn);
-        verify(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn));
+        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
     }
 
     @Test
@@ -372,7 +372,7 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
                 .thenReturn(forConsentedUsersApi);
         initSpyAuthenticationManager();
-        
+
         ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
         assertSame(forConsentedUsersApi, result);
 
