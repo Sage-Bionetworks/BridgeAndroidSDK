@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.VisibleForTesting;
 
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
@@ -12,16 +13,13 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
-import org.researchstack.backbone.ui.step.layout.ConsentSignatureStepLayout;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
 import org.researchstack.skin.model.TaskModel;
-import org.researchstack.skin.task.ConsentTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
@@ -150,17 +148,6 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @NonNull
-    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String
-            name,
-                                               @NonNull LocalDate birthdate,
-                                               @Nullable String base64Image, @Nullable String
-                                                       imageMimeType,
-                                               @NonNull SharingScope sharingScope) {
-        return authenticationManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
-                imageMimeType, sharingScope);
-    }
-
-    @NonNull
     public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull
             ConsentSignature consentSignature) {
         return giveConsent(subpopulationGuid,
@@ -172,10 +159,22 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @NonNull
+    public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid,
+                                               @NonNull String name,
+                                               @NonNull LocalDate birthdate,
+                                               @Nullable String base64Image,
+                                               @Nullable String imageMimeType,
+                                               @NonNull SharingScope sharingScope) {
+        return authenticationManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
+                imageMimeType, sharingScope);
+    }
+
+
+    @NonNull
     public Single<ConsentSignature> getConsent(@NonNull String subpopulation) {
         checkNotNull(subpopulation);
 
-        return authenticationManager.getConsentSignature(subpopulation);
+        return authenticationManager.getConsent(subpopulation);
     }
 
     // TODO: getConsent rid of Consent methods below on the interface. let ConsentManager handle the
@@ -185,34 +184,24 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
         ConsentSignatureBody consent = createConsentSignatureBody(
-                authenticationManager.getConsentSync(bridgeConfig.getStudyId()));
+                authenticationManager.retrieveLocalConsent(bridgeConfig.getStudyId()));
         logger.debug("loadLocalConsent called, got: ");
         return consent;
     }
 
     @Override
     public void saveConsent(Context context, @NonNull TaskResult consentResult) {
-        logger.warn("saveConsent called -- DEPRECATED");
-        giveConsent(bridgeConfig.getStudyId(), createConsentSignature(consentResult))
-                .toBlocking().value();
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void saveLocalConsent(Context context, ConsentSignatureBody signatureBody) {
-        logger.debug("saveLocalConsent called for: " + signatureBody);
-        LocalDate birthdate = null;
-        if (signatureBody.birthdate != null) {
-            birthdate = LocalDate.fromDateFields(signatureBody.birthdate);
-        }
-        authenticationManager.giveConsentSync(bridgeConfig.getStudyId(),
-                signatureBody.name,
-                birthdate,
-                signatureBody.imageData,
-                signatureBody.imageMimeType,
-                toSharingScope(signatureBody.scope));
+        ConsentSignature consentSignature = createConsentSignature(signatureBody);
+        saveLocalConsent(consentSignature);
     }
 
-    private SharingScope toSharingScope(String sharingScope) {
+    @VisibleForTesting
+    SharingScope toSharingScope(String sharingScope) {
         SharingScope scopeEnum = SharingScope.NO_SHARING;
         for (SharingScope scope : SharingScope.values()) {
             if (scope.toString().equals(sharingScope)) {
@@ -223,8 +212,9 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @Nullable
-    protected ConsentSignature createConsentSignature(@Nullable ConsentSignatureBody
-                                                              consentSignatureBody) {
+    @VisibleForTesting
+    ConsentSignature createConsentSignature(@Nullable ConsentSignatureBody
+                                                    consentSignatureBody) {
         if (consentSignatureBody == null) {
             return null;
         }
@@ -241,8 +231,9 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @Nullable
-    protected ConsentSignatureBody createConsentSignatureBody(@Nullable ConsentSignature
-                                                                      consentSignature) {
+    @VisibleForTesting
+    ConsentSignatureBody createConsentSignatureBody(@Nullable ConsentSignature
+                                                            consentSignature) {
         if (consentSignature == null) {
             return null;
         }
@@ -258,45 +249,13 @@ public abstract class BridgeDataProvider extends DataProvider {
                         null);
     }
 
-    @NonNull
-    protected ConsentSignature createConsentSignature(@NonNull TaskResult consentResult) {
-        StepResult<StepResult> formResult =
-                (StepResult<StepResult>) consentResult.getStepResult(ConsentTask.ID_FORM);
-
-        String sharingScope = (String) consentResult.getStepResult(ConsentTask.ID_SHARING)
-                .getResult();
-
-        String fullName =
-                (String) formResult.getResultForIdentifier(ConsentTask.ID_FORM_NAME).getResult();
-
-        Long birthdateInMillis =
-                (Long) formResult.getResultForIdentifier(ConsentTask.ID_FORM_DOB).getResult();
-
-        String base64Image = (String) consentResult.getStepResult(ConsentTask.ID_SIGNATURE)
-                .getResultForIdentifier(ConsentSignatureStepLayout.KEY_SIGNATURE);
-
-        String signatureDate = (String) consentResult.getStepResult(ConsentTask.ID_SIGNATURE)
-                .getResultForIdentifier(ConsentSignatureStepLayout.KEY_SIGNATURE_DATE);
-
-        // Save Consent Information
-        // User is not signed in yet, so we need to save consent info to disk for later upload
-        return new ConsentSignature()
-                .name(fullName)
-                .birthdate(new LocalDate(birthdateInMillis))
-                .imageData(base64Image)
-                .imageMimeType("image/png")
-                .scope(SharingScope.valueOf(sharingScope));
-    }
-
     @Override
     public void uploadConsent(Context context, @NonNull TaskResult consentResult) {
-        giveConsentSync(createConsentSignature(consentResult));
-        uploadConsent(bridgeConfig.getStudyId(),
-                createConsentSignature(consentResult));
+        throw new UnsupportedOperationException();
     }
 
-    private void giveConsentSync(@NonNull ConsentSignature consentSignature) {
-        authenticationManager.giveConsentSync(bridgeConfig.getStudyId(),
+    private void saveLocalConsent(@NonNull ConsentSignature consentSignature) {
+        authenticationManager.storeLocalConsent(bridgeConfig.getStudyId(),
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
                 consentSignature.getImageData(),

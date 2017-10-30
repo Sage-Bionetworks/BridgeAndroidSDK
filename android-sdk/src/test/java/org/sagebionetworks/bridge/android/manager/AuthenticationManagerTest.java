@@ -121,10 +121,18 @@ public class AuthenticationManagerTest {
         Call<Message> messageCall = successCall(message);
         when(authenticationApi.signUp(signUp)).thenReturn(messageCall);
 
+        SignIn equivalentSignIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
+        ForConsentedUsersApi api = mock(ForConsentedUsersApi.class);
+        when(apiClientProvider.getClient(ForConsentedUsersApi.class, equivalentSignIn)).thenReturn(api);
+
         Completable completable = spyAuthenticationManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
+        ForConsentedUsersApi resultingApi = spyAuthenticationManager.getApiReference().get();
+        assertSame(api, resultingApi);
+
+        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, equivalentSignIn);
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(argThat(signIn -> matches(signUp, signIn)));
         verify(accountDAO).setStudyParticipant(argThat(participant -> matches(signUp, participant)));
@@ -603,7 +611,7 @@ public class AuthenticationManagerTest {
                 .scope(sharingScope);
 
         // consent should get stored locally
-        doReturn(sig).when(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
+        doReturn(sig).when(spyAuthenticationManager).storeLocalConsent(SUBPOPULATION_GUID,
                 name,
                 birthdate,
                 imgString,
@@ -623,7 +631,7 @@ public class AuthenticationManagerTest {
                 birthdate, imgString, mimeType, sharingScope);
         assertSame(userSessionInfo, sessionSingle.toBlocking().value());
 
-        verify(spyAuthenticationManager).giveConsentSync(SUBPOPULATION_GUID,
+        verify(spyAuthenticationManager).storeLocalConsent(SUBPOPULATION_GUID,
                 name,
                 birthdate,
                 imgString,
@@ -672,7 +680,7 @@ public class AuthenticationManagerTest {
         // Make consent signature.
         ConsentSignature sig = new ConsentSignature().name("Eggplant McTester");
 
-        // mock api.getConsentSignature()
+        // mock api.getConsent()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
         apiAtomicReference.set(mockApi);
 
@@ -680,7 +688,7 @@ public class AuthenticationManagerTest {
         when(mockApi.getConsentSignature(SUBPOPULATION_GUID)).thenReturn(mockCall);
 
         // execute and validate
-        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsentSignature(SUBPOPULATION_GUID);
+        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsent(SUBPOPULATION_GUID);
         assertSame(sig, sigSingle.toBlocking().value());
 
         verify(mockApi).getConsentSignature(SUBPOPULATION_GUID);
@@ -692,7 +700,7 @@ public class AuthenticationManagerTest {
         // Make consent signature.
         ConsentSignature sig = new ConsentSignature().name("Eggplant McTester");
 
-        // mock api.getConsentSignature() - This throws a 404. We fall back to the local consent in consentDAO.
+        // mock api.getConsent() - This throws a 404. We fall back to the local consent in consentDAO.
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
         apiAtomicReference.set(mockApi);
 
@@ -703,7 +711,7 @@ public class AuthenticationManagerTest {
         when(consentDAO.getConsent(SUBPOPULATION_GUID)).thenReturn(sig);
 
         // execute and validate
-        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsentSignature(SUBPOPULATION_GUID);
+        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsent(SUBPOPULATION_GUID);
         assertSame(sig, sigSingle.toBlocking().value());
 
         verify(mockApi).getConsentSignature(SUBPOPULATION_GUID);
@@ -712,7 +720,7 @@ public class AuthenticationManagerTest {
 
     @Test
     public void getConsentSignature_500InternalServerError() throws Exception {
-        // mock api.getConsentSignature()
+        // mock api.getConsent()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
         apiAtomicReference.set(mockApi);
 
@@ -720,7 +728,7 @@ public class AuthenticationManagerTest {
         when(mockApi.getConsentSignature(SUBPOPULATION_GUID)).thenReturn(mockCall);
 
         // execute and validate
-        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsentSignature(SUBPOPULATION_GUID);
+        Single<ConsentSignature> sigSingle = spyAuthenticationManager.getConsent(SUBPOPULATION_GUID);
         sigSingle.test().awaitTerminalEvent().assertError(BridgeServiceException.class);
 
         verify(mockApi).getConsentSignature(SUBPOPULATION_GUID);

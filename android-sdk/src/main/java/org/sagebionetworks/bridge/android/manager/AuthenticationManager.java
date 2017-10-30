@@ -328,6 +328,12 @@ public class AuthenticationManager {
     /**
      * Get access to bridge API for currently authenticated client.
      *
+     * ForConsentedUserApi instances are bound to a specific set of credentials, and changes due to
+     * signIn or signOut result in a new ForConsentedUserApi instance.
+     *
+     * Callers should retain the AtomicReference and retrieve the API for use and should not cache
+     * or store an instance of the API itself.
+     *
      * @return returns an AtomicReference that returns API instance which updates automatically to
      * use the current credentials bound to this class
      */
@@ -512,7 +518,7 @@ public class AuthenticationManager {
                                                @Nullable String base64Image, @Nullable String
                                                        imageMimeType,
                                                @NonNull SharingScope sharingScope) {
-        ConsentSignature consent = giveConsentSync(
+        ConsentSignature consent = storeLocalConsent(
                 subpopulationGuid,
                 name,
                 birthdate,
@@ -548,8 +554,7 @@ public class AuthenticationManager {
     }
 
     /**
-     * Gives consent synchronously without making network call on current thread. Upload to Bridge
-     * will happen in the background, eventually.
+     * Stores a consent signature locally.
      *
      * @param subpopulationGuid guid for the subpopulation of the consent (required)
      * @param name              participant's full name (required)
@@ -559,11 +564,11 @@ public class AuthenticationManager {
      * @param sharingScope      participant's sharing scope for the study (required)
      * @return the resulting consentSignature
      */
-    public ConsentSignature giveConsentSync(@NonNull String subpopulationGuid, @NonNull String name,
-                                            @NonNull LocalDate birthdate,
-                                            @Nullable String base64Image,
-                                            @Nullable String imageMimeType,
-                                            @NonNull SharingScope sharingScope) {
+    public ConsentSignature storeLocalConsent(@NonNull String subpopulationGuid, @NonNull String name,
+                                              @NonNull LocalDate birthdate,
+                                              @Nullable String base64Image,
+                                              @Nullable String imageMimeType,
+                                              @NonNull SharingScope sharingScope) {
         checkNotNull(subpopulationGuid);
         checkNotNull(name);
         checkNotNull(birthdate);
@@ -576,13 +581,20 @@ public class AuthenticationManager {
                 .imageMimeType(imageMimeType)
                 .scope(sharingScope);
 
-        storeConsentSignatureLocally(subpopulationGuid, consentSignature);
+        storeLocalConsent(subpopulationGuid, consentSignature);
 
         return consentSignature;
     }
 
-    private void storeConsentSignatureLocally(@NonNull String subpopulationGuid,
-                                              @NonNull ConsentSignature consentSignature) {
+    /**
+     * Stores a consent signature locally. This method allows for saving a partially complete
+     * ConsentSignature, i.e. allows null fields.
+     *
+     * @param subpopulationGuid guid for the subpopulation of the consent (required)
+     * @param consentSignature  consent signature object
+     */
+    public void storeLocalConsent(@NonNull String subpopulationGuid,
+                                  @NonNull ConsentSignature consentSignature) {
         checkNotNull(subpopulationGuid);
         checkNotNull(consentSignature);
 
@@ -596,7 +608,7 @@ public class AuthenticationManager {
      * @return participant's previously given consent
      */
     @NonNull
-    public Single<ConsentSignature> getConsentSignature(@NonNull String subpopulationGuid) {
+    public Single<ConsentSignature> getConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
         return RxUtils.toBodySingle(getApiReference().get()
@@ -615,7 +627,7 @@ public class AuthenticationManager {
      * @return participant's previously given consent from local cache
      */
     @Nullable
-    public ConsentSignature getConsentSync(@NonNull String subpopulationGuid) {
+    public ConsentSignature retrieveLocalConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
         return consentDAO.getConsent(subpopulationGuid);
