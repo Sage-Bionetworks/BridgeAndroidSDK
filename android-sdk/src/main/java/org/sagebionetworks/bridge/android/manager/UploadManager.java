@@ -32,6 +32,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -48,10 +49,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Manages upload of Archive files to Bridge for processing.
  * <p>
- * To upload an Archive for processing, an UploadSession is requested from Bridge. This UploadSession
- * contains a pre-signed URL to which the Archive should be uploaded via a PUT request. After upload,
- * optionally call to notify Bridge of the completion of upload, if this call is not made, Bridge
- * will be notified later by a server-side background process.
+ * To upload an Archive for processing, an UploadSession is requested from Bridge. This
+ * UploadSession contains a pre-signed URL to which the Archive should be uploaded via a PUT
+ * request. After upload, optionally call to notify Bridge of the completion of upload, if this
+ * call is not made, Bridge will be notified later by a server-side background process.
  * <p>
  * When Bridge is notified of the completion of an upload, it will run validation on the Archive.
  * The validation includes steps such as decryption, unzipping, parsing JSON files, and schema
@@ -68,7 +69,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     // minimum number of minutes from now an expiration should be
     private static final int UPLOAD_EXPIRY_WINDOW_MINUTES = 30;
 
-    private final ForConsentedUsersApi api;
+    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
     private final AndroidStudyUploadEncryptor encryptor;
     private final UploadDAO uploadDAO;
     private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
@@ -79,7 +80,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
     public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
-        this.api = authenticationManager.getApi();
+        this.apiAtomicReference = authenticationManager.getApiReference();
         authenticationManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
@@ -94,7 +95,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     }
 
     /**
-     * Persists the archive on disk and add it to the queue of pending uploads, runs in an IO thread.
+     * Persists the archive on disk and add it to the queue of pending uploads, runs in an IO
+     * thread.
      *
      * @param filename filename for the archive
      * @param archive  archive to be queued
@@ -131,7 +133,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
      * to add UploadFiles for this method to operate on.
      * <p>
      * Retrieves cached UploadSession (if one exists) for each UploadFile and perform the next step
-     * in the upload flow by calling this{@link #processUploadForCachedSession(UploadFile, UploadSession)}.
+     * in the upload flow by calling
+     * this{@link #processUploadForCachedSession(UploadFile, UploadSession)}.
      *
      * @return Observable with information on if the upload was successful or not
      */
@@ -224,7 +227,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     @NonNull
     Completable processUploadForValidationStatus(@NonNull UploadFile uploadFile,
                                                  @NonNull UploadSession uploadSession,
-                                                 @NonNull UploadValidationStatus uploadValidationStatus) {
+                                                 @NonNull UploadValidationStatus
+                                                         uploadValidationStatus) {
         checkNotNull(uploadFile, "uploadFile cannot be null");
         checkNotNull(uploadSession, "uploadSession cannot be null");
         checkNotNull(uploadValidationStatus, "uploadValidationSession cannot be null");
@@ -282,7 +286,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     Single<UploadValidationStatus> getUploadValidationStatus(@NonNull String uploadId) {
         checkNotNull(uploadId, "uploadId required");
 
-        return RxUtils.toBodySingle(api.getUploadStatus(uploadId));
+        return RxUtils.toBodySingle(apiAtomicReference.get().getUploadStatus(uploadId));
     }
 
     /**
@@ -324,7 +328,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     LOG.info("S3 upload succeeded for id: " + session.getId());
 
                     // call upload complete on a computation thread
-                    RxUtils.toBodySingle(api.completeUploadSession(session.getId(), false))
+                    RxUtils.toBodySingle(apiAtomicReference.get()
+                            .completeUploadSession(session.getId(), false))
                             .doOnSuccess(val -> {
                                 LOG.info("Call to upload complete succeeded");
                             })
@@ -340,14 +345,16 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     @NonNull
     Single<UploadSession> getUploadSession(UploadFile uploadFile) {
         return RxUtils.toBodySingle(
-                api.requestUploadSession(
-                        new UploadRequest()
-                                .name(uploadFile.filename)
-                                .contentType(uploadFile.contentType)
-                                .contentLength(uploadFile.fileLength)
-                                .contentMd5(uploadFile.md5Hash)))
+                apiAtomicReference.get()
+                        .requestUploadSession(
+                                new UploadRequest()
+                                        .name(uploadFile.filename)
+                                        .contentType(uploadFile.contentType)
+                                        .contentLength(uploadFile.fileLength)
+                                        .contentMd5(uploadFile.md5Hash)))
                 .doOnSuccess((uploadSession) -> {
-                    LOG.info("Received processUploadFiles session with id: " + uploadSession.getId());
+                    LOG.info("Received processUploadFiles session with id: " + uploadSession
+                            .getId());
                     uploadDAO.putUploadSession(uploadFile.filename, uploadSession);
                 });
     }
@@ -402,7 +409,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
     File getFile(String filename) {
         return new File(BridgeManagerProvider.getInstance()
-                .getApplicationContext().getFilesDir().getAbsolutePath() + File.separator + filename);
+                .getApplicationContext().getFilesDir().getAbsolutePath() + File.separator +
+                filename);
     }
 
     S3Service getS3Service(UploadSession uploadSession) {

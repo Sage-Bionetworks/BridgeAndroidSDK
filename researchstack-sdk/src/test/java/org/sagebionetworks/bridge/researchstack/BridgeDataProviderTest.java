@@ -5,6 +5,8 @@ import android.os.Looper;
 import android.preference.PreferenceManager;
 
 import com.google.common.collect.ImmutableMap;
+import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -16,6 +18,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
@@ -34,19 +37,19 @@ import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
 
-import retrofit2.Call;
-import retrofit2.Response;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.same;
@@ -137,7 +140,6 @@ public class BridgeDataProviderTest {
     }
 
     @Test
-    @Ignore
     public void testInitialize() {
         dataProvider.initialize(context).test().assertCompleted();
     }
@@ -155,11 +157,7 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testSignIn() throws IOException {
-        Call<UserSessionInfo> sessionCall = mock(Call.class);
         UserSessionInfo session = mock(UserSessionInfo.class);
-
-        when(sessionCall.clone()).thenReturn(sessionCall);
-        when(sessionCall.execute()).thenReturn(Response.success(session));
 
         when(authenticationManager.signIn("email", "password")).thenReturn(Single.just(session));
         Observable<DataResponse> completable = dataProvider.signIn(context, "email", "password");
@@ -229,19 +227,76 @@ public class BridgeDataProviderTest {
         verify(authenticationManager).withdrawAll(reasonString);
     }
 
-    @Ignore
     @Test
-    public void testUploadConsent() {
-        TaskResult consentResult = mock(TaskResult.class);
-        dataProvider.uploadConsent(context, consentResult);
+    public void saveLocalConsent() throws Exception {
+        ConsentSignatureBody body = new ConsentSignatureBody();
+        body.birthdate = DateTime.now().toDate();
+        body.scope = SharingScope.ALL_QUALIFIED_RESEARCHERS.toString();
+        body.imageData = "some image Data";
+        body.imageMimeType = "image mime type";
+        body.name = "name";
+
+        when(bridgeConfig.getStudyId()).thenReturn("studyId");
+
+        dataProvider.saveLocalConsent(context, body);
+
+        verify(bridgeConfig).getStudyId();
+        verify(authenticationManager).storeLocalConsent(
+                "studyId",
+                body.name,
+                new LocalDate(body.birthdate),
+                body.imageData,
+                body.imageMimeType,
+                SharingScope.ALL_QUALIFIED_RESEARCHERS
+        );
     }
 
-    @Ignore
     @Test
-    public void testSaveConsent() {
-        TaskResult consentResult = mock(TaskResult.class);
-        dataProvider.saveConsent(context, consentResult);
+    public void saveLocalConsent_scopeOnly() throws Exception {
+        ConsentSignatureBody body = new ConsentSignatureBody();
+        body.scope = SharingScope.ALL_QUALIFIED_RESEARCHERS.toString();
+        // no exception when saving only the scope
+        dataProvider.saveLocalConsent(context, body);
+    }
 
+    @Test
+    public void toSharingScope() {
+        assertSharingScope("no_sharing", SharingScope.NO_SHARING);
+        assertSharingScope("all_qualified_researchers", SharingScope.ALL_QUALIFIED_RESEARCHERS);
+        assertSharingScope("sponsors_and_partners", SharingScope.SPONSORS_AND_PARTNERS);
+    }
+
+    private void assertSharingScope(String jsonKey, SharingScope expectedScope) {
+        SharingScope scopeResult = ((BridgeDataProvider) dataProvider).toSharingScope(jsonKey);
+        assertSame(expectedScope, scopeResult);
+    }
+
+    @Test
+    public void createConsentSignature_createConsentSignatureBody() {
+        ConsentSignature consentSignature = new ConsentSignature()
+                .name("name")
+                .birthdate(LocalDate.now())
+                .imageData("image")
+                .imageMimeType("image mime type")
+                .scope(SharingScope.SPONSORS_AND_PARTNERS);
+
+        BridgeDataProvider bridgeDataProvider = ((BridgeDataProvider) dataProvider);
+
+        // test functions that are inverses of each other
+        ConsentSignatureBody csb = bridgeDataProvider.createConsentSignatureBody(consentSignature);
+        ConsentSignature resultConsentSignature = bridgeDataProvider.createConsentSignature(csb);
+
+        assertEquals(consentSignature, resultConsentSignature);
+    }
+
+    @Test
+    public void createConsentSignature_requiredFieldsOnly() {
+        ((BridgeDataProvider) dataProvider).createConsentSignature(new ConsentSignatureBody());
+    }
+
+    @Test
+    public void createConsentSignatureBody_requiredFieldsOnly() {
+        ((BridgeDataProvider) dataProvider).createConsentSignatureBody(new ConsentSignature());
     }
 
     @Test
