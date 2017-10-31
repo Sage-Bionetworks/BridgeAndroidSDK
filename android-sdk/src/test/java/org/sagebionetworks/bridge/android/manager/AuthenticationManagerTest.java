@@ -46,6 +46,7 @@ import rx.Observable;
 import rx.Single;
 
 import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotSame;
 import static junit.framework.Assert.assertSame;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -216,11 +217,14 @@ public class AuthenticationManagerTest {
         when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
                 .thenReturn(mockSignedInApi);
 
+        ForConsentedUsersApi apiBeforeSignInResult = apiAtomicReference.get();
+
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
         ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
-        assertSame(mockSignedInApi, apiResult);
+        assertSame(mockSignedInApi, apiAtomicReference.get());
+        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -251,18 +255,29 @@ public class AuthenticationManagerTest {
         when(authenticationApi.signIn(signIn))
                 .thenReturn(signInCall);
 
+        ForConsentedUsersApi mockSignedInApi = mock(ForConsentedUsersApi.class);
+        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
+                .thenReturn(mockSignedInApi);
+
         // indicate that locally, we think we are consented
         doReturn(true)
                 .when(spyAuthenticationManager).isConsented();
         doReturn(userSessionInfoObservable)
                 .when(spyAuthenticationManager).uploadLocalConsents();
 
+        ForConsentedUsersApi apiBeforeSignInResult = apiAtomicReference.get();
+
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
+
+        assertSame(mockSignedInApi, apiAtomicReference.get());
+        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
         verify(spyAuthenticationManager).isConsented();
         // verify there was an attempt to upload all consents
         verify(spyAuthenticationManager).uploadLocalConsents();
+
+        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);

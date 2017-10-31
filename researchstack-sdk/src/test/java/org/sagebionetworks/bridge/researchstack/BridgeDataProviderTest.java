@@ -34,6 +34,7 @@ import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -151,11 +152,7 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testSignIn() throws IOException {
-        Call<UserSessionInfo> sessionCall = mock(Call.class);
         UserSessionInfo session = mock(UserSessionInfo.class);
-
-        when(sessionCall.clone()).thenReturn(sessionCall);
-        when(sessionCall.execute()).thenReturn(Response.success(session));
 
         when(authenticationManager.signIn("email", "password")).thenReturn(Single.just(session));
         Observable<DataResponse> completable = dataProvider.signIn(context, "email", "password");
