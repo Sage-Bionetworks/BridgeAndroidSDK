@@ -29,7 +29,7 @@ public class SharedPreferencesJsonDAO {
     }
 
     protected void removeValue(String key) {
-        logger.debug("removing key: " + key);
+        logger.debug(getClass().getCanonicalName(), "removing key: " + key);
 
         sharedPreferences.edit().remove(key).apply();
     }
@@ -37,7 +37,7 @@ public class SharedPreferencesJsonDAO {
     protected <T> void setValue(String key, T value, Class<? super T> klass) {
         String json = RestUtils.GSON.toJson(value, klass);
 
-        logger.debug("setting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "setting key: " + key + ", value: " + json);
 
         sharedPreferences.edit().putString(key, json).apply();
     }
@@ -45,7 +45,7 @@ public class SharedPreferencesJsonDAO {
     protected <T> T getValue(String key, Class<? extends T> klass) {
         String json = sharedPreferences.getString(key, null);
 
-        logger.debug("getting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "getting key: " + key + ", value: " + json);
 
         return RestUtils.GSON.fromJson(json, klass);
     }
@@ -53,7 +53,7 @@ public class SharedPreferencesJsonDAO {
     protected <T> void setValue(String key, T value, TypeToken<? super T> type) {
         String json = RestUtils.GSON.toJson(value, type.getType());
 
-        logger.debug("setting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "setting key: " + key + ", value: " + json);
 
         sharedPreferences.edit().putString(key, json).apply();
     }
@@ -61,7 +61,7 @@ public class SharedPreferencesJsonDAO {
     protected <T> T getValue(String key, TypeToken<? extends T> type) {
         String json = sharedPreferences.getString(key, null);
 
-        logger.debug("getting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "getting key: " + key + ", value: " + json);
 
         return RestUtils.GSON.fromJson(json, type.getType());
     }
@@ -70,7 +70,7 @@ public class SharedPreferencesJsonDAO {
                                 Function<String, String> transform) {
         String json = RestUtils.GSON.toJson(value, type.getType());
 
-        logger.debug("setting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "setting key: " + key + ", value: " + json);
 
         json = transform.apply(json);
 
@@ -83,7 +83,7 @@ public class SharedPreferencesJsonDAO {
 
         json = transform.apply(json);
 
-        logger.debug("getting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "getting key: " + key + ", value: " + json);
 
         return RestUtils.GSON.fromJson(json, type.getType());
     }
@@ -92,7 +92,7 @@ public class SharedPreferencesJsonDAO {
                                 Function<String, String> transform) {
         String json = RestUtils.GSON.toJson(value, klass);
 
-        logger.debug("setting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "setting key: " + key + ", value: " + json);
 
         json = transform.apply(json);
 
@@ -105,7 +105,7 @@ public class SharedPreferencesJsonDAO {
 
         json = transform.apply(json);
 
-        logger.debug("getting key: " + key + ", value: " + json);
+        logger.debug(getClass().getCanonicalName(), "getting key: " + key + ", value: " + json);
 
         return RestUtils.GSON.fromJson(json, klass);
     }

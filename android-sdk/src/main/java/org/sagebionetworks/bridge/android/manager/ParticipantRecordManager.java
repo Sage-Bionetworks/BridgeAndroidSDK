@@ -11,6 +11,8 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import rx.Completable;
 import rx.Single;
 
@@ -27,12 +29,12 @@ public class ParticipantRecordManager {
     @NonNull
     private final AccountDAO accountDAO;
     @NonNull
-    private final ForConsentedUsersApi consentedUsersApi;
+    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
 
     public ParticipantRecordManager(@NonNull AccountDAO accountDAO,
                                     @NonNull AuthenticationManager authenticationManager) {
         this.accountDAO = accountDAO;
-        this.consentedUsersApi = authenticationManager.getApi();
+        this.apiAtomicReference = authenticationManager.getApiReference();
     }
 
     /**
@@ -50,7 +52,8 @@ public class ParticipantRecordManager {
      */
     @NonNull
     public Single<StudyParticipant> getParticipantRecord() {
-        return toBodySingle(consentedUsersApi.getUsersParticipantRecord())
+        return toBodySingle(apiAtomicReference.get()
+                .getUsersParticipantRecord())
                 .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
     }
 
@@ -69,11 +72,12 @@ public class ParticipantRecordManager {
      * @return session
      */
     @NonNull
-    public Single<UserSessionInfo> updateParticipantRecord(@NonNull StudyParticipant
-                                                                       studyParticipant) {
+    public Single<UserSessionInfo> updateParticipantRecord(
+            @NonNull StudyParticipant studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return toBodySingle(consentedUsersApi.updateUsersParticipantRecord(studyParticipant))
+        return toBodySingle(apiAtomicReference.get()
+                .updateUsersParticipantRecord(studyParticipant))
                 .doOnSuccess(
                         userSessionInfo -> {
                             logger.debug("Successfully updated participant");
@@ -102,6 +106,7 @@ public class ParticipantRecordManager {
         checkNotNull(startDate);
         checkNotNull(endDate);
 
-        return toBodySingle(consentedUsersApi.emailDataToUser(startDate, endDate)).toCompletable();
+        return toBodySingle(apiAtomicReference.get()
+                .emailDataToUser(startDate, endDate)).toCompletable();
     }
 }

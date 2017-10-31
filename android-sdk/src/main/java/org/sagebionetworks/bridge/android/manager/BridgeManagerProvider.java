@@ -84,7 +84,7 @@ public class BridgeManagerProvider {
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
         } catch (Exception e) {
-            throw new RuntimeException("Could create StudyUploadEncryptor", e);
+            throw new RuntimeException("Could not create StudyUploadEncryptor", e);
         }
 
         s3OkHttpClient = new OkHttpClient.Builder()

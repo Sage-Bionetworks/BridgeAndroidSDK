@@ -15,6 +15,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -47,7 +48,7 @@ public class ActivityManagerTest {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApi()).thenReturn(activitiesApi);
+        when(authenticationManager.getApiReference()).thenReturn(new AtomicReference<>(activitiesApi));
         activityManager = new ActivityManager(authenticationManager);
     }
 
