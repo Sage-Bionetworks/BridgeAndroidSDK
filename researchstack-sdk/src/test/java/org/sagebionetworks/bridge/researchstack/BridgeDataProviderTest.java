@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -21,12 +22,14 @@ import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.Task;
+import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
+import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
@@ -58,6 +61,11 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PreferenceManager.class, Looper.class})
 public class BridgeDataProviderTest {
+    private static final String SCHEMA_ID = "my-schema-id";
+    private static final int SCHEMA_REV = 3;
+    private static final SchemaKey SCHEMA_KEY = new SchemaKey(SCHEMA_ID, SCHEMA_REV);
+    private static final String TASK_ID = "my-task-id";
+
     private DataProvider dataProvider;
     @Mock
     private ApiClientProvider apiClientProvider;
@@ -273,11 +281,40 @@ public class BridgeDataProviderTest {
         verify(authenticationManager).getEmail();
     }
 
-    @Ignore
     @Test
-    public void testUploadTaskResult() {
-        TaskResult taskResult = mock(TaskResult.class);
+    public void testUploadTaskResult_ActivityWithSchemaMapping() {
+        // mock bridge config
+        when(bridgeConfig.getTaskToSchemaMap()).thenReturn(ImmutableMap.of(TASK_ID, SCHEMA_KEY));
+
+        // set up and execute
+        TaskResult taskResult = makeActivityTask("my-task-id");
         dataProvider.uploadTaskResult(context, taskResult);
+
+        // verify
+        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, taskResult);
+    }
+
+    @Test
+    public void testUploadTaskResult_ActivityWithNoSchemaMapping() {
+        // mock bridge config
+        when(bridgeConfig.getTaskToSchemaMap()).thenReturn(ImmutableMap.of());
+
+        // set up and execute
+        TaskResult taskResult = makeActivityTask("my-task-id");
+        dataProvider.uploadTaskResult(context, taskResult);
+
+        // verify
+        verify(taskHelper).uploadActivityResult(TASK_ID, taskResult);
+    }
+
+    @Test
+    public void testUploadTaskResult_Survey() {
+        // set up and execute
+        TaskResult taskResult = new TaskResult(TASK_ID);
+        dataProvider.uploadTaskResult(context, taskResult);
+
+        // verify
+        verify(taskHelper).uploadSurveyResult(taskResult);
     }
 
     @Ignore
@@ -309,5 +346,11 @@ public class BridgeDataProviderTest {
         dataProvider.forgotPassword(context, "email").test().assertCompleted();
 
         verify(authenticationManager).requestPasswordReset("email");
+    }
+
+    private static TaskResult makeActivityTask(String taskId) {
+        TaskResult taskResult = new TaskResult(taskId);
+        taskResult.getTaskDetails().put(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY, true);
+        return taskResult;
     }
 }
