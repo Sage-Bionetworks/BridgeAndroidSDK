@@ -26,7 +26,6 @@ public class RxUtils {
     @NonNull
     public static <T> Single<T> toBodySingle(@NonNull Call<T> call) {
         checkNotNull(call);
-
         return Observable.create(new BodyOnSubscribe<>(new CallOnSubscribe<>(call)))
                 .subscribeOn(Schedulers.io()).toSingle();
     }

@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
 import rx.Single;
@@ -27,18 +28,19 @@ public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 
     @NonNull
-    private final ForConsentedUsersApi api;
+    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
 
 
     public ActivityManager(@NonNull AuthenticationManager authenticationManager) {
         checkNotNull(authenticationManager);
 
-        this.api = authenticationManager.getApi();
+        this.apiAtomicReference = authenticationManager.getApiReference();
     }
 
 
     public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
-        return toBodySingle(api.getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
+        return toBodySingle(apiAtomicReference.get()
+                .getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                 });
@@ -53,7 +55,8 @@ public class ActivityManager {
 
         checkNotNull(scheduledActivities);
 
-        return toBodySingle(api.updateScheduledActivities(scheduledActivities)).toCompletable();
+        return toBodySingle(apiAtomicReference.get()
+                .updateScheduledActivities(scheduledActivities)).toCompletable();
     }
 
     private String getTimezoneOffset() {
