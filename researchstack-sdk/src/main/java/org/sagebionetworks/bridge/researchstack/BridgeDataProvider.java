@@ -23,6 +23,7 @@ import org.researchstack.skin.model.TaskModel;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
@@ -550,7 +551,17 @@ public abstract class BridgeDataProvider extends DataProvider {
         }
 
         if (isActivity) {
-            taskHelper.uploadActivityResult(taskResult.getIdentifier(), taskResult);
+            String taskId = taskResult.getIdentifier();
+            SchemaKey schemaKey = bridgeConfig.getTaskToSchemaMap().get(taskId);
+
+            if (schemaKey != null) {
+                taskHelper.uploadActivityResult(schemaKey.getId(), schemaKey.getRevision(),
+                        taskResult);
+            } else {
+                logger.error("No schema key found for task " + taskId +
+                        ", falling back to task ID as schema ID");
+                taskHelper.uploadActivityResult(taskId, taskResult);
+            }
         } else {
             taskHelper.uploadSurveyResult(taskResult);
         }

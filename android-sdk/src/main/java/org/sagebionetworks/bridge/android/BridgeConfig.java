@@ -7,16 +7,25 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
+import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.lang.reflect.Type;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.util.Locale;
+import java.util.Map;
 
 import static android.content.res.AssetManager.ACCESS_BUFFER;
 import static android.os.Build.VERSION;
@@ -41,12 +50,36 @@ public class BridgeConfig {
      */
     public static final String STUDY_PUBLIC_KEY = "study_public_key.pem";
 
+    /**
+     * Filename for the task ID to schema key file. This file should be placed in the assets folder
+     * of your app.
+     */
+    public static final String TASK_TO_SCHEMA_FILENAME = "task_to_schema.json";
+
+    private static final Type TASK_TO_SCHEMA_TYPE =
+            new TypeToken<Map<String, SchemaKey>>(){}.getType();
+
     private final Context applicationContext;
+    private final Map<String, SchemaKey> taskToSchemaMap;
 
     public BridgeConfig(@NonNull Context context) {
         checkNotNull(context);
 
         this.applicationContext = context.getApplicationContext();
+
+        // Load task ID to schema map.
+        // Temp var is required to satisfy Java's assign-once semantics for final members.
+        Map<String, SchemaKey> tempTaskToSchemaMap;
+        try (InputStream taskToSchemaStream = applicationContext.getAssets().open(
+                TASK_TO_SCHEMA_FILENAME, ACCESS_BUFFER);
+             Reader taskToSchemaReader = new InputStreamReader(taskToSchemaStream)) {
+            tempTaskToSchemaMap = RestUtils.GSON.fromJson(taskToSchemaReader, TASK_TO_SCHEMA_TYPE);
+        } catch (IOException | JsonParseException ex) {
+            // Fall back to empty map.
+            logger.error("Could not task to schema mapping from /assets/task_to_schema.json", ex);
+            tempTaskToSchemaMap = ImmutableMap.of();
+        }
+        taskToSchemaMap = tempTaskToSchemaMap;
     }
 
     /**
@@ -104,15 +137,24 @@ public class BridgeConfig {
 
     @NonNull
     public X509Certificate getPublicKey() throws IOException, CertificateException {
-        InputStream publicKeyFile;
-        try {
-            publicKeyFile = applicationContext.getAssets().open(STUDY_PUBLIC_KEY, ACCESS_BUFFER);
+        try (InputStream publicKeyFile = applicationContext.getAssets().open(STUDY_PUBLIC_KEY,
+                ACCESS_BUFFER)) {
+            return (X509Certificate) new CertificateFactory().engineGenerateCertificate(
+                    publicKeyFile);
         } catch(IOException e) {
             logger.error("Could not load public key from /assets/study_public_key.pem", e);
             throw e;
         }
+    }
 
-        return (X509Certificate) new CertificateFactory().engineGenerateCertificate(publicKeyFile);
+    /**
+     * Mapping from task ID to schema key (ID and revision). This is obtained from
+     * assets/task_to_schema.json in your app. This will never return null, but may return an
+     * empty map.
+     */
+    @NonNull
+    public Map<String, SchemaKey> getTaskToSchemaMap() {
+        return taskToSchemaMap;
     }
 
     /**
