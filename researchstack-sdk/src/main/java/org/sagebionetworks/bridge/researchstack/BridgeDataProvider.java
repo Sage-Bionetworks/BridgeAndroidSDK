@@ -522,8 +522,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     //region TasksAndSchedules
 
     public Observable<Message> updateActivity(ScheduledActivity activity) {
-        List<ScheduledActivity> activityList = Collections.singletonList(activity);
-        return bridgeManagerProvider.getActivityManager().updateActivities(activityList);
+        return bridgeManagerProvider.getActivityManager().updateActivity(activity);
     }
 
     public Observable<ScheduledActivityListV4> getActivities(DateTime start, DateTime end) {

@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -68,12 +69,20 @@ public class ActivityManager {
         return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
     }
 
-    public Observable<Message> updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
+    public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
 
         checkNotNull(scheduledActivities);
 
         return toBodySingle(apiAtomicReference.get()
-                .updateScheduledActivities(scheduledActivities)).toObservable();
+                .updateScheduledActivities(scheduledActivities)).toCompletable();
+    }
+
+    public Observable<Message> updateActivity(@NonNull ScheduledActivity scheduledActivity) {
+
+        checkNotNull(scheduledActivity);
+
+        return toBodySingle(apiAtomicReference.get()
+                .updateScheduledActivities(Collections.singletonList(scheduledActivity))).toObservable();
     }
 
     private String getTimezoneOffset() {
