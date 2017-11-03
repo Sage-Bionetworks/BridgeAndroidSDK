@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,10 +13,12 @@ import org.mockito.MockitoAnnotations;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.ResourcePathManager;
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.answerformat.BooleanAnswerFormat;
 import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 import org.researchstack.backbone.model.Choice;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.result.AudioResult;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
@@ -30,14 +33,22 @@ import org.researchstack.backbone.step.active.TappingIntervalStep;
 import org.researchstack.backbone.step.active.TimedWalkStep;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.storage.database.TaskNotification;
+import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.task.factory.TappingTaskFactory;
 import org.researchstack.skin.AppPrefs;
+import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
+import org.researchstack.skin.task.SmartSurveyTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
+import org.sagebionetworks.bridge.researchstack.factory.TaskFactory;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.model.Survey;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -55,9 +66,16 @@ import rx.schedulers.Schedulers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.same;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -82,11 +100,20 @@ import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWa
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({TaskAlertReceiver.class, AndroidSchedulers.class})
 public class TaskHelperTest {
-
     private static final String JSON_CONTENT_TYPE = "application/json";
+    private static final String SCHEMA_ID = "my-schema";
+    private static final int SCHEMA_REV = 3;
+    private static final String SURVEY_CREATED_ON_STRING = "2017-09-22T13:52:26.685Z";
+    private static final DateTime SURVEY_CREATED_ON = DateTime.parse(SURVEY_CREATED_ON_STRING);
+    private static final String SURVEY_FILENAME = "my-survey.json";
+    private static final String SURVEY_GUID = "my-survey-guid";
+    private static final String SURVEY_IDENTIFIER = "my-survey";
+    private static final String TASK_ID = "my-task";
 
     private TaskHelper taskHelper;
 
+    @Mock
+    private ArchiveFactory archiveFactory;
     @Mock
     StorageAccessWrapper storageAccess;
     @Mock
@@ -98,6 +125,10 @@ public class TaskHelperTest {
     @Mock
     Context applicationContext;
     @Mock
+    private SurveyManager surveyManager;
+    @Mock
+    private TaskFactory taskFactory;
+    @Mock
     UploadManager uploadManager;
     @Mock
     BridgeManagerProvider bridgeManagerProvider;
@@ -108,12 +139,208 @@ public class TaskHelperTest {
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
 
+        when(bridgeManagerProvider.getSurveyManager()).thenReturn(surveyManager);
         when(bridgeManagerProvider.getUploadManager()).thenReturn(uploadManager);
         when(bridgeManagerProvider.getApplicationContext()).thenReturn(applicationContext);
         when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
 
-        taskHelper = new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
-                bridgeManagerProvider);
+        taskHelper = spy(new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
+                bridgeManagerProvider));
+        taskHelper.setArchiveFactory(archiveFactory);
+        taskHelper.setTaskFactory(taskFactory);
+    }
+
+    @Test
+    public void loadTask_ServerSideSurvey() {
+        // Mock SurveyManager - For Survey, we only care about identifier, guid, and createdOn.
+        // Everything else is handled by and tested in SmartSurveyTask.
+        Survey survey = new Survey().guid(SURVEY_GUID).createdOn(SURVEY_CREATED_ON).identifier(
+                SURVEY_IDENTIFIER);
+        when(surveyManager.getSurvey(SURVEY_GUID, SURVEY_CREATED_ON)).thenReturn(Single.just(
+                survey));
+
+        // Mock TaskFactory
+        SmartSurveyTask factoryOutput = mock(SmartSurveyTask.class);
+        when(taskFactory.newSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
+
+        // Make SurveyTaskScheduleModel - The only params we care about are guid and createdOn.
+        SurveyTaskScheduleModel surveyScheduleModel = new SurveyTaskScheduleModel();
+        surveyScheduleModel.surveyGuid = SURVEY_GUID;
+        surveyScheduleModel.surveyCreatedOn = SURVEY_CREATED_ON;
+
+        // Execute and validate
+        Task helperOutput = taskHelper.loadTask(applicationContext, surveyScheduleModel)
+                .toBlocking().value();
+        assertSame(factoryOutput, helperOutput);
+
+        // Verify back-ends
+        verify(surveyManager).getSurvey(SURVEY_GUID, SURVEY_CREATED_ON);
+
+        ArgumentCaptor<TaskModel> taskModelCaptor = ArgumentCaptor.forClass(TaskModel.class);
+        verify(taskFactory).newSmartSurveyTask(same(applicationContext), taskModelCaptor.capture());
+        TaskModel taskModel = taskModelCaptor.getValue();
+        assertEquals(SURVEY_GUID, taskModel.guid);
+        assertEquals(SURVEY_CREATED_ON_STRING, taskModel.createdOn);
+        assertEquals(SURVEY_IDENTIFIER, taskModel.identifier);
+
+        // Verify cached survey guid/createdOn
+        assertEquals(SURVEY_GUID, taskHelper.getGuid(SURVEY_IDENTIFIER));
+        assertEquals(SURVEY_CREATED_ON_STRING, taskHelper.getCreatedOnDate(SURVEY_IDENTIFIER));
+    }
+
+    @Test
+    public void loadTask_FileBasedSurvey() {
+        // Mock Resource and ResourceManager
+        TaskModel loadedTaskModel = new TaskModel();
+        loadedTaskModel.guid = SURVEY_GUID;
+        loadedTaskModel.createdOn = SURVEY_CREATED_ON_STRING;
+        loadedTaskModel.identifier = SURVEY_IDENTIFIER;
+
+        ResourcePathManager.Resource mockResource = mock(ResourcePathManager.Resource.class);
+        when(mockResource.create(any())).thenReturn(loadedTaskModel);
+        when(resourceManager.getTask(SURVEY_FILENAME)).thenReturn(mockResource);
+
+        // Mock TaskFactory
+        SmartSurveyTask factoryOutput = mock(SmartSurveyTask.class);
+        when(taskFactory.newSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
+
+        // Make TaskScheduleModel - The only param we care about is taskFileName.
+        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
+                new SchedulesAndTasksModel.TaskScheduleModel();
+        taskScheduleModel.taskFileName = SURVEY_FILENAME;
+
+        // Execute and validate
+        Task helperOutput = taskHelper.loadTask(applicationContext, taskScheduleModel).toBlocking()
+                .value();
+        assertSame(factoryOutput, helperOutput);
+
+        // Verify ResourceManager and Resource
+        verify(resourceManager).getTask(SURVEY_FILENAME);
+        verify(mockResource).create(applicationContext);
+
+        // Verify cached survey guid/createdOn
+        assertEquals(SURVEY_GUID, taskHelper.getGuid(SURVEY_IDENTIFIER));
+        assertEquals(SURVEY_CREATED_ON_STRING, taskHelper.getCreatedOnDate(SURVEY_IDENTIFIER));
+    }
+
+    @Test
+    public void loadTask_CannotLoadSurvey() {
+        // Make TaskScheduleModel - It has none of the relevant params. No guid/createdOn, no
+        // filename.
+        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
+                new SchedulesAndTasksModel.TaskScheduleModel();
+
+        // Execute and validate.
+        Task helperOutput = taskHelper.loadTask(applicationContext, taskScheduleModel).toBlocking()
+                .value();
+        assertNull(helperOutput);
+    }
+
+    @Test
+    public void uploadActivityResult_SchemaIdOnly() {
+        // Mock ArchiveFactory
+        Archive.Builder factoryOutput = mock(Archive.Builder.class);
+        when(archiveFactory.forActivity(any())).thenReturn(factoryOutput);
+
+        // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
+        // test it here.
+        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+
+        // Execute
+        TaskResult helperInput = new TaskResult(TASK_ID);
+        taskHelper.uploadActivityResult(SCHEMA_ID, helperInput);
+
+        // Verify backends
+        verify(archiveFactory).forActivity(SCHEMA_ID);
+        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+    }
+
+    @Test
+    public void uploadActivityResult_SchemaIdAndRev() {
+        // Mock ArchiveFactory
+        Archive.Builder factoryOutput = mock(Archive.Builder.class);
+        when(archiveFactory.forActivity(any(), anyInt())).thenReturn(factoryOutput);
+
+        // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
+        // test it here.
+        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+
+        // Execute
+        TaskResult helperInput = new TaskResult(TASK_ID);
+        taskHelper.uploadActivityResult(SCHEMA_ID, SCHEMA_REV, helperInput);
+
+        // Verify backends
+        verify(archiveFactory).forActivity(SCHEMA_ID, SCHEMA_REV);
+        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+    }
+
+    @Test
+    public void uploadSurveyResult_GuidAndCreatedOn() {
+        // Spy getGuid() and getCreatedOn with the correct values.
+        doReturn(SURVEY_GUID).when(taskHelper).getGuid(SURVEY_IDENTIFIER);
+        doReturn(SURVEY_CREATED_ON_STRING).when(taskHelper).getCreatedOnDate(SURVEY_IDENTIFIER);
+
+        // Mock ArchiveFactory
+        Archive.Builder factoryOutput = mock(Archive.Builder.class);
+        when(archiveFactory.forSurvey(any(), any())).thenReturn(factoryOutput);
+
+        // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
+        // test it here.
+        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+
+        // Execute
+        TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
+        taskHelper.uploadSurveyResult(helperInput);
+
+        // Verify backends
+        verify(archiveFactory).forSurvey(SURVEY_GUID, SURVEY_CREATED_ON);
+        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+    }
+
+    @Test
+    public void uploadSurveyResult_MissingGuid() {
+        // Spy getGuid() and getCreatedOn with the correct values.
+        doReturn(null).when(taskHelper).getGuid(SURVEY_IDENTIFIER);
+        doReturn(SURVEY_CREATED_ON_STRING).when(taskHelper).getCreatedOnDate(SURVEY_IDENTIFIER);
+
+        // Mock ArchiveFactory
+        Archive.Builder factoryOutput = mock(Archive.Builder.class);
+        when(archiveFactory.forActivity(any())).thenReturn(factoryOutput);
+
+        // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
+        // test it here.
+        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+
+        // Execute
+        TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
+        taskHelper.uploadSurveyResult(helperInput);
+
+        // Verify backends
+        verify(archiveFactory).forActivity(SURVEY_IDENTIFIER);
+        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+    }
+
+    @Test
+    public void uploadSurveyResult_MissingCreatedOn() {
+        // Spy getGuid() and getCreatedOn with the correct values.
+        doReturn(SURVEY_GUID).when(taskHelper).getGuid(SURVEY_IDENTIFIER);
+        doReturn(null).when(taskHelper).getCreatedOnDate(SURVEY_IDENTIFIER);
+
+        // Mock ArchiveFactory
+        Archive.Builder factoryOutput = mock(Archive.Builder.class);
+        when(archiveFactory.forActivity(any())).thenReturn(factoryOutput);
+
+        // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
+        // test it here.
+        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+
+        // Execute
+        TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
+        taskHelper.uploadSurveyResult(helperInput);
+
+        // Verify backends
+        verify(archiveFactory).forActivity(SURVEY_IDENTIFIER);
+        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
     }
 
     @Test
