@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
@@ -27,8 +28,10 @@ import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -37,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +49,7 @@ import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -502,9 +507,29 @@ public abstract class BridgeDataProvider extends DataProvider {
                         .sharingScope(scope));
     }
 
+    @NonNull
+    public Observable<StudyParticipant> getStudyParticipant() {
+        return bridgeManagerProvider.getParticipantManager().getParticipantRecord().toObservable();
+    }
+
+    @NonNull
+    public Observable<UserSessionInfo> updateStudyParticipant(StudyParticipant studyParticipant) {
+        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant).toObservable();
+    }
+
     //endregion
 
     //region TasksAndSchedules
+
+    public Observable<Message> updateActivity(ScheduledActivity activity) {
+        List<ScheduledActivity> activityList = Collections.singletonList(activity);
+        return bridgeManagerProvider.getActivityManager().updateActivities(activityList);
+    }
+
+    public Observable<ScheduledActivityListV4> getActivities(DateTime start, DateTime end) {
+        return bridgeManagerProvider.getActivityManager().getActivites(start, end)
+                .toObservable();
+    }
 
     @NonNull
     @Override
