@@ -2,8 +2,8 @@ package org.sagebionetworks.bridge.researchstack.factory;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import org.researchstack.skin.model.TaskModel;
-import org.researchstack.skin.task.SmartSurveyTask;
+import org.researchstack.backbone.model.TaskModel;
+import org.researchstack.backbone.task.SmartSurveyTask;
 
 /**
  * This class encapsulates creating Task instances, to allow us to separate the logic of creating
