@@ -15,6 +15,7 @@ import org.joda.time.DateTime;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
+import org.researchstack.backbone.model.survey.factory.SurveyFactory;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
@@ -34,7 +35,6 @@ import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
-import org.sagebionetworks.bridge.researchstack.factory.TaskFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
@@ -59,9 +59,9 @@ public class TaskHelper {
     private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
     // these are used to getConsent task/step guids without rereading the json files and iterating through
-    private final Map<String, String> loadedTaskGuids = new HashMap<String, String>();
-    private final Map<String, String> loadedTaskDates = new HashMap<String, String>();
-    private final Map<String, String> loadedTaskCrons = new HashMap<String, String>();
+    private final Map<String, String> loadedTaskGuids = new HashMap<>();
+    private final Map<String, String> loadedTaskDates = new HashMap<>();
+    private final Map<String, String> loadedTaskCrons = new HashMap<>();
 
     private final StorageAccessWrapper storageAccess;
     private final ResourceManager resourceManager;
@@ -70,7 +70,7 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
-    private TaskFactory taskFactory = TaskFactory.INSTANCE;
+    private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
             StorageAccessWrapper storageAccess,
@@ -93,8 +93,8 @@ public class TaskHelper {
 
     // To allow unit tests to mock.
     @VisibleForTesting
-    void setTaskFactory(@NonNull TaskFactory taskFactory) {
-        this.taskFactory = taskFactory;
+    void setSurveyFactory(@NonNull SurveyFactory surveyFactory) {
+        this.surveyFactory = surveyFactory;
     }
 
     public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
@@ -103,7 +103,7 @@ public class TaskHelper {
 
         AppDatabase db = storageAccess.getAppDatabase();
 
-        List<SchedulesAndTasksModel.ScheduleModel> schedules = new ArrayList<SchedulesAndTasksModel.ScheduleModel>();
+        List<SchedulesAndTasksModel.ScheduleModel> schedules = new ArrayList<>();
         for (SchedulesAndTasksModel.ScheduleModel schedule : schedulesAndTasksModel.schedules) {
             if (schedule.tasks.size() == 0) {
                 logger.error("No tasks in schedule");
@@ -189,7 +189,8 @@ public class TaskHelper {
             return Single.just(null);
         }
 
-        return taskModelSingle.map(taskModel -> taskFactory.newSmartSurveyTask(context, taskModel));
+        return taskModelSingle.map(taskModel -> surveyFactory.createSmartSurveyTask(context,
+                taskModel));
     }
 
     /**

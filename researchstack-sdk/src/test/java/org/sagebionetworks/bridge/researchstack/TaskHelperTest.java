@@ -20,6 +20,7 @@ import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 import org.researchstack.backbone.model.Choice;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
+import org.researchstack.backbone.model.survey.factory.SurveyFactory;
 import org.researchstack.backbone.result.AudioResult;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
@@ -45,7 +46,6 @@ import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
-import org.sagebionetworks.bridge.researchstack.factory.TaskFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.model.Survey;
@@ -127,7 +127,7 @@ public class TaskHelperTest {
     @Mock
     private SurveyManager surveyManager;
     @Mock
-    private TaskFactory taskFactory;
+    private SurveyFactory surveyFactory;
     @Mock
     UploadManager uploadManager;
     @Mock
@@ -147,7 +147,7 @@ public class TaskHelperTest {
         taskHelper = spy(new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
                 bridgeManagerProvider));
         taskHelper.setArchiveFactory(archiveFactory);
-        taskHelper.setTaskFactory(taskFactory);
+        taskHelper.setSurveyFactory(surveyFactory);
     }
 
     @Test
@@ -161,7 +161,7 @@ public class TaskHelperTest {
 
         // Mock TaskFactory
         SmartSurveyTask factoryOutput = mock(SmartSurveyTask.class);
-        when(taskFactory.newSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
+        when(surveyFactory.createSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
 
         // Make SurveyTaskScheduleModel - The only params we care about are guid and createdOn.
         SurveyTaskScheduleModel surveyScheduleModel = new SurveyTaskScheduleModel();
@@ -177,7 +177,8 @@ public class TaskHelperTest {
         verify(surveyManager).getSurvey(SURVEY_GUID, SURVEY_CREATED_ON);
 
         ArgumentCaptor<TaskModel> taskModelCaptor = ArgumentCaptor.forClass(TaskModel.class);
-        verify(taskFactory).newSmartSurveyTask(same(applicationContext), taskModelCaptor.capture());
+        verify(surveyFactory).createSmartSurveyTask(same(applicationContext), taskModelCaptor
+                .capture());
         TaskModel taskModel = taskModelCaptor.getValue();
         assertEquals(SURVEY_GUID, taskModel.guid);
         assertEquals(SURVEY_CREATED_ON_STRING, taskModel.createdOn);
@@ -202,7 +203,7 @@ public class TaskHelperTest {
 
         // Mock TaskFactory
         SmartSurveyTask factoryOutput = mock(SmartSurveyTask.class);
-        when(taskFactory.newSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
+        when(surveyFactory.createSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
 
         // Make TaskScheduleModel - The only param we care about is taskFileName.
         SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
