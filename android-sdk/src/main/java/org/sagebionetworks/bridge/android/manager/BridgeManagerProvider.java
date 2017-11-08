@@ -78,8 +78,8 @@ public class BridgeManagerProvider {
 
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
         participantManager = new ParticipantRecordManager(accountDAO, authenticationManager);
-
         activityManager = new ActivityManager(authenticationManager);
+        surveyManager = new SurveyManager(authenticationManager);
 
         try {
             studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
@@ -112,6 +112,8 @@ public class BridgeManagerProvider {
     private final ConsentDAO consentDAO;
     @NonNull
     private final AccountDAO accountDAO;
+    @NonNull
+    private final SurveyManager surveyManager;
     @NonNull
     private final UploadDAO uploadDAO;
     @NonNull
@@ -154,6 +156,12 @@ public class BridgeManagerProvider {
     @NonNull
     public ConsentDAO getConsentDao() {
         return consentDAO;
+    }
+
+    /** Survey Manager, used to call Bridge to get surveys. */
+    @NonNull
+    public SurveyManager getSurveyManager() {
+        return surveyManager;
     }
 
     @NonNull

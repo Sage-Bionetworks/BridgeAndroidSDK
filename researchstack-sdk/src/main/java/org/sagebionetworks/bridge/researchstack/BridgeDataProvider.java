@@ -5,6 +5,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
@@ -12,6 +14,7 @@ import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.TaskModel;
 import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
@@ -19,13 +22,14 @@ import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.model.TaskModel;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -37,9 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import rx.Completable;
 import rx.Observable;
@@ -508,18 +511,12 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     @Override
-    public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
+    public Single<SchedulesAndTasksModel> loadTasksAndSchedules(Context context) {
         logger.info("loadTasksAndSchedules()");
 
         // TODO: figure out the correct arguments to pass here
-        ScheduledActivityList scheduledActivityList = bridgeManagerProvider.getActivityManager()
-                .getActivities(4, 0)
-                .toBlocking()
-                .value();
-
-        SchedulesAndTasksModel model = translateActivities(scheduledActivityList);
-
-        return model;
+        return bridgeManagerProvider.getActivityManager()
+                .getActivities(4, 0).map(this::translateActivities);
     }
 
     private TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel
@@ -530,10 +527,10 @@ public abstract class BridgeDataProvider extends DataProvider {
         return taskHelper.loadTaskModel(context, task);
     }
 
+    @NonNull
     @Override
-    public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+    public Single<Task> loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
         // currently we only support task json files, override this method to taskClassName
-
         return taskHelper.loadTask(context, task);
     }
 
@@ -580,22 +577,20 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.info("translateActivities()");
 
         // first, group activities by day
-        Map<Integer, List<ScheduledActivity>> activityMap = new HashMap<>();
+        ListMultimap<Integer, ScheduledActivity> activityMap = LinkedListMultimap.create();
         for (ScheduledActivity sa : activityList.getItems()) {
             int day = sa.getScheduledOn().dayOfYear().get();
-            List<ScheduledActivity> actList = activityMap.get(day);
-            if (actList == null) {
-                actList = new ArrayList<>();
-                actList.add(sa);
-                activityMap.put(day, actList);
-            } else {
-                actList.add(sa);
-            }
+            activityMap.put(day, sa);
         }
 
+        // Sort the days. There aren't that many days, so this should be relatively quick.
+        List<Integer> dayList = new ArrayList<>(activityMap.keySet());
+        Collections.sort(dayList);
+
+        // Convert from Bridge activities to ResearchKit task model
         SchedulesAndTasksModel model = new SchedulesAndTasksModel();
         model.schedules = new ArrayList<>();
-        for (int day : activityMap.keySet()) {
+        for (int day : dayList) {
             List<ScheduledActivity> aList = activityMap.get(day);
             ScheduledActivity temp = aList.get(0);
 
@@ -606,15 +601,27 @@ public abstract class BridgeDataProvider extends DataProvider {
             sm.tasks = new ArrayList<>();
 
             for (ScheduledActivity sa : aList) {
-                SchedulesAndTasksModel.TaskScheduleModel tsm = new SchedulesAndTasksModel
-                        .TaskScheduleModel();
-                tsm.taskTitle = sa.getActivity().getLabel();
-                tsm.taskCompletionTime = sa.getActivity().getLabelDetail();
-                if (sa.getActivity().getTask() != null) {
-                    tsm.taskID = sa.getActivity().getTask().getIdentifier();
+                Activity activity = sa.getActivity();
+
+                SchedulesAndTasksModel.TaskScheduleModel tsm;
+                if (activity.getSurvey() != null) {
+                    // This is a survey. Use the subclass.
+                    SurveyTaskScheduleModel surveyTaskScheduleModel = new SurveyTaskScheduleModel();
+                    surveyTaskScheduleModel.surveyGuid = activity.getSurvey().getGuid();
+                    surveyTaskScheduleModel.surveyCreatedOn = activity.getSurvey().getCreatedOn();
+                    tsm = surveyTaskScheduleModel;
+                } else {
+                    // This is a non-survey. Use the base TaskScheduleModel.
+                    tsm = new SchedulesAndTasksModel.TaskScheduleModel();
+                }
+
+                tsm.taskTitle = activity.getLabel();
+                tsm.taskCompletionTime = activity.getLabelDetail();
+                if (activity.getTask() != null) {
+                    tsm.taskID = activity.getTask().getIdentifier();
                 }
                 tsm.taskIsOptional = sa.getPersistent();
-                tsm.taskType = sa.getActivity().getType();
+                tsm.taskType = activity.getActivityType().toString();
                 sm.tasks.add(tsm);
             }
         }
