@@ -2,14 +2,10 @@ package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
 import android.content.Intent;
-
 import android.support.annotation.NonNull;
 import android.support.annotation.VisibleForTesting;
+
 import com.google.common.base.Strings;
-import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 import org.joda.time.DateTime;
 import org.researchstack.backbone.ResourceManager;
@@ -32,18 +28,15 @@ import org.researchstack.skin.schedule.ScheduleHelper;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.data.Archive;
-import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
-import org.sagebionetworks.bridge.data.JsonArchiveFile;
+import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
-import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -70,6 +63,7 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
     private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
@@ -89,6 +83,12 @@ public class TaskHelper {
     @VisibleForTesting
     void setArchiveFactory(@NonNull ArchiveFactory archiveFactory) {
         this.archiveFactory = archiveFactory;
+    }
+
+    // To allow unit tests to mock.
+    @VisibleForTesting
+    void setArchiveFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
+        this.archiveFileFactory = archiveFileFactory;
     }
 
     // To allow unit tests to mock.
@@ -262,7 +262,7 @@ public class TaskHelper {
         // Traverse through the StepResult maps and get an ordered list of Results
         List<Result> results = flattenResults(taskResult);
         for (Result result : results) {
-            org.sagebionetworks.bridge.data.ArchiveFile archiveFile = toBridgeArchiveFile(result);
+            ArchiveFile archiveFile = archiveFileFactory.fromResult(result);
             if (archiveFile != null) {
                 builder.addDataFile(archiveFile);
             } else {
@@ -306,53 +306,6 @@ public class TaskHelper {
         // Add notification to Alarm Manager
         Intent intent = TaskAlertReceiver.createCreateIntent(notification);
         bridgeManagerProvider.getApplicationContext().sendBroadcast(intent);
-    }
-
-
-    org.sagebionetworks.bridge.data.ArchiveFile toBridgeArchiveFile(Result result) {
-        DateTime endTime = new DateTime(result.getEndDate());
-
-        if (result instanceof StepResult) {
-            StepResult stepResult = (StepResult) result;
-            String filename = bridgifyIdentifier(stepResult.getIdentifier()) + ".json";
-
-            // If a step result has an answer format, we know that it was formed from a QuestionStep
-            if (stepResult.getAnswerFormat() != null) {
-                SurveyAnswer surveyAnswer = SurveyAnswer.create(stepResult);
-
-                return new JsonArchiveFile(filename, endTime, surveyAnswer, SurveyAnswer.class);
-            } else {  // otherwise make a generic String, Object JSON Map
-                Type typeOfMap = new TypeToken<Map<String, Object>>() {
-                }.getType();
-
-                return new JsonArchiveFile(filename, endTime, stepResult.getResults(), typeOfMap);
-            }
-        } else if (result instanceof FileResult) {
-            FileResult fileResult = (FileResult) result;
-            File file = fileResult.getFile();
-
-            int lastIndex = file.getName().lastIndexOf(".");
-            String fileExtension = ".json";
-            if (lastIndex >= 0) {
-                fileExtension = file.getName().substring(lastIndex, file.getName().length());
-            }
-            String filename = bridgifyIdentifier(fileResult.getIdentifier()) + fileExtension;
-
-            return new ByteSourceArchiveFile(
-                    filename,
-                    endTime,
-                    Files.asByteSource(file));
-        } else {
-            if (result instanceof TappingIntervalResult) {
-                // TODO: replace this in RestUtils.GSON
-                // TODO: you can do standard json parsing after this
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create();
-                String filename = bridgifyIdentifier(result.getIdentifier()) + ".json";
-                String json = gson.toJson(result, TappingIntervalResult.class);
-                return new JsonArchiveFile(filename, endTime, json);
-            }
-        }
-        return null;
     }
 
     /**

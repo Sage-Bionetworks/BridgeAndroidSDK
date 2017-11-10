@@ -1,19 +1,21 @@
 package org.sagebionetworks.bridge.researchstack.survey;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class SurveyAnswer {
-  public int questionType;
-  public String startDate;
-  public String questionTypeName;
-  public String item;
-  public String endDate;
+  public final int questionType;
+  public final String startDate;
+  public final String questionTypeName;
+  public final String item;
+  public final String endDate;
 
   public SurveyAnswer(StepResult stepResult) {
     AnswerFormat.Type type = (AnswerFormat.Type) stepResult.getAnswerFormat().getQuestionType();
@@ -23,7 +25,6 @@ public class SurveyAnswer {
     this.item = stepResult.getIdentifier();
     this.endDate = FormatHelper.DEFAULT_FORMAT.format(stepResult.getEndDate());
   }
-
   public static SurveyAnswer create(StepResult stepResult) {
     AnswerFormat.Type type = (AnswerFormat.Type) stepResult.getAnswerFormat().getQuestionType();
     SurveyAnswer answer;
@@ -78,20 +79,18 @@ public class SurveyAnswer {
     }
   }
 
-  public static class ChoiceSurveyAnswer extends SurveyAnswer {
+  public static class ChoiceSurveyAnswer<T> extends SurveyAnswer {
+    public final List<T> choiceAnswers;
 
-    private List<?> choiceAnswers;
-
-    public ChoiceSurveyAnswer(StepResult stepResult) {
+    public ChoiceSurveyAnswer(StepResult<T> stepResult) {
       super(stepResult);
 
-      Object result = stepResult.getResult();
+      T result = stepResult.getResult();
       if (result instanceof List) {
-        choiceAnswers = (List<?>) result;
+        // TODO: verify whether answer is List or array, see MultiChoiceQuestionBody
+        choiceAnswers = ImmutableList.copyOf((List) result);
       } else {
-        List<Object> list = new ArrayList<>();
-        list.add(result);
-        choiceAnswers = list;
+        choiceAnswers = ImmutableList.of(result);
       }
     }
   }
