@@ -65,7 +65,7 @@ public class ArchiveFileFactory {
      * @param identifier identifier for the result
      * @return the filename to use for the bridge result
      */
-    public String getFilename(String identifier) {
+    private String getFilename(String identifier) {
         return identifier.replace(".", "_");
     }
 

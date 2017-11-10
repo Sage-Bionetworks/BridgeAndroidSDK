@@ -87,7 +87,7 @@ public class TaskHelper {
 
     // To allow unit tests to mock.
     @VisibleForTesting
-    void setArchiveFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
+    void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
         this.archiveFileFactory = archiveFileFactory;
     }
 
@@ -345,8 +345,8 @@ public class TaskHelper {
         List<Result> resultList = new ArrayList<>();
 
         if (taskResult != null) {
-            for (String key : taskResult.getResults().keySet()) {
-                StepResult stepResult = taskResult.getResults().get(key);
+            Map<String, StepResult> stepResults = taskResult.getResults();
+            for (StepResult stepResult : stepResults.values()) {
                 addResultsRecursively(stepResult, resultList);
             }
         }
@@ -365,8 +365,7 @@ public class TaskHelper {
         if (stepResult != null) {
             Map stepResultMap = stepResult.getResults();
 
-            for (Object key : stepResultMap.keySet()) {
-                Object value = stepResultMap.get(key);
+            for (Object value : stepResultMap.values()) {
 
                 // The StepResult is a special case, because it could contain nested StepResults,
                 // or it could contain FileResults, which need added themselves,
@@ -383,6 +382,8 @@ public class TaskHelper {
                 } else if (value instanceof TappingIntervalResult) {
                     resultList.add((Result) value);
                     wentDeeper = true;
+                } else {
+                    logger.warn("Could not add result for unknown type: " + value.getClass());
                 }
             }
         }
