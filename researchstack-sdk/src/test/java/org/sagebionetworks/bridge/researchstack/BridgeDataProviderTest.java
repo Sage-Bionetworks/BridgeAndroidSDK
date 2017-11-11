@@ -76,6 +76,7 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PreferenceManager.class, Looper.class})
 public class BridgeDataProviderTest {
+    private static final String EXTERNAL_ID = "dummy-external-id";
     private static final String SCHEMA_ID = "my-schema-id";
     private static final int SCHEMA_REV = 3;
     private static final SchemaKey SCHEMA_KEY = new SchemaKey(SCHEMA_ID, SCHEMA_REV);
@@ -182,6 +183,30 @@ public class BridgeDataProviderTest {
 
         // TODO: verify background tasks are triggered when session is established
         // verify(uploadHandler).uploadPendingFiles(forConsentedUsersApi);
+    }
+
+    @Test
+    public void signInWithExternalId() {
+        // Mock BridgeConfig
+        when(bridgeConfig.getEmailForExternalId(EXTERNAL_ID)).thenReturn(
+                "example+extId@example.com");
+        when(bridgeConfig.getPasswordForExternalId(EXTERNAL_ID)).thenReturn(
+                "extId's dummy password");
+
+        // Mock Authentication Manager
+        when(authenticationManager.signIn(any(), any())).thenReturn(Single.just(
+                new UserSessionInfo()));
+
+        // Execute and validate
+        Observable<DataResponse> loginResult = dataProvider.signInWithExternalId(context,
+                EXTERNAL_ID);
+        loginResult.test().assertCompleted();
+
+        // Verify dependencies
+        verify(bridgeConfig).getEmailForExternalId(EXTERNAL_ID);
+        verify(bridgeConfig).getPasswordForExternalId(EXTERNAL_ID);
+        verify(authenticationManager).signIn("example+extId@example.com",
+                "extId's dummy password");
     }
 
     @Test

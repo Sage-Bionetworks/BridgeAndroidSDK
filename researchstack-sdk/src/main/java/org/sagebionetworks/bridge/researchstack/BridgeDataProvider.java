@@ -338,6 +338,16 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
+    /** {@inheritDoc} */
+    @NonNull
+    @Override
+    public Observable<DataResponse> signInWithExternalId(
+            @Nullable Context context, @NonNull String externalId) {
+        String email = bridgeConfig.getEmailForExternalId(externalId);
+        String password = bridgeConfig.getPasswordForExternalId(externalId);
+        return signIn(email, password).andThen(SUCCESS_DATA_RESPONSE);
+    }
+
     /**
      * @param email    the participant's email
      * @param password participant's password
