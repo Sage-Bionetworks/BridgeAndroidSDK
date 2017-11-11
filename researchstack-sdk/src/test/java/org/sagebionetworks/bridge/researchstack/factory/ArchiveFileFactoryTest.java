@@ -34,11 +34,14 @@ public class ArchiveFileFactoryTest {
                 new ChoiceAnswerFormat(AnswerFormat.ChoiceAnswerStyle.SingleChoice)
         );
 
-        List<String> result = Arrays.asList("Result1");
-        when(stepResultMock.getResult()).thenReturn(result);
+        List<String> results = Arrays.asList("stringResult");
+        when(stepResultMock.getResult()).thenReturn(results);
 
         SurveyAnswer.ChoiceSurveyAnswer answer = createAnswer(stepResultMock,
                 SurveyAnswer.ChoiceSurveyAnswer.class);
+
+        // sanity check the result is wired through
+        assertEquals(results, answer.choiceAnswers);
 
         JsonArchiveFile file = archiveFileFactory.fromStepResult(stepResultMock);
 
