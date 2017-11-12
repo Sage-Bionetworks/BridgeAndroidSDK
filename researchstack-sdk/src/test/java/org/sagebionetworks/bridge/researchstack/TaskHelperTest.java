@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 
+import com.google.common.collect.Maps;
+
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,7 +47,9 @@ import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.model.Survey;
@@ -56,6 +60,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import rx.Completable;
@@ -115,6 +120,8 @@ public class TaskHelperTest {
     @Mock
     private ArchiveFactory archiveFactory;
     @Mock
+    private ArchiveFileFactory archiveFileFactory;
+    @Mock
     StorageAccessWrapper storageAccess;
     @Mock
     ResourceManager resourceManager;
@@ -147,6 +154,7 @@ public class TaskHelperTest {
         taskHelper = spy(new TaskHelper(storageAccess, resourceManager, appPrefs, notificationHelper,
                 bridgeManagerProvider));
         taskHelper.setArchiveFactory(archiveFactory);
+        taskHelper.setArchiveFileFactory(archiveFileFactory);
         taskHelper.setSurveyFactory(surveyFactory);
     }
 
@@ -350,16 +358,31 @@ public class TaskHelperTest {
         String taskId = "taskId";
         String taskChron = "chron";
 
+        Map<String, StepResult> stepResults = Maps.newHashMap();
+
+        String step1 = "step1";
+        StepResult result1 = mock(StepResult.class);
+        ArchiveFile file1 = mock(ArchiveFile.class);
+        stepResults.put(step1, result1);
+        when(archiveFileFactory.fromResult(result1)).thenReturn(file1);
+
+        String step2 = "step2";
+        StepResult result2 = mock(StepResult.class);
+        ArchiveFile file2 = mock(ArchiveFile.class);
+        stepResults.put(step2, result2);
+        when(archiveFileFactory.fromResult(result2)).thenReturn(file2);
+
         TaskResult taskResult = mock(TaskResult.class);
         when(taskResult.getIdentifier()).thenReturn(taskId);
         when(taskResult.getEndDate()).thenReturn(endDate);
+        when(taskResult.getResults()).thenReturn(stepResults);
 
         String appVersionName = "appversion";
         String phoneInfo = "Android";
         when(bridgeConfig.getAppVersionName()).thenReturn(appVersionName);
         when(bridgeConfig.getDeviceName()).thenReturn(phoneInfo);
 
-       Archive archive = mock(Archive.class);
+        Archive archive = mock(Archive.class);
         Archive.Builder archiveBuilder = mock(Archive.Builder.class);
         when(archiveBuilder.withAppVersionName(appVersionName)).thenReturn(archiveBuilder);
         when(archiveBuilder.withPhoneInfo(phoneInfo)).thenReturn(archiveBuilder);
@@ -383,6 +406,9 @@ public class TaskHelperTest {
         when(TaskAlertReceiver.createCreateIntent(any())).thenReturn(notificationCreateIntent);
 
         taskHelper.uploadTaskResult(taskResult, archiveBuilder);
+
+        verify(archiveFileFactory).fromResult(result1);
+        verify(archiveFileFactory).fromResult(result2);
 
         verify(archiveBuilder).withPhoneInfo(phoneInfo);
         verify(archiveBuilder).withAppVersionName(appVersionName);
