@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
+import org.joda.time.DateTime;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import org.joda.time.LocalDate;
@@ -31,8 +32,10 @@ import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignUp;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
@@ -515,9 +518,28 @@ public abstract class BridgeDataProvider extends DataProvider {
                         .sharingScope(scope));
     }
 
+    @NonNull
+    public Observable<StudyParticipant> getStudyParticipant() {
+        return bridgeManagerProvider.getParticipantManager().getParticipantRecord().toObservable();
+    }
+
+    @NonNull
+    public Observable<UserSessionInfo> updateStudyParticipant(StudyParticipant studyParticipant) {
+        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant).toObservable();
+    }
+
     //endregion
 
     //region TasksAndSchedules
+
+    public Observable<Message> updateActivity(ScheduledActivity activity) {
+        return bridgeManagerProvider.getActivityManager().updateActivity(activity);
+    }
+
+    public Observable<ScheduledActivityListV4> getActivities(DateTime start, DateTime end) {
+        return bridgeManagerProvider.getActivityManager().getActivites(start, end)
+                .toObservable();
+    }
 
     @NonNull
     @Override
