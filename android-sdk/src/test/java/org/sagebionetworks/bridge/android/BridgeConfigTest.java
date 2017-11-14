@@ -6,20 +6,29 @@ import org.junit.Test;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.AdditionalMatchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class BridgeConfigTest {
+    private static final String EXTERNAL_ID = "my-external-id";
+
     @Test
     public void taskToSchemaMap_ErrorOpeningFile() throws Exception {
         // mock context
-        Context mockContext = mockContextWithException(IOException.class);
+        Context mockContext = mockContextWithException(BridgeConfig.TASK_TO_SCHEMA_FILENAME,
+                IOException.class);
 
         // execute and validate
         BridgeConfig config = new BridgeConfig(mockContext);
@@ -31,7 +40,8 @@ public class BridgeConfigTest {
     public void taskToSchemaMap_ErrorParsingJson() throws Exception {
         // mock context
         String jsonText = "This is bad JSON";
-        Context mockContext = mockContextWithTaskToSchemaMap(jsonText);
+        Context mockContext = mockContextWithJsonFile(BridgeConfig.TASK_TO_SCHEMA_FILENAME,
+                jsonText);
 
         // execute and validate
         BridgeConfig config = new BridgeConfig(mockContext);
@@ -48,7 +58,8 @@ public class BridgeConfigTest {
                 "       \"revision\":3\n" +
                 "   }\n" +
                 "}";
-        Context mockContext = mockContextWithTaskToSchemaMap(jsonText);
+        Context mockContext = mockContextWithJsonFile(BridgeConfig.TASK_TO_SCHEMA_FILENAME,
+                jsonText);
 
         // execute and validate
         BridgeConfig config = new BridgeConfig(mockContext);
@@ -58,25 +69,78 @@ public class BridgeConfigTest {
         assertEquals(3, result.get("my-task-id").getRevision());
     }
 
-    private static Context mockContextWithException(Class<? extends Throwable> throwableType)
-            throws Exception {
+    @Test
+    public void externalIdSettings_NoFile() throws Exception {
+        // Mock context
+        Context mockContext = mockContextWithException(BridgeConfig.EXTERNAL_ID_SETTINGS_FILENAME,
+                FileNotFoundException.class);
+
+        // Execute - getEmail/PasswordForExternalId() should both throw.
+        BridgeConfig config = new BridgeConfig(mockContext);
+
+        try {
+            config.getEmailForExternalId(EXTERNAL_ID);
+            fail("expected exception");
+        } catch (UnsupportedOperationException ex) {
+            assertEquals("Credentials for external ID require asset file " +
+                    BridgeConfig.EXTERNAL_ID_SETTINGS_FILENAME, ex.getMessage());
+        }
+
+        try {
+            config.getPasswordForExternalId(EXTERNAL_ID);
+            fail("expected exception");
+        } catch (UnsupportedOperationException ex) {
+            assertEquals("Credentials for external ID require asset file " +
+                    BridgeConfig.EXTERNAL_ID_SETTINGS_FILENAME, ex.getMessage());
+        }
+    }
+
+    @Test
+    public void externalIdSettings_WithSettings() throws Exception {
+        // Mock context
+        String settingsJsonText = "{\n" +
+                "   \"emailFormat\":\"example+%s@example.com\",\n" +
+                "   \"passwordFormat\":\"%s's dummy password\"\n" +
+                "}";
+        Context mockContext = mockContextWithJsonFile(BridgeConfig.EXTERNAL_ID_SETTINGS_FILENAME,
+                settingsJsonText);
+
+        // Execute
+        BridgeConfig config = new BridgeConfig(mockContext);
+        assertEquals("example+" + EXTERNAL_ID + "@example.com", config
+                .getEmailForExternalId(EXTERNAL_ID));
+        assertEquals(EXTERNAL_ID + "'s dummy password", config.getPasswordForExternalId(
+                EXTERNAL_ID));
+    }
+
+    private static Context mockContextWithException(
+            String filename, Class<? extends Throwable> throwableType) throws Exception {
         // mock asset manager
         AssetManager mockAssetManager = mock(AssetManager.class);
-        when(mockAssetManager.open(BridgeConfig.TASK_TO_SCHEMA_FILENAME,
-                AssetManager.ACCESS_BUFFER)).thenThrow(throwableType);
+        when(mockAssetManager.open(filename, AssetManager.ACCESS_BUFFER)).thenThrow(throwableType);
+
+        // Every other file should just throw a FileNotFoundException. Otherwise, the test throws
+        // with a NullPointerException.
+        when(mockAssetManager.open(not(eq(filename)), anyInt())).thenThrow(
+                FileNotFoundException.class);
 
         // mock context
         return mockContextWithAssetManager(mockAssetManager);
     }
 
-    private static Context mockContextWithTaskToSchemaMap(String mapText) throws Exception {
+    private static Context mockContextWithJsonFile(String filename, String mapText)
+            throws Exception {
         // mock file
         InputStream inputStream = new ByteArrayInputStream(mapText.getBytes());
 
         // mock asset manager
         AssetManager mockAssetManager = mock(AssetManager.class);
-        when(mockAssetManager.open(BridgeConfig.TASK_TO_SCHEMA_FILENAME,
-                AssetManager.ACCESS_BUFFER)).thenReturn(inputStream);
+        when(mockAssetManager.open(filename, AssetManager.ACCESS_BUFFER)).thenReturn(inputStream);
+
+        // Every other file should just throw a FileNotFoundException. Otherwise, the test throws
+        // with a NullPointerException.
+        when(mockAssetManager.open(not(eq(filename)), anyInt())).thenThrow(
+                FileNotFoundException.class);
 
         // mock context
         return mockContextWithAssetManager(mockAssetManager);

@@ -2,16 +2,16 @@ package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
 import android.content.Intent;
+import android.support.annotation.NonNull;
+import android.support.annotation.VisibleForTesting;
 
 import com.google.common.base.Strings;
-import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 import org.joda.time.DateTime;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.TaskModel;
+import org.researchstack.backbone.model.survey.factory.SurveyFactory;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
@@ -23,22 +23,20 @@ import org.researchstack.backbone.storage.database.AppDatabase;
 import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.skin.AppPrefs;
-import org.researchstack.skin.model.TaskModel;
 import org.researchstack.skin.notification.TaskAlertReceiver;
 import org.researchstack.skin.schedule.ScheduleHelper;
-import org.researchstack.skin.task.SmartSurveyTask;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.data.Archive;
-import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
-import org.sagebionetworks.bridge.data.JsonArchiveFile;
-import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
+import org.sagebionetworks.bridge.data.ArchiveFile;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -46,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
@@ -53,15 +52,19 @@ public class TaskHelper {
     private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
     // these are used to getConsent task/step guids without rereading the json files and iterating through
-    private final Map<String, String> loadedTaskGuids = new HashMap<String, String>();
-    private final Map<String, String> loadedTaskDates = new HashMap<String, String>();
-    private final Map<String, String> loadedTaskCrons = new HashMap<String, String>();
+    private final Map<String, String> loadedTaskGuids = new HashMap<>();
+    private final Map<String, String> loadedTaskDates = new HashMap<>();
+    private final Map<String, String> loadedTaskCrons = new HashMap<>();
 
     private final StorageAccessWrapper storageAccess;
     private final ResourceManager resourceManager;
     private final AppPrefs appPrefs;
     private final NotificationHelper notificationHelper;
     private final BridgeManagerProvider bridgeManagerProvider;
+
+    private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
+    private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
             StorageAccessWrapper storageAccess,
@@ -76,13 +79,31 @@ public class TaskHelper {
         this.bridgeManagerProvider = bridgeManagerProvider;
     }
 
+    // To allow unit tests to mock.
+    @VisibleForTesting
+    void setArchiveFactory(@NonNull ArchiveFactory archiveFactory) {
+        this.archiveFactory = archiveFactory;
+    }
+
+    // To allow unit tests to mock.
+    @VisibleForTesting
+    void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
+        this.archiveFileFactory = archiveFileFactory;
+    }
+
+    // To allow unit tests to mock.
+    @VisibleForTesting
+    void setSurveyFactory(@NonNull SurveyFactory surveyFactory) {
+        this.surveyFactory = surveyFactory;
+    }
+
     public SchedulesAndTasksModel loadTasksAndSchedules(Context context) {
         SchedulesAndTasksModel schedulesAndTasksModel =
                 resourceManager.getTasksAndSchedules().create(context);
 
         AppDatabase db = storageAccess.getAppDatabase();
 
-        List<SchedulesAndTasksModel.ScheduleModel> schedules = new ArrayList<SchedulesAndTasksModel.ScheduleModel>();
+        List<SchedulesAndTasksModel.ScheduleModel> schedules = new ArrayList<>();
         for (SchedulesAndTasksModel.ScheduleModel schedule : schedulesAndTasksModel.schedules) {
             if (schedule.tasks.size() == 0) {
                 logger.error("No tasks in schedule");
@@ -120,43 +141,101 @@ public class TaskHelper {
         return schedulesAndTasksModel;
     }
 
-    protected TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+    @NonNull
+    protected TaskModel loadTaskModel(
+            @NonNull Context context, @NonNull SchedulesAndTasksModel.TaskScheduleModel task) {
         TaskModel taskModel = resourceManager.getTask(task.taskFileName).create(context);
-
-        // cache guid and createdOnDate
-        loadedTaskGuids.put(taskModel.identifier, taskModel.guid);
-        loadedTaskDates.put(taskModel.identifier, taskModel.createdOn);
-
+        cacheSurveyGuidCreatedOn(taskModel);
         return taskModel;
     }
 
-    public Task loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
-        // currently we only support task json files, override this method to taskClassName
-        if (Strings.isNullOrEmpty(task.taskFileName)) {
-            return null;
+    // Helper method to cache the survey guid and createdOn for a give survey task model.
+    private void cacheSurveyGuidCreatedOn(@NonNull TaskModel taskModel) {
+        loadedTaskGuids.put(taskModel.identifier, taskModel.guid);
+        loadedTaskDates.put(taskModel.identifier, taskModel.createdOn);
+    }
+
+    /**
+     * Given the ResearchStack task model, load a survey. This can either load a survey from a
+     * static file, or it can call Bridge Server to get the survey. The returned Single will never
+     * be null, though it may contain a null result if loading the survey failed, or if the task
+     * model doesn't represent a survey.
+     *
+     * @param context activity context
+     * @param task    task model, which may or may not represent a survey
+     * @return constructed survey, or null if the task model wasn't a survey or could not be loaded
+     */
+    @NonNull
+    public Single<Task> loadTask(
+            @NonNull Context context, @NonNull SchedulesAndTasksModel.TaskScheduleModel task) {
+        Single<TaskModel> taskModelSingle;
+        if (task instanceof SurveyTaskScheduleModel) {
+            // Call server, then convert the server's survey model to ResearchStack's equivalent
+            // TaskModel.
+            SurveyTaskScheduleModel surveyTaskScheduleModel = (SurveyTaskScheduleModel) task;
+            taskModelSingle = bridgeManagerProvider.getSurveyManager()
+                    .getSurvey(surveyTaskScheduleModel.surveyGuid, surveyTaskScheduleModel
+                            .surveyCreatedOn)
+                    .map(survey -> {
+                        TaskModel taskModel = RestUtils.toType(survey, TaskModel.class);
+                        cacheSurveyGuidCreatedOn(taskModel);
+                        return taskModel;
+                    });
+        } else if (!Strings.isNullOrEmpty(task.taskFileName)) {
+            // Load survey from static JSON.
+            taskModelSingle = Single.just(loadTaskModel(context, task));
+        } else {
+            // Unsupported. Return null.
+            return Single.just(null);
         }
 
-        TaskModel taskModel = loadTaskModel(context, task);
-        SmartSurveyTask smartSurveyTask = new SmartSurveyTask(context, taskModel);
-        return smartSurveyTask;
+        return taskModelSingle.map(taskModel -> surveyFactory.createSmartSurveyTask(context,
+                taskModel));
     }
 
-    public void uploadActivityResult(String schemaId, TaskResult taskResult) {
-
-        uploadTaskResult(taskResult, Archive.Builder
-                .forActivity(schemaId));
+    /**
+     * Uploads the task result to Bridge with the given schema ID and default revision 1.
+     *
+     * @param schemaId   schema ID for this task
+     * @param taskResult task results
+     */
+    public void uploadActivityResult(@NonNull String schemaId, @NonNull TaskResult taskResult) {
+        uploadTaskResult(taskResult, archiveFactory.forActivity(schemaId));
     }
 
-    public void uploadActivityResult(String schemaId, int schemaRevisionId, TaskResult taskResult) {
-        uploadTaskResult(taskResult, Archive.Builder
-                .forActivity(schemaId, schemaRevisionId));
+    /**
+     * Uploads the task result to Bridge with the given schema ID and revision.
+     *
+     * @param schemaId         schema ID for this task
+     * @param schemaRevisionId schema revision for this task
+     * @param taskResult       task results
+     */
+    public void uploadActivityResult(
+            @NonNull String schemaId, int schemaRevisionId, @NonNull TaskResult taskResult) {
+        uploadTaskResult(taskResult, archiveFactory.forActivity(schemaId, schemaRevisionId));
     }
 
-    public void uploadSurveyResult(TaskResult taskResult) {
+    /**
+     * Uploads the task result to Bridge, where the task was a server-side survey. Survey guid and
+     * createdOn are loaded from the cache when the task was originally loaded. Task ID should match
+     * the survey's identifier. See loadTask().
+     *
+     * @param taskResult task results
+     */
+    public void uploadSurveyResult(@NonNull TaskResult taskResult) {
+        // Figure out surveyGuid and createdOn from task.
         String taskId = taskResult.getIdentifier();
+        String surveyGuid = getGuid(taskId);
+        DateTime surveyCreatedOn = DateTimeUtils.parseDateTime(getCreatedOnDate(taskId));
 
-        uploadTaskResult(taskResult, Archive.Builder
-                .forSurvey(taskId, DateTime.parse(getCreatedOnDate(taskId))));
+        // Upload only if we have a surveyGuid/CreatedOn. Otherwise, the Archive library crashes.
+        if (!Strings.isNullOrEmpty(surveyGuid) && surveyCreatedOn != null) {
+            uploadTaskResult(taskResult, archiveFactory.forSurvey(surveyGuid, surveyCreatedOn));
+        } else {
+            logger.error("No surveyGuid/CreatedOn for task " + taskId +
+                    ", falling back to task ID as schema ID");
+            uploadActivityResult(taskId, taskResult);
+        }
     }
 
     //package private for test access
@@ -183,7 +262,7 @@ public class TaskHelper {
         // Traverse through the StepResult maps and get an ordered list of Results
         List<Result> results = flattenResults(taskResult);
         for (Result result : results) {
-            org.sagebionetworks.bridge.data.ArchiveFile archiveFile = toBridgeArchiveFile(result);
+            ArchiveFile archiveFile = archiveFileFactory.fromResult(result);
             if (archiveFile != null) {
                 builder.addDataFile(archiveFile);
             } else {
@@ -229,53 +308,6 @@ public class TaskHelper {
         bridgeManagerProvider.getApplicationContext().sendBroadcast(intent);
     }
 
-
-    org.sagebionetworks.bridge.data.ArchiveFile toBridgeArchiveFile(Result result) {
-        DateTime endTime = new DateTime(result.getEndDate());
-
-        if (result instanceof StepResult) {
-            StepResult stepResult = (StepResult) result;
-            String filename = bridgifyIdentifier(stepResult.getIdentifier()) + ".json";
-
-            // If a step result has an answer format, we know that it was formed from a QuestionStep
-            if (stepResult.getAnswerFormat() != null) {
-                SurveyAnswer surveyAnswer = SurveyAnswer.create(stepResult);
-
-                return new JsonArchiveFile(filename, endTime, surveyAnswer, SurveyAnswer.class);
-            } else {  // otherwise make a generic String, Object JSON Map
-                Type typeOfMap = new TypeToken<Map<String, Object>>() {
-                }.getType();
-
-                return new JsonArchiveFile(filename, endTime, stepResult.getResults(), typeOfMap);
-            }
-        } else if (result instanceof FileResult) {
-            FileResult fileResult = (FileResult) result;
-            File file = fileResult.getFile();
-
-            int lastIndex = file.getName().lastIndexOf(".");
-            String fileExtension = ".json";
-            if (lastIndex >= 0) {
-                fileExtension = file.getName().substring(lastIndex, file.getName().length());
-            }
-            String filename = bridgifyIdentifier(fileResult.getIdentifier()) + fileExtension;
-
-            return new ByteSourceArchiveFile(
-                    filename,
-                    endTime,
-                    Files.asByteSource(file));
-        } else {
-            if (result instanceof TappingIntervalResult) {
-                // TODO: replace this in RestUtils.GSON
-                // TODO: you can do standard json parsing after this
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create();
-                String filename = bridgifyIdentifier(result.getIdentifier()) + ".json";
-                String json = gson.toJson(result, TappingIntervalResult.class);
-                return new JsonArchiveFile(filename, endTime, json);
-            }
-        }
-        return null;
-    }
-
     /**
      * @param identifier identifier for the result
      * @return the filename to use for the bridge result
@@ -313,8 +345,8 @@ public class TaskHelper {
         List<Result> resultList = new ArrayList<>();
 
         if (taskResult != null) {
-            for (String key : taskResult.getResults().keySet()) {
-                StepResult stepResult = taskResult.getResults().get(key);
+            Map<String, StepResult> stepResults = taskResult.getResults();
+            for (StepResult stepResult : stepResults.values()) {
                 addResultsRecursively(stepResult, resultList);
             }
         }
@@ -333,8 +365,7 @@ public class TaskHelper {
         if (stepResult != null) {
             Map stepResultMap = stepResult.getResults();
 
-            for (Object key : stepResultMap.keySet()) {
-                Object value = stepResultMap.get(key);
+            for (Object value : stepResultMap.values()) {
 
                 // The StepResult is a special case, because it could contain nested StepResults,
                 // or it could contain FileResults, which need added themselves,
@@ -351,6 +382,8 @@ public class TaskHelper {
                 } else if (value instanceof TappingIntervalResult) {
                     resultList.add((Result) value);
                     wentDeeper = true;
+                } else {
+                    logger.warn("Could not add result for unknown type: " + value.getClass());
                 }
             }
         }

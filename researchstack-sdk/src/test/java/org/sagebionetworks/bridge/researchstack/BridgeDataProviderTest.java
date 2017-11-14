@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -28,30 +29,41 @@ import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SurveyReference;
+import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
+import java.util.List;
 
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -64,6 +76,7 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PreferenceManager.class, Looper.class})
 public class BridgeDataProviderTest {
+    private static final String EXTERNAL_ID = "dummy-external-id";
     private static final String SCHEMA_ID = "my-schema-id";
     private static final int SCHEMA_REV = 3;
     private static final SchemaKey SCHEMA_KEY = new SchemaKey(SCHEMA_ID, SCHEMA_REV);
@@ -96,6 +109,8 @@ public class BridgeDataProviderTest {
     @Mock
     protected ResearchStackDAO researchStackDAO;
     @Mock
+    private ActivityManager activityManager;
+    @Mock
     protected AuthenticationManager authenticationManager;
 
     @Before
@@ -108,6 +123,7 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
         when(bridgeManagerProvider.getAccountDao()).thenReturn(accountDAO);
         when(bridgeManagerProvider.getConsentDao()).thenReturn(consentDAO);
+        when(bridgeManagerProvider.getActivityManager()).thenReturn(activityManager);
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
 
         pinCodeConfig = mock(PinCodeConfig.class);
@@ -167,6 +183,30 @@ public class BridgeDataProviderTest {
 
         // TODO: verify background tasks are triggered when session is established
         // verify(uploadHandler).uploadPendingFiles(forConsentedUsersApi);
+    }
+
+    @Test
+    public void signInWithExternalId() {
+        // Mock BridgeConfig
+        when(bridgeConfig.getEmailForExternalId(EXTERNAL_ID)).thenReturn(
+                "example+extId@example.com");
+        when(bridgeConfig.getPasswordForExternalId(EXTERNAL_ID)).thenReturn(
+                "extId's dummy password");
+
+        // Mock Authentication Manager
+        when(authenticationManager.signIn(any(), any())).thenReturn(Single.just(
+                new UserSessionInfo()));
+
+        // Execute and validate
+        Observable<DataResponse> loginResult = dataProvider.signInWithExternalId(context,
+                EXTERNAL_ID);
+        loginResult.test().assertCompleted();
+
+        // Verify dependencies
+        verify(bridgeConfig).getEmailForExternalId(EXTERNAL_ID);
+        verify(bridgeConfig).getPasswordForExternalId(EXTERNAL_ID);
+        verify(authenticationManager).signIn("example+extId@example.com",
+                "extId's dummy password");
     }
 
     @Test
@@ -244,7 +284,7 @@ public class BridgeDataProviderTest {
         verify(authenticationManager).storeLocalConsent(
                 "studyId",
                 body.name,
-                new LocalDate(body.birthdate),
+                LocalDate.fromDateFields(body.birthdate),
                 body.imageData,
                 body.imageMimeType,
                 SharingScope.ALL_QUALIFIED_RESEARCHERS
@@ -372,18 +412,135 @@ public class BridgeDataProviderTest {
         verify(taskHelper).uploadSurveyResult(taskResult);
     }
 
-    @Ignore
     @Test
     public void testLoadTasksAndSchedules() {
-        SchedulesAndTasksModel schedulesAndTasksModel = dataProvider.loadTasksAndSchedules(context);
+        // There are two parts to this test:
+        // 1. We can handle both surveys and tasks.
+        // 2. We group and sort date correctly.
+        //
+        // With that in mind, we'll want 4 activites, 2 on the 1st and 2 on the 2nd, arranged in
+        // unsorted order. Each day will have a survey and a task.
+        DateTime day1 = DateTime.parse("2017-11-01T07:00-0700");
+        DateTime day2 = DateTime.parse("2017-11-03T07:00-0700");
+
+        DateTime surveyCreatedOn1 = DateTime.parse("2017-02-21T19:46:33.515Z");
+        SurveyReference surveyRef1 = new SurveyReference().identifier("survey-1")
+                .guid("survey-1-guid").createdOn(surveyCreatedOn1);
+        Activity surveyActivity1 = new Activity().label("Survey 1").labelDetail("1 question")
+                .activityType(ActivityType.SURVEY).survey(surveyRef1);
+        ScheduledActivity surveyScheduledActivity1 = makeScheduledActivity(day1, surveyActivity1,
+                false);
+
+        DateTime surveyCreatedOn2 = DateTime.parse("2016-12-09T19:23:57.424Z");
+        SurveyReference surveyRef2 = new SurveyReference().identifier("survey-2")
+                .guid("survey-2-guid").createdOn(surveyCreatedOn2);
+        Activity surveyActivity2 = new Activity().label("Survey 2").labelDetail("2 questions")
+                .activityType(ActivityType.SURVEY).survey(surveyRef2);
+        ScheduledActivity surveyScheduledActivity2 = makeScheduledActivity(day2, surveyActivity2,
+                true);
+
+        TaskReference taskRef1 = new TaskReference().identifier("task-1");
+        Activity taskActivity1 = new Activity().label("Task 1").labelDetail("1 minute")
+                .activityType(ActivityType.TASK).task(taskRef1);
+        ScheduledActivity taskScheduledActivity1 = makeScheduledActivity(day1, taskActivity1,
+                false);
+
+        TaskReference taskRef2 = new TaskReference().identifier("task-2");
+        Activity taskActivity2 = new Activity().label("Task 2").labelDetail("2 minutes")
+                .activityType(ActivityType.TASK).task(taskRef2);
+        ScheduledActivity taskScheduledActivity2 = makeScheduledActivity(day2, taskActivity2,
+                true);
+
+        ScheduledActivityList scheduledActivityList = new ScheduledActivityList()
+                .items(ImmutableList.of(surveyScheduledActivity2, surveyScheduledActivity1,
+                        taskScheduledActivity2, taskScheduledActivity1));
+
+        // Mock Bridge call
+        when(activityManager.getActivities(anyInt(), anyInt())).thenReturn(Single.just(
+                scheduledActivityList));
+
+        // Execute and validate
+        SchedulesAndTasksModel schedulesAndTasksModel = dataProvider.loadTasksAndSchedules(context)
+                .toBlocking().value();
+        List<SchedulesAndTasksModel.ScheduleModel> scheduleModelList = schedulesAndTasksModel
+                .schedules;
+        assertEquals(2, scheduleModelList.size());
+
+        // Day 1
+        SchedulesAndTasksModel.ScheduleModel scheduleDay1 = scheduleModelList.get(0);
+        assertEquals("once", scheduleDay1.scheduleType);
+        assertEquals(day1.toDate(), scheduleDay1.scheduledOn);
+        List<SchedulesAndTasksModel.TaskScheduleModel> taskModelListDay1 = scheduleDay1.tasks;
+        assertEquals(2, taskModelListDay1.size());
+
+        SurveyTaskScheduleModel surveyScheduleModel1 = (SurveyTaskScheduleModel) taskModelListDay1
+                .get(0);
+        assertEquals("survey-1-guid", surveyScheduleModel1.surveyGuid);
+        assertEquals(surveyCreatedOn1, surveyScheduleModel1.surveyCreatedOn);
+        assertEquals("Survey 1", surveyScheduleModel1.taskTitle);
+        assertFalse(surveyScheduleModel1.taskIsOptional);
+        assertEquals(ActivityType.SURVEY.toString(), surveyScheduleModel1.taskType);
+        assertEquals("1 question", surveyScheduleModel1.taskCompletionTime);
+
+        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel1 = taskModelListDay1.get(1);
+        assertEquals("Task 1", taskScheduleModel1.taskTitle);
+        assertEquals("task-1", taskScheduleModel1.taskID);
+        assertFalse(taskScheduleModel1.taskIsOptional);
+        assertEquals(ActivityType.TASK.toString(), taskScheduleModel1.taskType);
+        assertEquals("1 minute", taskScheduleModel1.taskCompletionTime);
+
+        // Day 2
+        SchedulesAndTasksModel.ScheduleModel scheduleDay2 = scheduleModelList.get(1);
+        assertEquals("once", scheduleDay2.scheduleType);
+        assertEquals(day2.toDate(), scheduleDay2.scheduledOn);
+        List<SchedulesAndTasksModel.TaskScheduleModel> taskModelListDay2 = scheduleDay2.tasks;
+        assertEquals(2, taskModelListDay2.size());
+
+        SurveyTaskScheduleModel surveyScheduleModel2 = (SurveyTaskScheduleModel) taskModelListDay2
+                .get(0);
+        assertEquals("survey-2-guid", surveyScheduleModel2.surveyGuid);
+        assertEquals(surveyCreatedOn2, surveyScheduleModel2.surveyCreatedOn);
+        assertEquals("Survey 2", surveyScheduleModel2.taskTitle);
+        assertTrue(surveyScheduleModel2.taskIsOptional);
+        assertEquals(ActivityType.SURVEY.toString(), surveyScheduleModel2.taskType);
+        assertEquals("2 questions", surveyScheduleModel2.taskCompletionTime);
+
+        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel2 = taskModelListDay2.get(1);
+        assertEquals("Task 2", taskScheduleModel2.taskTitle);
+        assertEquals("task-2", taskScheduleModel2.taskID);
+        assertTrue(taskScheduleModel2.taskIsOptional);
+        assertEquals(ActivityType.TASK.toString(), taskScheduleModel2.taskType);
+        assertEquals("2 minutes", taskScheduleModel2.taskCompletionTime);
+
+        // Verify back-end call
+        verify(activityManager).getActivities(4, 0);
     }
 
-    @Ignore
+    // Helper method to make a ScheduledActivity. This is because there are no setters for
+    // scheduledOn and persistent.
+    private static ScheduledActivity makeScheduledActivity(
+            DateTime scheduledOn, Activity activity, boolean persistent) {
+        ScheduledActivity scheduledActivity = mock(ScheduledActivity.class);
+        when(scheduledActivity.getScheduledOn()).thenReturn(scheduledOn);
+        when(scheduledActivity.getActivity()).thenReturn(activity);
+        when(scheduledActivity.getPersistent()).thenReturn(persistent);
+        return scheduledActivity;
+    }
+
     @Test
     public void testLoadTask() {
-        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
-                mock(SchedulesAndTasksModel.TaskScheduleModel.class);
-        Task task = dataProvider.loadTask(context, taskScheduleModel);
+        // Mock TaskHelper
+        Single<Task> taskHelperOutput = Single.just(mock(Task.class));
+        when(taskHelper.loadTask(any(), any())).thenReturn(taskHelperOutput);
+
+        // Execute and validate
+        SchedulesAndTasksModel.TaskScheduleModel dataProviderInput =
+                new SchedulesAndTasksModel.TaskScheduleModel();
+        Single<Task> dataProviderOutput = dataProvider.loadTask(context, dataProviderInput);
+        assertSame(taskHelperOutput, dataProviderOutput);
+
+        // Verify back-end call
+        verify(taskHelper).loadTask(same(context), same(dataProviderInput));
     }
 
     @Ignore

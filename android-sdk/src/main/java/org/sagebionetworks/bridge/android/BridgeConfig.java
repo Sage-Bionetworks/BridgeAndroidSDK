@@ -45,6 +45,17 @@ public class BridgeConfig {
     private static final Logger logger = LoggerFactory.getLogger(BridgeConfig.class);
 
     /**
+     * Filename for external ID settings. This file should be in the format:
+     * {
+     *   "emailFormat":"example+%s@example.com",
+     *   "passwordFormat":"%s"
+     * }
+     *
+     * Where %s will be replaced by the external ID. This file is optional.
+     */
+    public static final String EXTERNAL_ID_SETTINGS_FILENAME = "external_id_settings.json";
+
+    /**
      * Filename of the study's public key. File is found in the assets folder can be overriden by
      * your app
      */
@@ -56,10 +67,16 @@ public class BridgeConfig {
      */
     public static final String TASK_TO_SCHEMA_FILENAME = "task_to_schema.json";
 
+    private static final String KEY_EXTERNAL_ID_EMAIL_FORMAT = "emailFormat";
+    private static final String KEY_EXTERNAL_ID_PASSWORD_FORMAT = "passwordFormat";
+    private static final Type STRING_TO_STRING_MAP =
+            new TypeToken<Map<String, String>>(){}.getType();
     private static final Type TASK_TO_SCHEMA_TYPE =
             new TypeToken<Map<String, SchemaKey>>(){}.getType();
 
     private final Context applicationContext;
+    private final String externalIdEmailFormat;
+    private final String externalIdPasswordFormat;
     private final Map<String, SchemaKey> taskToSchemaMap;
 
     public BridgeConfig(@NonNull Context context) {
@@ -69,17 +86,40 @@ public class BridgeConfig {
 
         // Load task ID to schema map.
         // Temp var is required to satisfy Java's assign-once semantics for final members.
-        Map<String, SchemaKey> tempTaskToSchemaMap;
-        try (InputStream taskToSchemaStream = applicationContext.getAssets().open(
-                TASK_TO_SCHEMA_FILENAME, ACCESS_BUFFER);
-             Reader taskToSchemaReader = new InputStreamReader(taskToSchemaStream)) {
-            tempTaskToSchemaMap = RestUtils.GSON.fromJson(taskToSchemaReader, TASK_TO_SCHEMA_TYPE);
-        } catch (IOException | JsonParseException ex) {
-            // Fall back to empty map.
-            logger.error("Could not task to schema mapping from /assets/task_to_schema.json", ex);
-            tempTaskToSchemaMap = ImmutableMap.of();
+        Map<String, SchemaKey> tempTaskToSchemaMap = loadJsonAsset(TASK_TO_SCHEMA_FILENAME,
+                TASK_TO_SCHEMA_TYPE);
+        taskToSchemaMap = tempTaskToSchemaMap != null ? tempTaskToSchemaMap : ImmutableMap.of();
+
+        // Load external ID settings, if present.
+        Map<String, String> externalIdSettings = loadJsonAsset(EXTERNAL_ID_SETTINGS_FILENAME,
+                STRING_TO_STRING_MAP);
+        if (externalIdSettings != null) {
+            externalIdEmailFormat = externalIdSettings.get(KEY_EXTERNAL_ID_EMAIL_FORMAT);
+            externalIdPasswordFormat = externalIdSettings.get(KEY_EXTERNAL_ID_PASSWORD_FORMAT);
+        } else {
+            // Java assign-once semantics require us to assign a value in the constructor.
+            externalIdEmailFormat = null;
+            externalIdPasswordFormat = null;
         }
-        taskToSchemaMap = tempTaskToSchemaMap;
+    }
+
+    /**
+     * Helper method to load a JSON file from the asset manager.
+     *
+     * @param filename asset filename
+     * @param typeOfT  Type object represented by T
+     * @param <T>      type that GSON should convert the object into
+     * @return JSON loaded and parsed from the asset file
+     */
+    @Nullable
+    private <T> T loadJsonAsset(@NonNull String filename, @NonNull Type typeOfT) {
+        try (InputStream inputStream = applicationContext.getAssets().open(filename, ACCESS_BUFFER);
+             Reader reader = new InputStreamReader(inputStream)) {
+            return RestUtils.GSON.fromJson(reader, typeOfT);
+        } catch (IOException | JsonParseException ex) {
+            logger.error("Could not asset " + filename, ex);
+        }
+        return null;
     }
 
     /**
@@ -198,6 +238,36 @@ public class BridgeConfig {
             return s;
         } else {
             return Character.toUpperCase(first) + s.substring(1);
+        }
+    }
+
+    /**
+     * Gets the account's email address for the user's external ID, based on app config.
+     *
+     * @param externalId user's external ID
+     * @return account's email address
+     */
+    public String getEmailForExternalId(String externalId) {
+        if (externalIdEmailFormat != null) {
+            return String.format(externalIdEmailFormat, externalId);
+        } else {
+            throw new UnsupportedOperationException("Credentials for external ID require asset file " +
+                    EXTERNAL_ID_SETTINGS_FILENAME);
+        }
+    }
+
+    /**
+     * Gets the account's password for the user's external ID, based on app config.
+     *
+     * @param externalId user's external ID
+     * @return account's password
+     */
+    public String getPasswordForExternalId(String externalId) {
+        if (externalIdPasswordFormat != null) {
+            return String.format(externalIdPasswordFormat, externalId);
+        } else {
+            throw new UnsupportedOperationException("Credentials for external ID require asset file " +
+                    EXTERNAL_ID_SETTINGS_FILENAME);
         }
     }
 }
