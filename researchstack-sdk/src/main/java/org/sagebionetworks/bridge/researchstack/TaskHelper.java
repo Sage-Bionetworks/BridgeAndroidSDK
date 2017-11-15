@@ -183,18 +183,12 @@ public class TaskHelper {
                     });
         } else {
             // Does the taskID match one of our local resources?
-            taskModelSingle = Single.fromCallable(() -> {
-                // There doesn't seem to be a way to check for file existence before we attempt to
-                // open it. If the file exists, it'll throw a FileNotFoundException wrapped in a
-                // RuntimeException. Wrap in a try catch.
-                try {
-                    return resourceManager.getTask(task.taskID).create(context);
-                } catch (RuntimeException ex) {
-                    // Return null. This signals to the ActivitiesFragment that we can't load the
+            taskModelSingle = Single.fromCallable(() -> (TaskModel) resourceManager
+                    .getTask(task.taskID).create(context))
+                    // If creating the task fails (generally because it's not a file-based survey,
+                    // return null. This signals to the ActivitiesFragment that we can't load the
                     // survey either from server or file, and that it's probably a custom task.
-                    return null;
-                }
-            });
+                    .onErrorReturn(throwable -> null);
         }
 
         return taskModelSingle.map(taskModel -> {
