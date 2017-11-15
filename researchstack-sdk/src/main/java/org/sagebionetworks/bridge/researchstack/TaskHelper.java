@@ -181,16 +181,23 @@ public class TaskHelper {
                         cacheSurveyGuidCreatedOn(taskModel);
                         return taskModel;
                     });
-        } else if (!Strings.isNullOrEmpty(task.taskFileName)) {
-            // Load survey from static JSON.
-            taskModelSingle = Single.just(loadTaskModel(context, task));
         } else {
-            // Unsupported. Return null.
-            return Single.just(null);
+            // Does the taskID match one of our local resources?
+            taskModelSingle = Single.fromCallable(() -> (TaskModel) resourceManager
+                    .getTask(task.taskID).create(context))
+                    // If creating the task fails (generally because it's not a file-based survey,
+                    // return null. This signals to the ActivitiesFragment that we can't load the
+                    // survey either from server or file, and that it's probably a custom task.
+                    .onErrorReturn(throwable -> null);
         }
 
-        return taskModelSingle.map(taskModel -> surveyFactory.createSmartSurveyTask(context,
-                taskModel));
+        return taskModelSingle.map(taskModel -> {
+            if (taskModel != null) {
+                return surveyFactory.createSmartSurveyTask(context, taskModel);
+            } else {
+                return null;
+            }
+        });
     }
 
     /**
