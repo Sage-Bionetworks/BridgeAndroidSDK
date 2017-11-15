@@ -181,16 +181,29 @@ public class TaskHelper {
                         cacheSurveyGuidCreatedOn(taskModel);
                         return taskModel;
                     });
-        } else if (!Strings.isNullOrEmpty(task.taskFileName)) {
-            // Load survey from static JSON.
-            taskModelSingle = Single.just(loadTaskModel(context, task));
         } else {
-            // Unsupported. Return null.
-            return Single.just(null);
+            // Does the taskID match one of our local resources?
+            taskModelSingle = Single.fromCallable(() -> {
+                // There doesn't seem to be a way to check for file existence before we attempt to
+                // open it. If the file exists, it'll throw a FileNotFoundException wrapped in a
+                // RuntimeException. Wrap in a try catch.
+                try {
+                    return resourceManager.getTask(task.taskID).create(context);
+                } catch (RuntimeException ex) {
+                    // Return null. This signals to the ActivitiesFragment that we can't load the
+                    // survey either from server or file, and that it's probably a custom task.
+                    return null;
+                }
+            });
         }
 
-        return taskModelSingle.map(taskModel -> surveyFactory.createSmartSurveyTask(context,
-                taskModel));
+        return taskModelSingle.map(taskModel -> {
+            if (taskModel != null) {
+                return surveyFactory.createSmartSurveyTask(context, taskModel);
+            } else {
+                return null;
+            }
+        });
     }
 
     /**

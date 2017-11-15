@@ -80,6 +80,7 @@ import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -103,6 +104,7 @@ import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWa
  * Created by TheMDP on 3/3/17.
  */
 @RunWith(PowerMockRunner.class)
+@SuppressWarnings("unchecked")
 @PrepareForTest({TaskAlertReceiver.class, AndroidSchedulers.class})
 public class TaskHelperTest {
     private static final String JSON_CONTENT_TYPE = "application/json";
@@ -110,7 +112,6 @@ public class TaskHelperTest {
     private static final int SCHEMA_REV = 3;
     private static final String SURVEY_CREATED_ON_STRING = "2017-09-22T13:52:26.685Z";
     private static final DateTime SURVEY_CREATED_ON = DateTime.parse(SURVEY_CREATED_ON_STRING);
-    private static final String SURVEY_FILENAME = "my-survey.json";
     private static final String SURVEY_GUID = "my-survey-guid";
     private static final String SURVEY_IDENTIFIER = "my-survey";
     private static final String TASK_ID = "my-task";
@@ -201,22 +202,18 @@ public class TaskHelperTest {
     public void loadTask_FileBasedSurvey() {
         // Mock Resource and ResourceManager
         TaskModel loadedTaskModel = new TaskModel();
-        loadedTaskModel.guid = SURVEY_GUID;
-        loadedTaskModel.createdOn = SURVEY_CREATED_ON_STRING;
-        loadedTaskModel.identifier = SURVEY_IDENTIFIER;
-
         ResourcePathManager.Resource mockResource = mock(ResourcePathManager.Resource.class);
         when(mockResource.create(any())).thenReturn(loadedTaskModel);
-        when(resourceManager.getTask(SURVEY_FILENAME)).thenReturn(mockResource);
+        when(resourceManager.getTask(TASK_ID)).thenReturn(mockResource);
 
         // Mock TaskFactory
         SmartSurveyTask factoryOutput = mock(SmartSurveyTask.class);
         when(surveyFactory.createSmartSurveyTask(any(), any())).thenReturn(factoryOutput);
 
-        // Make TaskScheduleModel - The only param we care about is taskFileName.
+        // Make TaskScheduleModel - The only param we care about is taskID.
         SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
                 new SchedulesAndTasksModel.TaskScheduleModel();
-        taskScheduleModel.taskFileName = SURVEY_FILENAME;
+        taskScheduleModel.taskID = TASK_ID;
 
         // Execute and validate
         Task helperOutput = taskHelper.loadTask(applicationContext, taskScheduleModel).toBlocking()
@@ -224,25 +221,38 @@ public class TaskHelperTest {
         assertSame(factoryOutput, helperOutput);
 
         // Verify ResourceManager and Resource
-        verify(resourceManager).getTask(SURVEY_FILENAME);
+        verify(resourceManager).getTask(TASK_ID);
         verify(mockResource).create(applicationContext);
 
-        // Verify cached survey guid/createdOn
-        assertEquals(SURVEY_GUID, taskHelper.getGuid(SURVEY_IDENTIFIER));
-        assertEquals(SURVEY_CREATED_ON_STRING, taskHelper.getCreatedOnDate(SURVEY_IDENTIFIER));
+        // Verify SurveyFactory
+        verify(surveyFactory).createSmartSurveyTask(same(applicationContext),
+                same(loadedTaskModel));
     }
 
     @Test
     public void loadTask_CannotLoadSurvey() {
-        // Make TaskScheduleModel - It has none of the relevant params. No guid/createdOn, no
-        // filename.
+        // Mock Resource and ResourceManager
+        ResourcePathManager.Resource mockResource = mock(ResourcePathManager.Resource.class);
+        when(mockResource.create(any())).thenThrow(RuntimeException.class);
+        when(resourceManager.getTask(TASK_ID)).thenReturn(mockResource);
+
+        // Make TaskScheduleModel - It's not a server-side survey (no guid/createdOn), and the
+        // taskID doesn't load in the ResourceManager.
         SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel =
                 new SchedulesAndTasksModel.TaskScheduleModel();
+        taskScheduleModel.taskID = TASK_ID;
 
         // Execute and validate.
         Task helperOutput = taskHelper.loadTask(applicationContext, taskScheduleModel).toBlocking()
                 .value();
         assertNull(helperOutput);
+
+        // Verify ResourceManager and Resource
+        verify(resourceManager).getTask(TASK_ID);
+        verify(mockResource).create(applicationContext);
+
+        // Verify SurveyFactory never called.
+        verify(surveyFactory, never()).createSmartSurveyTask(any(), any());
     }
 
     @Test
