@@ -6,8 +6,8 @@ import android.preference.PreferenceManager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
-
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.Before;
@@ -569,6 +569,18 @@ public class BridgeDataProviderTest {
     }
 
     @Test
+    public void testAddDataGroup() {
+        ((BridgeDataProvider) dataProvider).addLocalDataGroup("foo");
+        verify(accountDAO).addDataGroup("foo");
+    }
+
+    @Test
+    public void testGetDataGroups() {
+        when(accountDAO.getDataGroups()).thenReturn(Lists.newArrayList("foo", "bar"));
+        List<String> dataGroupList = ((BridgeDataProvider) dataProvider).getDataGroups();
+        assertEquals(Lists.newArrayList("foo", "bar"), dataGroupList);
+    }
+  
     public void testUpdateActivityOnUpload() throws IOException {
         // mock bridge config
         when(bridgeConfig.getTaskToSchemaMap()).thenReturn(ImmutableMap.of(TASK_ID, SCHEMA_KEY));
