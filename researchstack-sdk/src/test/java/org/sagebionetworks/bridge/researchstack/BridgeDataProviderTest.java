@@ -6,6 +6,7 @@ import android.preference.PreferenceManager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.Before;
@@ -558,6 +559,19 @@ public class BridgeDataProviderTest {
         dataProvider.forgotPassword(context, "email").test().assertCompleted();
 
         verify(authenticationManager).requestPasswordReset("email");
+    }
+
+    @Test
+    public void testAddDataGroup() {
+        ((BridgeDataProvider) dataProvider).addLocalDataGroup("foo");
+        verify(accountDAO).addDataGroup("foo");
+    }
+
+    @Test
+    public void testGetDataGroups() {
+        when(accountDAO.getDataGroups()).thenReturn(Lists.newArrayList("foo", "bar"));
+        List<String> dataGroupList = ((BridgeDataProvider) dataProvider).getDataGroups();
+        assertEquals(Lists.newArrayList("foo", "bar"), dataGroupList);
     }
 
     private static TaskResult makeActivityTask(String taskId) {

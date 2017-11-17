@@ -456,6 +456,27 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     //endregion
 
+    // region Data Groups
+
+    /**
+     * Add data groups to this account locally. Note: this does not call the server to update the
+     * participant.
+     */
+    public void addLocalDataGroup(@NonNull String dataGroup) {
+        bridgeManagerProvider.getAccountDao().addDataGroup(dataGroup);
+    }
+
+    /**
+     * Returns a list of data groups associated with this account. If there are no data groups,
+     * this method returns an empty list.
+     */
+    @NonNull
+    public List<String> getDataGroups() {
+        return bridgeManagerProvider.getAccountDao().getDataGroups();
+    }
+
+    // endregion Data Groups
+
     //region User
 
     @Override
