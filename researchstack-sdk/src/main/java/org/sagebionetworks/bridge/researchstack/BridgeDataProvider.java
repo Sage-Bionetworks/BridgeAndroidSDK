@@ -4,10 +4,13 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
+import android.util.Log;
 
 import org.joda.time.DateTime;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.gson.Gson;
+
 import org.joda.time.LocalDate;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
@@ -21,6 +24,7 @@ import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
+import org.researchstack.backbone.ui.ViewTaskActivity;
 import org.researchstack.backbone.utils.ObservableUtils;
 import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
@@ -51,6 +55,7 @@ import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -63,6 +68,11 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     // set in initialize
     private final TaskHelper taskHelper;
+
+    /**
+     * The GUID of the last task that was loaded (used in completion)
+     */
+    private String lastLoadedTaskGuid = null;
 
     @NonNull
     private final StorageAccessWrapper storageAccessWrapper;
@@ -562,6 +572,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     @Override
     public Single<Task> loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+        lastLoadedTaskGuid = task.taskGUID;
         // currently we only support task json files, override this method to taskClassName
         return taskHelper.loadTask(context, task);
     }
@@ -577,6 +588,24 @@ public abstract class BridgeDataProvider extends DataProvider {
             if (isActivityObject instanceof Boolean) {
                 isActivity = (Boolean) isActivityObject;
             }
+        }
+
+        if (lastLoadedTaskGuid == null) {
+            logger.error("lastLoadedTaskGuid must be set for this task to complete and " +
+                    "set finishedOn and startedOn dates, and clientData on the bridge server");
+        } else {
+            // TODO: make GUID available in ScheduledActivity constructor and get rid of this gson nonsense
+            String activityJson = String.format("{\"guid\":\"%s\"}", lastLoadedTaskGuid);
+            ScheduledActivity activity = (new Gson()).fromJson(activityJson, ScheduledActivity.class);
+            if (taskResult.getStartDate() != null) {
+                activity.setStartedOn(new DateTime(taskResult.getStartDate()));
+            }
+            if (taskResult.getEndDate() != null) {
+                activity.setFinishedOn(new DateTime(taskResult.getEndDate()));
+            }
+            bridgeManagerProvider.getActivityManager().updateActivity(activity).subscribe(message -> {
+                logger.info("Update activity success " + message);
+            }, throwable -> logger.error(throwable.getLocalizedMessage()));
         }
 
         if (isActivity) {
@@ -600,17 +629,22 @@ public abstract class BridgeDataProvider extends DataProvider {
     public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
     //endregion
 
+    @NonNull
+    protected SchedulesAndTasksModel translateActivities(@NonNull ScheduledActivityList activityList) {
+        return translateActivities(activityList.getItems());
+    }
+
     //
     // NOTE: this is a crude translation and needs to be updated to properly
     //       handle schedules and filters
     @NonNull
-    private SchedulesAndTasksModel translateActivities(@NonNull ScheduledActivityList
+    protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
                                                                activityList) {
         logger.info("translateActivities()");
 
         // first, group activities by day
         ListMultimap<Integer, ScheduledActivity> activityMap = LinkedListMultimap.create();
-        for (ScheduledActivity sa : activityList.getItems()) {
+        for (ScheduledActivity sa : activityList) {
             int day = sa.getScheduledOn().dayOfYear().get();
             activityMap.put(day, sa);
         }
@@ -654,6 +688,10 @@ public abstract class BridgeDataProvider extends DataProvider {
                 }
                 tsm.taskIsOptional = sa.getPersistent();
                 tsm.taskType = activity.getActivityType().toString();
+                if (sa.getFinishedOn() != null) {
+                    tsm.taskFinishedOn = sa.getFinishedOn().toDate();
+                }
+                tsm.taskGUID = sa.getGuid();
                 sm.tasks.add(tsm);
             }
         }
