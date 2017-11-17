@@ -6,6 +6,8 @@ import android.preference.PreferenceManager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.Gson;
+
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.Before;
@@ -25,6 +27,7 @@ import org.researchstack.backbone.model.User;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.storage.file.FileAccess;
 import org.researchstack.backbone.storage.file.PinCodeConfig;
+import org.researchstack.backbone.task.OrderedTask;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.skin.AppPrefs;
@@ -43,6 +46,7 @@ import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
@@ -52,6 +56,7 @@ import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 import rx.Completable;
@@ -64,6 +69,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -427,7 +433,7 @@ public class BridgeDataProviderTest {
         SurveyReference surveyRef1 = new SurveyReference().identifier("survey-1")
                 .guid("survey-1-guid").createdOn(surveyCreatedOn1);
         Activity surveyActivity1 = new Activity().label("Survey 1").labelDetail("1 question")
-                .activityType(ActivityType.SURVEY).survey(surveyRef1);
+                .activityType(ActivityType.SURVEY).survey(surveyRef1).guid("survey-1-guid-test");
         ScheduledActivity surveyScheduledActivity1 = makeScheduledActivity(day1, surveyActivity1,
                 false);
 
@@ -476,6 +482,7 @@ public class BridgeDataProviderTest {
         SurveyTaskScheduleModel surveyScheduleModel1 = (SurveyTaskScheduleModel) taskModelListDay1
                 .get(0);
         assertEquals("survey-1-guid", surveyScheduleModel1.surveyGuid);
+        assertEquals("survey-1-guid-test", surveyScheduleModel1.taskGUID);
         assertEquals(surveyCreatedOn1, surveyScheduleModel1.surveyCreatedOn);
         assertEquals("Survey 1", surveyScheduleModel1.taskTitle);
         assertFalse(surveyScheduleModel1.taskIsOptional);
@@ -524,6 +531,7 @@ public class BridgeDataProviderTest {
         when(scheduledActivity.getScheduledOn()).thenReturn(scheduledOn);
         when(scheduledActivity.getActivity()).thenReturn(activity);
         when(scheduledActivity.getPersistent()).thenReturn(persistent);
+        when(scheduledActivity.getGuid()).thenReturn(activity.getGuid());
         return scheduledActivity;
     }
 
@@ -558,6 +566,38 @@ public class BridgeDataProviderTest {
         dataProvider.forgotPassword(context, "email").test().assertCompleted();
 
         verify(authenticationManager).requestPasswordReset("email");
+    }
+
+    @Test
+    public void testUpdateActivityOnUpload() throws IOException {
+        // mock bridge config
+        when(bridgeConfig.getTaskToSchemaMap()).thenReturn(ImmutableMap.of(TASK_ID, SCHEMA_KEY));
+        // Mock Bridge update activity call
+        when(activityManager.updateActivity(any())).thenReturn(Observable.just(new Message()));
+        when(taskHelper.loadTask(any(), any())).thenReturn(Single.just(new OrderedTask(TASK_ID)));
+
+        // set up and execute
+        SchedulesAndTasksModel.TaskScheduleModel task = new SchedulesAndTasksModel.TaskScheduleModel();
+        task.taskID = TASK_ID;
+        task.taskGUID = TASK_ID;
+        // Needs to be called for the activity to upload
+        dataProvider.loadTask(context, task);
+
+        Date taskFinished = new Date();
+        TaskResult taskResult = makeActivityTask("my-task-id");
+        taskResult.setStartDate(taskFinished);
+        taskResult.setEndDate(taskFinished);
+        dataProvider.uploadTaskResult(context, taskResult);
+
+        // verify
+        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, taskResult);
+
+        // TODO: make GUID available in ScheduledActivity constructor and get rid of this gson nonsense
+        String activityJson = String.format("{\"guid\":\"%s\"}", TASK_ID);
+        ScheduledActivity activity = (new Gson()).fromJson(activityJson, ScheduledActivity.class);
+        activity.setStartedOn(new DateTime(taskFinished));
+        activity.setFinishedOn(new DateTime(taskFinished));
+        verify(activityManager).updateActivity(eq(activity));
     }
 
     private static TaskResult makeActivityTask(String taskId) {
