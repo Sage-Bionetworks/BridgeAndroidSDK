@@ -349,9 +349,8 @@ public class AuthenticationManagerTest {
         assertSame(mockUnauthenticatedApi, apiResult);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
-        verify(accountDAO).setSignIn(null);
-        verify(accountDAO).setStudyParticipant(null);
-        verify(accountDAO).setUserSessionInfo(null);
+        verify(accountDAO).clear();
+        verify(consentDAO).clear();
     }
 
     @Test
