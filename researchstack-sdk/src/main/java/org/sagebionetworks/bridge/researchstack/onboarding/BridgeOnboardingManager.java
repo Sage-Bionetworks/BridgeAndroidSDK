@@ -66,7 +66,7 @@ public class BridgeOnboardingManager extends OnboardingManager {
             AnswerFormat format = new ChoiceAnswerFormat(answerStyle, choices);
 
             // Create the question step and apply navigation rules
-            DataGroupQuestionStep dataGroupStep = new DataGroupQuestionStep(
+            DataGroupQuestionStep dataGroupStep = dataGroupsQuestionStep(
                     dataGroupItem.identifier, dataGroupItem.title, format);
             dataGroupStep.setExpectedAnswer(dataGroupItem.expectedAnswer);
             dataGroupStep.setOptional(dataGroupItem.optional);
@@ -81,5 +81,9 @@ public class BridgeOnboardingManager extends OnboardingManager {
             // For everything else, fallback to the superclass's createCustomStep.
             return super.createCustomStep(context, item, isSubtaskStep, factory);
         }
+    }
+
+    protected DataGroupQuestionStep dataGroupsQuestionStep(String identifier, String title, AnswerFormat format) {
+        return new DataGroupQuestionStep(identifier, title, format);
     }
 }
