@@ -301,12 +301,13 @@ public class AuthenticationManager {
             listener.onSignedOut(email);
         }
 
-        return RxUtils.toBodySingle(authenticationApi.signOut())
-                .doOnSuccess(message -> {
-                    accountDAO.setSignIn(null);
-                    accountDAO.setUserSessionInfo(null);
-                    accountDAO.setStudyParticipant(null);
-                }).toCompletable();
+        Completable completable = RxUtils.toBodySingle(authenticationApi.signOut()).toCompletable();
+
+        // Clear relevant account information whether call was successful or not
+        accountDAO.clear();
+        consentDAO.clear();
+
+        return completable;
     }
 
     /**

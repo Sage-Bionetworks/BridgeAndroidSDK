@@ -30,6 +30,13 @@ public class ConsentDAO extends SharedPreferencesJsonDAO {
     }
 
     /**
+     * Removes all saved data
+     */
+    public void clear() {
+        sharedPreferences.edit().clear().commit();
+    }
+
+    /**
      * This returns the subpouplationGuid of consent signatures stored locally. It is not to be used
      * as a means to determine the participant's consent status. For the participant's consent
      * state, use ConsentManager (preferred) or UserSessionInfo
