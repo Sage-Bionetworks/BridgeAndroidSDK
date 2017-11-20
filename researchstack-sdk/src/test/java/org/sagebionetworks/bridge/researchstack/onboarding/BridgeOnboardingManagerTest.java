@@ -33,6 +33,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +43,8 @@ public class BridgeOnboardingManagerTest {
         // Constructing an OnboardingManager is kinda hairy. Just mock it, and then set
         // createCustomStep() to call through to the real method.
         BridgeOnboardingManager bridgeOnboardingManager = mock(BridgeOnboardingManager.class);
+        when(bridgeOnboardingManager.dataGroupsQuestionStep(anyString(), anyString(), any()))
+                .thenCallRealMethod();
         when(bridgeOnboardingManager.createCustomStep(any(), any(), anyBoolean(), any()))
                 .thenCallRealMethod();
 

@@ -30,6 +30,13 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
         super(applicationContext, PREFERENCES_FILE);
     }
 
+    /*
+     * Removes all saved data
+     */
+    public void clear() {
+        sharedPreferences.edit().clear().commit();
+    }
+
     /**
      * Returns a list of data groups associated with this account. If there are no data groups,
      * this method returns an empty list.

@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
@@ -397,16 +398,13 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public Observable<DataResponse> signOut(Context context) {
         logger.debug("Called signOut");
+        Observable<DataResponse> dataResponse = signOut().andThen(SUCCESS_DATA_RESPONSE);
 
-        return signOut().doOnCompleted(new Action0() {
-            @Override
-            public void call() {
-                // After the call is completed and successful,
-                // Clear the other parts of the user data
-                AppPrefs.getInstance().clear();
-                StorageAccess.getInstance().removePinCode(context);
-            }
-        }).andThen(SUCCESS_DATA_RESPONSE);
+        // Clear all the parts of the user data whether call is successful or not
+        AppPrefs.getInstance().clear();
+        StorageAccess.getInstance().removePinCode(context);
+
+        return dataResponse;
     }
 
     @NonNull
