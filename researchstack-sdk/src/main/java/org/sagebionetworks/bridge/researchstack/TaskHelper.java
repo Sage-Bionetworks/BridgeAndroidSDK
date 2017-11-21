@@ -390,7 +390,9 @@ public class TaskHelper {
                     resultList.add((Result) value);
                     wentDeeper = true;
                 } else {
-                    logger.warn("Could not add result for unknown type: " + value.getClass());
+                    if (value != null) {
+                        logger.warn("Could not add result for unknown type: " + value.getClass());
+                    }
                 }
             }
         }
