@@ -82,7 +82,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     private final BridgeManagerProvider bridgeManagerProvider;
     @NonNull
-    private final BridgeConfig bridgeConfig;
+    protected final BridgeConfig bridgeConfig;
+
     @NonNull
     private final AuthenticationManager authenticationManager;
 
