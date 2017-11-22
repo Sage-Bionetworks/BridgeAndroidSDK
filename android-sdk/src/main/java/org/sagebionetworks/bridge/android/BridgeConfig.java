@@ -76,6 +76,13 @@ public class BridgeConfig {
 
     private final Context applicationContext;
     private final String externalIdEmailFormat;
+    /**
+     * @return external ID format specified from file, if one exists, null otherwise
+     */
+    public String getExternalIdEmailFormat() {
+        return externalIdEmailFormat;
+    }
+
     private final String externalIdPasswordFormat;
     private final Map<String, SchemaKey> taskToSchemaMap;
 

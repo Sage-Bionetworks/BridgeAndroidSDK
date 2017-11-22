@@ -76,13 +76,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     private String lastLoadedTaskGuid = null;
 
     @NonNull
-    private final StorageAccessWrapper storageAccessWrapper;
+    protected final StorageAccessWrapper storageAccessWrapper;
     @NonNull
-    private final ResearchStackDAO researchStackDAO;
+    protected final ResearchStackDAO researchStackDAO;
     @NonNull
-    private final BridgeManagerProvider bridgeManagerProvider;
+    protected final BridgeManagerProvider bridgeManagerProvider;
     @NonNull
-    private final BridgeConfig bridgeConfig;
+    protected final BridgeConfig bridgeConfig;
+
     @NonNull
     private final AuthenticationManager authenticationManager;
 
