@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
  * Created by liujoshua on 11/10/2017.
  */
 public class ArchiveFileFactoryTest {
-    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
 
     @Test
     public void toArchiveFile_forStepResult() throws Exception {
@@ -69,8 +69,7 @@ public class ArchiveFileFactoryTest {
     }
 
     private <T extends SurveyAnswer> T createAnswer(StepResult result, Class<T> klass) {
-        SurveyAnswer rawAnswer = SurveyAnswer.create(result);
-
+        SurveyAnswer rawAnswer = archiveFileFactory.surveyAnswer(result);
         assertThat(rawAnswer, instanceOf(klass));
         return (T) rawAnswer;
     }

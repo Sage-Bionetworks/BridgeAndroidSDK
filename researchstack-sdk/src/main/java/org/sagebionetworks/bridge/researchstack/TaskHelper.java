@@ -63,7 +63,7 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
-    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
     private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
@@ -85,9 +85,10 @@ public class TaskHelper {
         this.archiveFactory = archiveFactory;
     }
 
-    // To allow unit tests to mock.
-    @VisibleForTesting
-    void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
+    /**
+     * @param archiveFileFactory set your own ArchiveFileFactory to control archiving
+     */
+    public void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
         this.archiveFileFactory = archiveFileFactory;
     }
 

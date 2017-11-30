@@ -27,6 +27,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.joda.time.DateTime;
+import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
@@ -46,19 +47,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Creates ArchiveFiles from ResearchStack Results.
  */
 public class ArchiveFileFactory {
-    /**
-     * Singleton instance.
-     */
-    public static final ArchiveFileFactory INSTANCE = new ArchiveFileFactory();
 
     private static final Type TYPE_OF_MAP = new TypeToken<Map<String, Object>>() {
     }.getType();
 
-    /**
-     * Private constructor, to enforce the singleton property. This prevents creating additional
-     * instances, but the factory can still be mocked.
-     */
-    private ArchiveFileFactory() {
+    public ArchiveFileFactory() {
     }
 
     /**
@@ -102,12 +95,68 @@ public class ArchiveFileFactory {
 
         // If a step result has an answer format, we know that it was formed from a QuestionStep
         if (stepResult.getAnswerFormat() != null) {
-            SurveyAnswer surveyAnswer = SurveyAnswer.create(stepResult);
-
+            SurveyAnswer surveyAnswer = surveyAnswer(stepResult);
             return new JsonArchiveFile(filename, endTime, surveyAnswer);
         } else {  // otherwise make a generic String, Object JSON Map
             return new JsonArchiveFile(filename, endTime, stepResult.getResults(), TYPE_OF_MAP);
         }
+    }
+
+    /**
+     * @param stepResult to transform into a survey answer
+     * @param format the answer format that should be analyzed to make a survey answer
+     * @return a valid SurveyAnswer, or null if conversion is unknown
+     */
+    public SurveyAnswer customSurveyAnswer(StepResult stepResult, AnswerFormat format) {
+        return null; // to be implemented by subclass
+    }
+
+    public SurveyAnswer surveyAnswer(StepResult stepResult) {
+        AnswerFormat format = stepResult.getAnswerFormat();
+        if (!(format.getQuestionType() instanceof AnswerFormat.Type)) {
+            return customSurveyAnswer(stepResult, format);
+        }
+        AnswerFormat.Type type = (AnswerFormat.Type) format.getQuestionType();
+        SurveyAnswer answer;
+        switch (type) {
+            case SingleChoice:
+            case MultipleChoice:
+                answer = new SurveyAnswer.ChoiceSurveyAnswer(stepResult);
+                break;
+            case Integer:
+                answer = new SurveyAnswer.NumericSurveyAnswer(stepResult);
+                break;
+            case Boolean:
+                answer = new SurveyAnswer.BooleanSurveyAnswer(stepResult);
+                break;
+            case Text:
+                answer = new SurveyAnswer.TextSurveyAnswer(stepResult);
+                break;
+            case Date:
+                answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
+                break;
+            case ImageChoice:
+                if (stepResult.getResult() instanceof Number) {
+                    answer = new SurveyAnswer.NumericSurveyAnswer(stepResult);
+                } else if (stepResult.getResult() instanceof String) {
+                    answer = new SurveyAnswer.TextSurveyAnswer(stepResult);
+                } else {
+                    throw new RuntimeException("Cannot upload ImageChoice result to bridge");
+                }
+                break;
+            case None:
+            case Scale:
+            case Decimal:
+            case Eligibility:
+            case TimeOfDay:
+            case DateAndTime:
+            case TimeInterval:
+            case Location:
+            case Form:
+            default:
+                throw new RuntimeException("Cannot upload this question type to bridge");
+        }
+        return answer;
     }
 
     @VisibleForTesting
