@@ -69,8 +69,7 @@ public class ArchiveFileFactoryTest {
     }
 
     private <T extends SurveyAnswer> T createAnswer(StepResult result, Class<T> klass) {
-        SurveyAnswer rawAnswer = SurveyAnswer.create(result);
-
+        SurveyAnswer rawAnswer = archiveFileFactory.surveyAnswer(result);
         assertThat(rawAnswer, instanceOf(klass));
         return (T) rawAnswer;
     }
