@@ -85,9 +85,10 @@ public class TaskHelper {
         this.archiveFactory = archiveFactory;
     }
 
-    // To allow unit tests to mock.
-    @VisibleForTesting
-    void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
+    /**
+     * @param archiveFileFactory set your own ArchiveFileFactory to control archiving
+     */
+    public void setArchiveFileFactory(@NonNull ArchiveFileFactory archiveFileFactory) {
         this.archiveFileFactory = archiveFileFactory;
     }
 

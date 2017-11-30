@@ -11,62 +11,22 @@ import java.util.Date;
 import java.util.List;
 
 public class SurveyAnswer {
-  public final int questionType;
+  public int questionType;
+  public String questionTypeName;
   public final String startDate;
-  public final String questionTypeName;
   public final String item;
   public final String endDate;
 
   public SurveyAnswer(StepResult stepResult) {
-    AnswerFormat.Type type = (AnswerFormat.Type) stepResult.getAnswerFormat().getQuestionType();
-    this.questionType = type.ordinal();
-    this.questionTypeName = type.name();
+    // Custom implementations of SurveyAnswer may not have the AnswerFormat.Type enum value
+    if (stepResult.getAnswerFormat().getQuestionType() instanceof AnswerFormat.Type) {
+      AnswerFormat.Type type = (AnswerFormat.Type) stepResult.getAnswerFormat().getQuestionType();
+      this.questionType = type.ordinal();
+      this.questionTypeName = type.name();
+    }
     this.startDate = FormatHelper.DEFAULT_FORMAT.format(stepResult.getStartDate());
     this.item = stepResult.getIdentifier();
     this.endDate = FormatHelper.DEFAULT_FORMAT.format(stepResult.getEndDate());
-  }
-  public static SurveyAnswer create(StepResult stepResult) {
-    AnswerFormat.Type type = (AnswerFormat.Type) stepResult.getAnswerFormat().getQuestionType();
-    SurveyAnswer answer;
-    switch (type) {
-      case SingleChoice:
-      case MultipleChoice:
-        answer = new ChoiceSurveyAnswer(stepResult);
-        break;
-      case Integer:
-        answer = new NumericSurveyAnswer(stepResult);
-        break;
-      case Boolean:
-        answer = new BooleanSurveyAnswer(stepResult);
-        break;
-      case Text:
-        answer = new TextSurveyAnswer(stepResult);
-        break;
-      case Date:
-        answer = new DateSurveyAnswer(stepResult);
-        break;
-      case ImageChoice:
-        if (stepResult.getResult() instanceof Number) {
-          answer = new NumericSurveyAnswer(stepResult);
-        } else if (stepResult.getResult() instanceof String) {
-          answer = new TextSurveyAnswer(stepResult);
-        } else {
-          throw new RuntimeException("Cannot upload ImageChoice result to bridge");
-        }
-        break;
-      case None:
-      case Scale:
-      case Decimal:
-      case Eligibility:
-      case TimeOfDay:
-      case DateAndTime:
-      case TimeInterval:
-      case Location:
-      case Form:
-      default:
-        throw new RuntimeException("Cannot upload this question type to bridge");
-    }
-    return answer;
   }
 
   public static class BooleanSurveyAnswer extends SurveyAnswer {
