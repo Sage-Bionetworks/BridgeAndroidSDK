@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
  * Created by liujoshua on 11/10/2017.
  */
 public class ArchiveFileFactoryTest {
-    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
 
     @Test
     public void toArchiveFile_forStepResult() throws Exception {

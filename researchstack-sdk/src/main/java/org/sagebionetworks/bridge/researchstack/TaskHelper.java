@@ -63,7 +63,7 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
-    private ArchiveFileFactory archiveFileFactory = ArchiveFileFactory.INSTANCE;
+    private ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
     private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(

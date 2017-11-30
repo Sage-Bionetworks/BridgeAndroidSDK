@@ -47,19 +47,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Creates ArchiveFiles from ResearchStack Results.
  */
 public class ArchiveFileFactory {
-    /**
-     * Singleton instance.
-     */
-    public static final ArchiveFileFactory INSTANCE = new ArchiveFileFactory();
 
     private static final Type TYPE_OF_MAP = new TypeToken<Map<String, Object>>() {
     }.getType();
 
-    /**
-     * Protected constructor, to enforce the singleton property. This prevents creating additional
-     * instances, but the factory can still be mocked.
-     */
-    protected ArchiveFileFactory() {
+    public ArchiveFileFactory() {
     }
 
     /**
