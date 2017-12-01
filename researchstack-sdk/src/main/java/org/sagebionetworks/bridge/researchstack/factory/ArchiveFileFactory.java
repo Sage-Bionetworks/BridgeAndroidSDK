@@ -69,10 +69,10 @@ public class ArchiveFileFactory {
         checkNotNull(result.getEndDate());
 
         if (result instanceof StepResult) {
-            // Skipped steps will have a null result
-            if (((StepResult) result).getResult() != null) {
-                return fromStepResult((StepResult) result);
+            if (((StepResult) result).getResult() == null) {
+                return null; // Skipped StepResults will have a null result
             }
+            return fromStepResult((StepResult) result);
         } else if (result instanceof FileResult) {
             return fromFileResult((FileResult) result);
         } else {
@@ -115,10 +115,6 @@ public class ArchiveFileFactory {
     }
 
     public SurveyAnswer surveyAnswer(StepResult stepResult) {
-        // Skipped questions will have a null result
-        if (stepResult.getResult() == null) {
-            return null;
-        }
         AnswerFormat format = stepResult.getAnswerFormat();
         if (!(format.getQuestionType() instanceof AnswerFormat.Type)) {
             return customSurveyAnswer(stepResult, format);
