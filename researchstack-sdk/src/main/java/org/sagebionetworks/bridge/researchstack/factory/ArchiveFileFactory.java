@@ -69,6 +69,9 @@ public class ArchiveFileFactory {
         checkNotNull(result.getEndDate());
 
         if (result instanceof StepResult) {
+            if (((StepResult) result).getResult() == null) {
+                return null; // Skipped StepResults will have a null result
+            }
             return fromStepResult((StepResult) result);
         } else if (result instanceof FileResult) {
             return fromFileResult((FileResult) result);
