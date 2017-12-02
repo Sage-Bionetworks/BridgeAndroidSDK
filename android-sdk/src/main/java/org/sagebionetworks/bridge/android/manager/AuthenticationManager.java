@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.functions.Action1;
 import rx.functions.Func1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -200,8 +199,10 @@ public class AuthenticationManager {
 
         logger.debug("signIn called with email: " + email);
 
+        String subpopulationGuid = config.getStudyId();
+
         SignIn signIn = new SignIn()
-                .study(config.getStudyId())
+                .study(subpopulationGuid)
                 .email(email)
                 .password(password);
 
@@ -211,7 +212,7 @@ public class AuthenticationManager {
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .toObservable()
-                .retryWhen(retrySignInForConsentOnce())
+                .retryWhen(retrySignInForConsentOnce(subpopulationGuid))
                 .toSingle()
                 .doOnSuccess(userSessionInfo -> {
                     forConsentedUsersApiAtomicReference.set(
@@ -252,7 +253,7 @@ public class AuthenticationManager {
      * @return a retry function that will attempt a to upload Consent one time
      */
     Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
-    retrySignInForConsentOnce() {
+    retrySignInForConsentOnce(String subpopulationGuid) {
         return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
             private int retryAttempt = 0;
 
@@ -264,7 +265,7 @@ public class AuthenticationManager {
 
                     if (!(throwable instanceof ConsentRequiredException)
                             || retryAttempt > 1
-                            || isConsentedOnBridgeServer()) {
+                            || (!isConsented() && !isConsentedInLocal(subpopulationGuid))) {
                         Observable<UserSessionInfo> obs = Observable.error(throwable);
                         return obs;
                     }
@@ -402,6 +403,19 @@ public class AuthenticationManager {
         listeners.remove(listener);
     }
 
+
+    // region Consent
+
+    /**
+     * @param subpopulationGuid guid for the subpopulation of the consent
+     * @return true if consent to participate was made for this consent
+     */
+    public boolean isConsented(@NonNull String subpopulationGuid) {
+        checkNotNull(subpopulationGuid);
+
+        return isConsentedInSessionOrLocal(getUserSessionInfo(), subpopulationGuid);
+    }
+
     /**
      * @param subpopulationGuid guid for the subpopulation of the consent
      * @return true if the consent to participate was made against the most recently published
@@ -428,31 +442,22 @@ public class AuthenticationManager {
 
     // if the participant's session indicates consent to this subpopulation, use that. otherwise,
     // treat presense of consent in DAO as having consented
-    boolean isConsented(UserSessionInfo session, String subpopulationGuid, boolean checkLocalCache) {
+    boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
         ConsentStatus subpopulationStatus = getConsentStatusFromSession(subpopulationGuid);
         if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
             return true;
         }
-        if (checkLocalCache) {
-            return consentDAO.getConsent(subpopulationGuid) != null;
-        }
-        return false;
+        return isConsentedInLocal(subpopulationGuid);
     }
 
-    public boolean isConsentedOnBridgeServer() {
-        return isConsented(false);
-    }
-
-    public boolean isConsentedOnBridgeOrLocally() {
-        return isConsented(true);
+    boolean isConsentedInLocal(String subpopulationGuid) {
+        return consentDAO.getConsent(subpopulationGuid) != null;
     }
 
     /**
-     * @param checkLocalCache if true, we will check if the user has consented locally,
-     *                        if false, we will check if consent has been verified on the server ONLY
      * @return true if all required consents have been signed
      */
-    private boolean isConsented(boolean checkLocalCache) {
+    public boolean isConsented() {
         UserSessionInfo userSessionInfo = getUserSessionInfo();
         if (userSessionInfo != null) {
             if (userSessionInfo.getConsented()) {
@@ -460,7 +465,7 @@ public class AuthenticationManager {
             }
 
             for (String subpopulation : getRequiredConsents(userSessionInfo)) {
-                if (!isConsented(userSessionInfo, subpopulation, checkLocalCache)) {
+                if (!isConsentedInSessionOrLocal(userSessionInfo, subpopulation)) {
                     return false;
                 }
             }
@@ -539,8 +544,6 @@ public class AuthenticationManager {
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
-                        // Make sure the consent info from the user session is updated
-                        .doOnSuccess(accountDAO::setUserSessionInfo)
                         .doOnError(e ->
                                 logger.info("Couldn't upload consent to Bridge, " +
                                         "subpopulationGuid: " + subpopulationGuid, e)
@@ -574,6 +577,9 @@ public class AuthenticationManager {
                                               @Nullable String imageMimeType,
                                               @NonNull SharingScope sharingScope) {
         checkNotNull(subpopulationGuid);
+        checkNotNull(name);
+        checkNotNull(birthdate);
+        checkNotNull(sharingScope);
 
         final ConsentSignature consentSignature = new ConsentSignature()
                 .name(name)
@@ -597,6 +603,7 @@ public class AuthenticationManager {
     public void storeLocalConsent(@NonNull String subpopulationGuid,
                                   @NonNull ConsentSignature consentSignature) {
         checkNotNull(subpopulationGuid);
+        checkNotNull(consentSignature);
 
         logger.debug("Saving consent locally, subpopulationGuid: " + subpopulationGuid);
 

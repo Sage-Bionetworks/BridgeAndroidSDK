@@ -163,7 +163,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public boolean isConsented() {
         logger.debug("Called isConsented");
-        return authenticationManager.isConsentedOnBridgeOrLocally();
+        return authenticationManager.isConsented();
     }
 
     @NonNull
@@ -387,7 +387,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public boolean isSignedIn() {
         return authenticationManager.getEmail() != null &&
-                authenticationManager.isConsentedOnBridgeServer();
+            authenticationManager.getUserSessionInfo() != null;
     }
 
     @Deprecated
@@ -532,8 +532,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         SharingScope sharingScope = RestUtils.GSON.fromJson(scope, SharingScope.class);
         participant.setSharingScope(sharingScope);
 
-        setUserSharingScope(sharingScope)
-                .subscribe();
+        setUserSharingScope(sharingScope).subscribe();
     }
 
     @NonNull
