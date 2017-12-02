@@ -261,7 +261,7 @@ public class AuthenticationManagerTest {
 
         // indicate that locally, we think we are consented
         doReturn(true)
-                .when(spyAuthenticationManager).isConsented();
+                .when(spyAuthenticationManager).isConsentedOnBridgeOrLocally();
         doReturn(userSessionInfoObservable)
                 .when(spyAuthenticationManager).uploadLocalConsents();
 
@@ -273,7 +273,7 @@ public class AuthenticationManagerTest {
         assertSame(mockSignedInApi, apiAtomicReference.get());
         assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
-        verify(spyAuthenticationManager).isConsented();
+        verify(spyAuthenticationManager).isConsentedOnBridgeServer();
         // verify there was an attempt to upload all consents
         verify(spyAuthenticationManager).uploadLocalConsents();
 
@@ -310,7 +310,7 @@ public class AuthenticationManagerTest {
 
         // indicate that locally, we think we are consented
         doReturn(true)
-                .when(spyAuthenticationManager).isConsented();
+                .when(spyAuthenticationManager).isConsentedOnBridgeOrLocally();
         doReturn(userSessionInfoObservable)
                 .when(spyAuthenticationManager).uploadLocalConsents();
 
@@ -319,7 +319,7 @@ public class AuthenticationManagerTest {
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertError(exception);
 
-        verify(spyAuthenticationManager).isConsented();
+        verify(spyAuthenticationManager).isConsentedOnBridgeServer();
         // verify there was an attempt to upload all consents
         verify(spyAuthenticationManager).uploadLocalConsents();
 
@@ -477,7 +477,7 @@ public class AuthenticationManagerTest {
 
         doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsented(userSessionInfo, SUBPOPULATION_GUID, true);
 
         assertTrue(result);
 
@@ -495,7 +495,7 @@ public class AuthenticationManagerTest {
 
         doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsented(userSessionInfo, SUBPOPULATION_GUID, true);
 
         assertFalse(result);
 
@@ -511,7 +511,7 @@ public class AuthenticationManagerTest {
 
         doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
 
-        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsented(userSessionInfo, SUBPOPULATION_GUID, true);
 
         assertFalse(result);
 
@@ -530,7 +530,7 @@ public class AuthenticationManagerTest {
         doReturn(userSessionInfo).when(spyAuthenticationManager).getUserSessionInfo();
         doReturn(new ConsentSignature()).when(consentDAO).getConsent(SUBPOPULATION_GUID);
 
-        boolean result = spyAuthenticationManager.isConsentedInSessionOrLocal(userSessionInfo, SUBPOPULATION_GUID);
+        boolean result = spyAuthenticationManager.isConsented(userSessionInfo, SUBPOPULATION_GUID, true);
 
         assertTrue(result);
 
@@ -548,11 +548,11 @@ public class AuthenticationManagerTest {
                 .when(spyAuthenticationManager)
                 .getRequiredConsents(userSessionInfo);
 
-        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        doReturn(true).when(spyAuthenticationManager).isConsented(userSessionInfo, "A", true);
+        doReturn(true).when(spyAuthenticationManager).isConsented(userSessionInfo, "B", true);
+        doReturn(true).when(spyAuthenticationManager).isConsented(userSessionInfo, "C", true);
 
-        boolean result = spyAuthenticationManager.isConsented();
+        boolean result = spyAuthenticationManager.isConsentedOnBridgeOrLocally();
 
         assertTrue(result);
 
@@ -560,9 +560,9 @@ public class AuthenticationManagerTest {
 
         verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
 
-        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        verify(spyAuthenticationManager).isConsented(userSessionInfo, "A", true);
+        verify(spyAuthenticationManager).isConsented(userSessionInfo, "B", true);
+        verify(spyAuthenticationManager).isConsented(userSessionInfo, "C", true);
     }
 
     @Test
@@ -575,11 +575,11 @@ public class AuthenticationManagerTest {
                 .when(spyAuthenticationManager)
                 .getRequiredConsents(userSessionInfo);
 
-        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        doReturn(false).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        doReturn(true).when(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        doReturn(true).when(spyAuthenticationManager).isConsented(userSessionInfo, "A", true);
+        doReturn(false).when(spyAuthenticationManager).isConsented(userSessionInfo, "B", true);
+        doReturn(true).when(spyAuthenticationManager).isConsented(userSessionInfo, "C", true);
 
-        boolean result = spyAuthenticationManager.isConsented();
+        boolean result = spyAuthenticationManager.isConsentedOnBridgeOrLocally();
 
         assertFalse(result);
 
@@ -587,9 +587,9 @@ public class AuthenticationManagerTest {
 
         verify(spyAuthenticationManager).getRequiredConsents(userSessionInfo);
 
-        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "A");
-        verify(spyAuthenticationManager).isConsentedInSessionOrLocal(userSessionInfo, "B");
-        verify(spyAuthenticationManager, times(0)).isConsentedInSessionOrLocal(userSessionInfo, "C");
+        verify(spyAuthenticationManager).isConsented(userSessionInfo, "A", true);
+        verify(spyAuthenticationManager).isConsented(userSessionInfo, "B", true);
+        verify(spyAuthenticationManager, times(0)).isConsented(userSessionInfo, "C", true);
     }
 
     @Test
