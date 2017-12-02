@@ -252,27 +252,15 @@ public class BridgeDataProviderTest {
         verify(authenticationManager).getEmail();
     }
 
-    @Test
-    public void testIsSignedIn() {
-        when(authenticationManager.getEmail()).thenReturn("Email");
-        when(authenticationManager.isConsentedOnBridgeServer()).thenReturn(true);
-
-        boolean isSignedUp = dataProvider.isSignedIn(context);
-        assertTrue(isSignedUp);
-
-        verify(authenticationManager).getEmail();
-        verify(authenticationManager).isConsentedOnBridgeServer();
-    }
 
     @Test
     public void testIsConsented() {
-        when(authenticationManager.isConsentedOnBridgeOrLocally()).thenReturn(true);
+        when(authenticationManager.isConsented()).thenReturn(true);
 
-        // This should reflect the bridge or local status of consent
         boolean isConsented = dataProvider.isConsented();
 
         assertTrue(isConsented);
-        verify(authenticationManager).isConsentedOnBridgeOrLocally();
+        verify(authenticationManager).isConsented();
     }
 
     @Test
@@ -283,25 +271,6 @@ public class BridgeDataProviderTest {
         dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
 
         verify(authenticationManager).withdrawAll(reasonString);
-    }
-
-    @Test
-    public void saveLocalSharingScope() {
-        ConsentSignatureBody body = new ConsentSignatureBody();
-        body.scope = SharingScope.ALL_QUALIFIED_RESEARCHERS.toString();
-        when(bridgeConfig.getStudyId()).thenReturn("studyId");
-
-        dataProvider.saveLocalConsent(context, body);
-
-        verify(bridgeConfig).getStudyId();
-        verify(authenticationManager).storeLocalConsent(
-                "studyId",
-                null,
-                null,
-                null,
-                null,
-                SharingScope.ALL_QUALIFIED_RESEARCHERS
-        );
     }
 
     @Test
@@ -326,6 +295,14 @@ public class BridgeDataProviderTest {
                 body.imageMimeType,
                 SharingScope.ALL_QUALIFIED_RESEARCHERS
         );
+    }
+
+    @Test
+    public void saveLocalConsent_scopeOnly() throws Exception {
+        ConsentSignatureBody body = new ConsentSignatureBody();
+        body.scope = SharingScope.ALL_QUALIFIED_RESEARCHERS.toString();
+        // no exception when saving only the scope
+        dataProvider.saveLocalConsent(context, body);
     }
 
     @Test
