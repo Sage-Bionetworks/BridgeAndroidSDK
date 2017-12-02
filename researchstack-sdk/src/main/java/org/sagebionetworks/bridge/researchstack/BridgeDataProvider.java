@@ -163,7 +163,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public boolean isConsented() {
         logger.debug("Called isConsented");
-        return authenticationManager.isConsented();
+        return authenticationManager.isConsentedOnBridgeOrLocally();
     }
 
     @NonNull
@@ -386,7 +386,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     public boolean isSignedIn() {
-        return authenticationManager.getEmail() != null;
+        return authenticationManager.getEmail() != null &&
+                authenticationManager.isConsentedOnBridgeServer();
     }
 
     @Deprecated
@@ -436,17 +437,13 @@ public abstract class BridgeDataProvider extends DataProvider {
      * returning true if verifyEmail was successful
      */
     @NonNull
-    public Observable<DataResponse> verifyEmail(@Nullable Context context, @NonNull String
-            password) {
-        return verifyEmail(getUserEmail(context), password).andThen(SUCCESS_DATA_RESPONSE);
+    public Observable<DataResponse> verifyEmail(Context context, @NonNull String password) {
+        return verifyEmail(checkNotNull(getUserEmail(context)), password).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @NonNull
     public Completable verifyEmail(@NonNull String email, @NonNull String password) {
-        checkNotNull(email);
-        checkNotNull(password);
-
-        return authenticationManager.signIn(email, password).toCompletable();
+        return authenticationManager.signIn(checkNotNull(email), checkNotNull(password)).toCompletable();
     }
 
     @NonNull
