@@ -199,8 +199,10 @@ public class AuthenticationManager {
 
         logger.debug("signIn called with email: " + email);
 
+        String subpopulationGuid = config.getStudyId();
+
         SignIn signIn = new SignIn()
-                .study(config.getStudyId())
+                .study(subpopulationGuid)
                 .email(email)
                 .password(password);
 
@@ -210,7 +212,7 @@ public class AuthenticationManager {
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .toObservable()
-                .retryWhen(retrySignInForConsentOnce())
+                .retryWhen(retrySignInForConsentOnce(subpopulationGuid))
                 .toSingle()
                 .doOnSuccess(userSessionInfo -> {
                     forConsentedUsersApiAtomicReference.set(
@@ -251,7 +253,7 @@ public class AuthenticationManager {
      * @return a retry function that will attempt a to upload Consent one time
      */
     Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
-    retrySignInForConsentOnce() {
+    retrySignInForConsentOnce(String subpopulationGuid) {
         return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
             private int retryAttempt = 0;
 
@@ -263,7 +265,7 @@ public class AuthenticationManager {
 
                     if (!(throwable instanceof ConsentRequiredException)
                             || retryAttempt > 1
-                            || !isConsented()) {
+                            || (!isConsented() && !isConsentedInLocal(subpopulationGuid))) {
                         Observable<UserSessionInfo> obs = Observable.error(throwable);
                         return obs;
                     }
@@ -445,6 +447,10 @@ public class AuthenticationManager {
         if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
             return true;
         }
+        return isConsentedInLocal(subpopulationGuid);
+    }
+
+    boolean isConsentedInLocal(String subpopulationGuid) {
         return consentDAO.getConsent(subpopulationGuid) != null;
     }
 
@@ -538,6 +544,8 @@ public class AuthenticationManager {
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
+                        // Make sure the consent info from the user session is updated
+                        .doOnSuccess(accountDAO::setUserSessionInfo)
                         .doOnError(e ->
                                 logger.info("Couldn't upload consent to Bridge, " +
                                         "subpopulationGuid: " + subpopulationGuid, e)
