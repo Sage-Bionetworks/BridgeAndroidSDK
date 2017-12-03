@@ -544,6 +544,8 @@ public class AuthenticationManager {
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
+                        // Make sure the consent info from the user session is updated
+                        .doOnSuccess(accountDAO::setUserSessionInfo)
                         .doOnError(e ->
                                 logger.info("Couldn't upload consent to Bridge, " +
                                         "subpopulationGuid: " + subpopulationGuid, e)
