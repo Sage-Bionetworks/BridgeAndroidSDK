@@ -34,7 +34,7 @@ android {
 dependencies {
   implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-  api project (':skin'), {
+  api project (':backbone'), {
     exclude group: 'joda-time', module: 'joda-time'
   }
   api project(":android-sdk") // to export BridgeApplication
