@@ -49,7 +49,7 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 public class TaskHelper {
-    private static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
+    protected static final Logger logger = LoggerFactory.getLogger(TaskHelper.class);
 
     // these are used to getConsent task/step guids without rereading the json files and iterating through
     private final Map<String, String> loadedTaskGuids = new HashMap<>();
@@ -63,7 +63,7 @@ public class TaskHelper {
     private final BridgeManagerProvider bridgeManagerProvider;
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
-    private ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
+    protected ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
     private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
@@ -269,14 +269,7 @@ public class TaskHelper {
 
         // Traverse through the StepResult maps and get an ordered list of Results
         List<Result> results = flattenResults(taskResult);
-        for (Result result : results) {
-            ArchiveFile archiveFile = archiveFileFactory.fromResult(result);
-            if (archiveFile != null) {
-                builder.addDataFile(archiveFile);
-            } else {
-                logger.error("Failed to convert Result to BridgeDataInput " + result.toString());
-            }
-        }
+        addFiles(builder, results, taskId);
 
         String archiveFilename = taskId + "_" + UUID.randomUUID().toString() + ".zip";
 
@@ -300,6 +293,23 @@ public class TaskHelper {
                         }
                     }
                 });
+    }
+
+    /**
+     * Can be overridden by sub-class for custom data archiving
+     * @param archiveBuilder fill this builder up with files from the flattenedResultList
+     * @param flattenedResultList read these and add them to the archiveBuilder
+     * @param taskResultId the identifier of the task result
+     */
+    protected void addFiles(Archive.Builder archiveBuilder, List<Result> flattenedResultList, String taskResultId) {
+        for (Result result : flattenedResultList) {
+            ArchiveFile archiveFile = archiveFileFactory.fromResult(result);
+            if (archiveFile != null) {
+                archiveBuilder.addDataFile(archiveFile);
+            } else {
+                logger.error("Failed to convert Result to BridgeDataInput " + result.toString());
+            }
+        }
     }
 
     private void scheduleReminderNotification(Date endDate, String chronTime) {
