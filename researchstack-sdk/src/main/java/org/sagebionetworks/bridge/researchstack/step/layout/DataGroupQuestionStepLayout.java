@@ -76,7 +76,7 @@ public class DataGroupQuestionStepLayout extends SurveyStepLayout {
 
             // Update Participant API merges the participant we send up with the participant stored
             // in the server. Thus, it's safe to send a participant with just data groups.
-            List<String> dataGroupList = dataProvider.getDataGroups();
+            List<String> dataGroupList = dataProvider.getLocalDataGroups();
             StudyParticipant updatedParticipant = new StudyParticipant();
             updatedParticipant.setDataGroups(dataGroupList);
             Observable<DataResponse> updateObservable = dataProvider
