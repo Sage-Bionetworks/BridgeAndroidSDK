@@ -30,7 +30,7 @@ import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.OrderedTask;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
-import org.researchstack.skin.AppPrefs;
+import org.researchstack.backbone.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;

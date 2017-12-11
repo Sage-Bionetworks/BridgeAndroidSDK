@@ -12,6 +12,7 @@ import com.google.gson.Gson;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.researchstack.backbone.AppPrefs;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ResourceManager;
@@ -25,7 +26,6 @@ import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.utils.ObservableUtils;
-import org.researchstack.skin.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
