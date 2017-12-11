@@ -540,17 +540,25 @@ public abstract class BridgeDataProvider extends DataProvider {
         return bridgeManagerProvider.getParticipantManager()
                 .updateParticipantRecord((StudyParticipant) new StudyParticipant()
                         .email(authenticationManager.getEmail())
-                        .sharingScope(scope));
+                        .sharingScope(scope))
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()));
     }
 
     @NonNull
     public Observable<StudyParticipant> getStudyParticipant() {
-        return bridgeManagerProvider.getParticipantManager().getParticipantRecord().toObservable();
+        return bridgeManagerProvider.getParticipantManager().getParticipantRecord()
+                .doOnSuccess(participant -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(participant.getDataGroups()))
+                .toObservable();
     }
 
     @NonNull
     public Observable<UserSessionInfo> updateStudyParticipant(StudyParticipant studyParticipant) {
-        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant).toObservable();
+        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant)
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()))
+                .toObservable();
     }
 
     //endregion

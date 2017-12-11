@@ -30,6 +30,7 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
     public static final String CUSTOM_TYPE = "dataGroups.singleChoiceText";
 
     private boolean shouldPersist;
+    private boolean shouldSkipIfSessionContainsDataGroups;
 
     @Override
     @VisibleForTesting
@@ -49,5 +50,16 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
     /** @see #shouldPersist */
     public void setShouldPersist(boolean shouldPersist) {
         this.shouldPersist = shouldPersist;
+    }
+
+    /**
+     * @return true if question should be skipped when session contains data groups
+     */
+    public boolean shouldSkipIfSessionContainsDataGroups() {
+        return shouldSkipIfSessionContainsDataGroups;
+    }
+
+    public void setShouldSkipIfSessionContainsDataGroups(boolean shouldSkipIfSessionContainsDataGroups) {
+        this.shouldSkipIfSessionContainsDataGroups = shouldSkipIfSessionContainsDataGroups;
     }
 }
