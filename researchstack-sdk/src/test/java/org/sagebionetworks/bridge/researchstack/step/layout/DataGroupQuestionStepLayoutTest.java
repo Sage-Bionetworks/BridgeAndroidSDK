@@ -152,7 +152,7 @@ public class DataGroupQuestionStepLayoutTest {
 
         // Mock data provider
         List<String> dataGroupList = Lists.newArrayList("foo", "bar", DATA_GROUP);
-        when(mockDataProvider.getDataGroups()).thenReturn(dataGroupList);
+        when(mockDataProvider.getLocalDataGroups()).thenReturn(dataGroupList);
 
         Observable<DataResponse> mockDataResponseObservable = Observable.empty();
 

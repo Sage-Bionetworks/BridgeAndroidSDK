@@ -577,7 +577,7 @@ public class BridgeDataProviderTest {
     @Test
     public void testGetDataGroups() {
         when(accountDAO.getDataGroups()).thenReturn(Lists.newArrayList("foo", "bar"));
-        List<String> dataGroupList = ((BridgeDataProvider) dataProvider).getDataGroups();
+        List<String> dataGroupList = ((BridgeDataProvider) dataProvider).getLocalDataGroups();
         assertEquals(Lists.newArrayList("foo", "bar"), dataGroupList);
     }
   

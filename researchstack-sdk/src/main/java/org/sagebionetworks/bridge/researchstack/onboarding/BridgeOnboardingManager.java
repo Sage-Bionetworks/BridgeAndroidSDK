@@ -72,6 +72,8 @@ public class BridgeOnboardingManager extends OnboardingManager {
             dataGroupStep.setOptional(dataGroupItem.optional);
             dataGroupStep.setPlaceholder(dataGroupItem.placeholderText);
             dataGroupStep.setShouldPersist(dataGroupItem.shouldPersist());
+            dataGroupStep.setShouldSkipIfSessionContainsDataGroups(
+                    dataGroupItem.shouldSkipIfSessionContainsDataGroups());
             dataGroupStep.setSkipToStepIdentifier(dataGroupItem.skipIdentifier);
             dataGroupStep.setSkipIfPassed(dataGroupItem.skipIfPassed);
             dataGroupStep.setText(dataGroupItem.text);

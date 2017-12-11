@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.gson.Gson;
@@ -376,6 +377,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         return authenticationManager
                 .signIn(email, password)
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()))
                 .toCompletable().doOnCompleted((Action0) () -> {
                     // TODO: upload pending files
                 });
@@ -473,8 +476,8 @@ public abstract class BridgeDataProvider extends DataProvider {
      * this method returns an empty list.
      */
     @NonNull
-    public List<String> getDataGroups() {
-        return bridgeManagerProvider.getAccountDao().getDataGroups();
+    public List<String> getLocalDataGroups() {
+        return ImmutableList.copyOf(bridgeManagerProvider.getAccountDao().getDataGroups());
     }
 
     // endregion Data Groups
@@ -537,17 +540,25 @@ public abstract class BridgeDataProvider extends DataProvider {
         return bridgeManagerProvider.getParticipantManager()
                 .updateParticipantRecord((StudyParticipant) new StudyParticipant()
                         .email(authenticationManager.getEmail())
-                        .sharingScope(scope));
+                        .sharingScope(scope))
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()));
     }
 
     @NonNull
     public Observable<StudyParticipant> getStudyParticipant() {
-        return bridgeManagerProvider.getParticipantManager().getParticipantRecord().toObservable();
+        return bridgeManagerProvider.getParticipantManager().getParticipantRecord()
+                .doOnSuccess(participant -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(participant.getDataGroups()))
+                .toObservable();
     }
 
     @NonNull
     public Observable<UserSessionInfo> updateStudyParticipant(StudyParticipant studyParticipant) {
-        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant).toObservable();
+        return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant)
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()))
+                .toObservable();
     }
 
     //endregion
