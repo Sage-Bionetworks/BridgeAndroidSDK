@@ -25,28 +25,24 @@ import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 import org.researchstack.backbone.model.Choice;
 import org.researchstack.backbone.model.survey.SurveyItemType;
 import org.researchstack.backbone.model.survey.factory.SurveyFactory;
+import org.researchstack.backbone.step.Step;
 import org.sagebionetworks.bridge.researchstack.step.DataGroupQuestionStep;
 import org.sagebionetworks.bridge.researchstack.survey.DataGroupQuestionSurveyItem;
 
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class BridgeOnboardingManagerTest {
+public class BridgeSurveyFactoryTest {
     @Test
     public void createCustomStep_DataGroupQuestionStep() {
-        // Constructing an OnboardingManager is kinda hairy. Just mock it, and then set
-        // createCustomStep() to call through to the real method.
-        BridgeOnboardingManager bridgeOnboardingManager = mock(BridgeOnboardingManager.class);
-        when(bridgeOnboardingManager.dataGroupsQuestionStep(anyString(), anyString(), any()))
-                .thenCallRealMethod();
-        when(bridgeOnboardingManager.createCustomStep(any(), any(), anyBoolean(), any()))
-                .thenCallRealMethod();
+        BridgeSurveyFactory bridgeSurveyFactory = new BridgeSurveyFactory();
 
         // We don't use Context or SurveyFactory (or isSubtaskStep), but mock them anyway.
         Context mockContext = mock(Context.class);
@@ -73,8 +69,10 @@ public class BridgeOnboardingManagerTest {
         item.type = SurveyItemType.CUSTOM;
 
         // Execute and validate
-        DataGroupQuestionStep step = (DataGroupQuestionStep) bridgeOnboardingManager
-                .createCustomStep(mockContext, item, true, mockSurveyFactory);
+        Step baseStep = bridgeSurveyFactory.createSurveyStep(mockContext, item, false);
+        assertTrue(baseStep instanceof DataGroupQuestionStep);
+        DataGroupQuestionStep step = (DataGroupQuestionStep)baseStep;
+
         assertEquals(item.expectedAnswer, step.getExpectedAnswer());
         assertEquals(item.identifier, step.getIdentifier());
         assertEquals(item.optional, step.isOptional());
