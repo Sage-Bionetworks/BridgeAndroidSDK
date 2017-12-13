@@ -135,9 +135,6 @@ public class ArchiveFileFactory {
             case Text:
                 answer = new SurveyAnswer.TextSurveyAnswer(stepResult);
                 break;
-            case Date:
-                answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
-                break;
             case ImageChoice:
                 if (stepResult.getResult() instanceof Number) {
                     answer = new SurveyAnswer.NumericSurveyAnswer(stepResult);
@@ -147,11 +144,17 @@ public class ArchiveFileFactory {
                     throw new RuntimeException("Cannot upload ImageChoice result to bridge");
                 }
                 break;
+            case Date:
+                answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
+                break;
+            case TimeOfDay:
+                // TODO: implement tie of day only sending the hour/min/sec
+                answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
+                break;
             case None:
             case Scale:
             case Decimal:
             case Eligibility:
-            case TimeOfDay:
             case DateAndTime:
             case TimeInterval:
             case Location:
