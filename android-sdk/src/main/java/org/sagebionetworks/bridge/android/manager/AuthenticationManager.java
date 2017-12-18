@@ -21,6 +21,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.EmailSignIn;
+import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -36,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
+import rx.Notification;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Func1;
@@ -80,9 +83,10 @@ public class AuthenticationManager {
         this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
 
         SignIn signIn = accountDAO.getSignIn();
-        ForConsentedUsersApi api = signIn == null ?
-                apiClientProvider.getClient(ForConsentedUsersApi.class) :
-                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
+
+        ForConsentedUsersApi api = signIn == null
+                ? apiClientProvider.getClient(ForConsentedUsersApi.class)
+                : apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
 
         this.forConsentedUsersApiAtomicReference = new AtomicReference<>(api);
         listeners = Lists.newArrayList();
@@ -183,6 +187,50 @@ public class AuthenticationManager {
     }
 
     /**
+     * Request an email from Bridge server containing a link which will authenticate the
+     * participant. The link is used with {@link #signInViaEmailLink(String, String)}
+     *
+     * @param email participant's email address
+     * @return completable which requests sign in via email from Bridge
+     */
+    @NonNull
+    public Completable requestEmailSignIn(@NonNull final String email) {
+        checkNotNull(email);
+
+        return RxUtils.toBodySingle(
+                authenticationApi.requestEmailSignIn(
+                        new EmailSignInRequest()
+                                .email(email)
+                                .study(config.getStudyId())))
+                .doOnSuccess(m -> logger.debug("Email sign in request success: " + m.getMessage()))
+                .doOnError(t -> logger.debug("Email sign in request failure", t))
+                .toCompletable();
+    }
+
+    @NonNull
+    public Single<UserSessionInfo> signInViaEmailLink(@NonNull String email, @NonNull String token) {
+        checkNotNull(email);
+        checkNotNull(token);
+
+        // store sign in, so we have signIn as a key to retrieve session in case of 412
+        SignIn signIn = new SignIn().email(email).study(config.getStudyId());
+        accountDAO.setSignIn(signIn);
+
+        return RxUtils.toBodySingle(
+                authenticationApi.signInViaEmail(
+                        new EmailSignIn()
+                                .email(email)
+                                .study(config.getStudyId())
+                                .token(token)))
+                .compose(signInHelper(signIn, config.getStudyId()))
+                .doOnSuccess(session -> logger.debug("Successfully signed in via email"))
+                .doOnError(t -> {
+                    logger.debug("Failed to sign in via email", t);
+                    requestEmailSignIn(email).subscribe();
+                });
+    }
+
+    /**
      * On success, stores participant's email, password and session. If a
      * NotAuthenticatedException is encountered, this could mean the credentials are invalid, or the
      * user has not verified their email.
@@ -199,10 +247,10 @@ public class AuthenticationManager {
 
         logger.debug("signIn called with email: " + email);
 
-        String subpopulationGuid = config.getStudyId();
+        String studyId = config.getStudyId();
 
         SignIn signIn = new SignIn()
-                .study(subpopulationGuid)
+                .study(studyId)
                 .email(email)
                 .password(password);
 
@@ -211,35 +259,93 @@ public class AuthenticationManager {
 
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
-                .toObservable()
-                .retryWhen(retrySignInForConsentOnce(subpopulationGuid))
-                .toSingle()
-                .doOnSuccess(userSessionInfo -> {
-                    forConsentedUsersApiAtomicReference.set(
-                            apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
-                    );
-                    accountDAO.setUserSessionInfo(userSessionInfo);
-                    accountDAO.setStudyParticipant(
-                            new StudyParticipant()
-                                    .email(signIn.getEmail()));
-                    for (AuthenticationEventListener listener : listeners) {
-                        listener.onSignedIn(email);
+                .compose(signInHelper(signIn, studyId));
+    }
+
+    /**
+     * Used to transform a raw Bridge signIn single by retrying upload of required consent if it
+     * is present locally and setting state on success/failure
+     * @param signIn signIn credentials
+     * @param subpopulationGuid consent to upload
+     * @return
+     */
+    Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn,
+                                                                      String subpopulationGuid) {
+        final String email = signIn.getEmail();
+
+        return userSessionInfoSingle -> userSessionInfoSingle
+                .doOnEach(notification -> {
+                    UserSessionInfo session = null;
+                    Notification.Kind kind = notification.getKind();
+                    if (kind == Notification.Kind.OnNext) {
+                        session = notification.getValue();
+                    } else if (kind == Notification.Kind.OnError) {
+                        Throwable t = notification.getThrowable();
+                        if (t instanceof ConsentRequiredException) {
+                            session = ((ConsentRequiredException) t).getSession();
+
+                            if (isConsentedInLocal(subpopulationGuid)) {
+
+                                uploadLocalConsents()
+                                        .onErrorResumeNext(Observable.just(session))
+                                        .subscribe();
+                            }
+                        }
                     }
-                }).doOnError(throwable -> {
-                    // a 412 is a successful signin
-                    if (throwable instanceof ConsentRequiredException) {
-                        forConsentedUsersApiAtomicReference.set(
-                                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
-                        );
-                        accountDAO.setUserSessionInfo(
-                                ((ConsentRequiredException) throwable).getSession());
+
+                    if (session != null) {
+                        apiClientProvider
+                                .setEmailUserSessionInfo(config.getStudyId(), email, session);
                         accountDAO.setStudyParticipant(
                                 new StudyParticipant()
                                         .email(signIn.getEmail()));
+                        forConsentedUsersApiAtomicReference.set(
+                                apiClientProvider.getClient(ForConsentedUsersApi.class, email)
+                        );
                     } else {
                         accountDAO.setSignIn(null);
                     }
+                    accountDAO.setUserSessionInfo(session);
+                })
+                .onErrorResumeNext(throwable -> {
+                    if (throwable instanceof ConsentRequiredException
+                            && isConsentedInLocal(subpopulationGuid)) {
+                        UserSessionInfo session =
+                                ((ConsentRequiredException) throwable).getSession();
+                        return uploadLocalConsents()
+                                .onErrorReturn(throwable1 -> session)
+                                .last()
+                                .toSingle();
+                    }
+                    return Single.error(throwable);
                 });
+//
+//                .doOnSuccess(userSessionInfo -> {
+//                    forConsentedUsersApiAtomicReference.set(
+//                            apiClientProvider.getClient(ForConsentedUsersApi.class, email)
+//                    );
+//                    accountDAO.setUserSessionInfo(userSessionInfo);
+//                    accountDAO.setStudyParticipant(
+//                            new StudyParticipant()
+//                                    .email(signIn.getEmail()));
+//                    for (AuthenticationEventListener listener : listeners) {
+//                        listener.onSignedIn(signIn.getEmail());
+//                    }
+//                }).doOnError(throwable -> {
+//                    // a 412 is a successful signin
+//                    if (throwable instanceof ConsentRequiredException) {
+//                        forConsentedUsersApiAtomicReference.set(
+//                                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+//                        );
+//                        accountDAO.setUserSessionInfo(
+//                                ((ConsentRequiredException) throwable).getSession());
+//                        accountDAO.setStudyParticipant(
+//                                new StudyParticipant()
+//                                        .email(signIn.getEmail()));
+//                    } else {
+//                        accountDAO.setSignIn(null);
+//                    }
+//                });
     }
 
     /**
@@ -252,7 +358,7 @@ public class AuthenticationManager {
      *
      * @return a retry function that will attempt a to upload Consent one time
      */
-    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
+    Func1<Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
     retrySignInForConsentOnce(String subpopulationGuid) {
         return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
             private int retryAttempt = 0;
@@ -266,6 +372,7 @@ public class AuthenticationManager {
                     if (!(throwable instanceof ConsentRequiredException)
                             || retryAttempt > 1
                             || (!isConsented() && !isConsentedInLocal(subpopulationGuid))) {
+
                         Observable<UserSessionInfo> obs = Observable.error(throwable);
                         return obs;
                     }
