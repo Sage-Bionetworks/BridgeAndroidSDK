@@ -573,10 +573,10 @@ public abstract class BridgeDataProvider extends DataProvider {
      * @return completable
      */
     @NonNull
-    public Observable<Message> downloadData(LocalDate startDate,
+    public Observable<DataResponse> downloadData(LocalDate startDate,
                                             LocalDate endDate) {
         return bridgeManagerProvider.getParticipantManager()
-                .emailDataToParticipant(startDate, endDate);
+                .emailDataToParticipant(startDate, endDate).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     //endregion

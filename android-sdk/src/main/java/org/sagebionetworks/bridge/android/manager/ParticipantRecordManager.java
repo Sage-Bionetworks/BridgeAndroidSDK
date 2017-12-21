@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import rx.Completable;
 import rx.Observable;
 import rx.Single;
 
@@ -102,12 +103,12 @@ public class ParticipantRecordManager {
      * @return completable
      */
     @NonNull
-    public Observable<Message> emailDataToParticipant(@NonNull LocalDate startDate,
-                                                      @NonNull LocalDate endDate) {
+    public Completable emailDataToParticipant(@NonNull LocalDate startDate,
+                                              @NonNull LocalDate endDate) {
         checkNotNull(startDate);
         checkNotNull(endDate);
 
         return toBodySingle(apiAtomicReference.get()
-                .emailDataToUser(startDate, endDate)).toObservable();
+                .emailDataToUser(startDate, endDate)).toCompletable();
     }
 }
