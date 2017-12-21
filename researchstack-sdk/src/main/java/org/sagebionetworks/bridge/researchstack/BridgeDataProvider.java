@@ -561,6 +561,24 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .toObservable();
     }
 
+    /**
+     * Make participant data available for download.
+     * <p>
+     * Request the uploaded data for this user, in a given time range (inclusive). Bridge will
+     * asynchronously gather the user's data for the given time range and email a secure link to the
+     * participant's registered email address.
+     *
+     * @param startDate The first day to include in reports that are returned (required)
+     * @param endDate   The last day to include in reports that are returned (required)
+     * @return completable
+     */
+    @NonNull
+    public Observable<Message> downloadData(LocalDate startDate,
+                                            LocalDate endDate) {
+        return bridgeManagerProvider.getParticipantManager()
+                .emailDataToParticipant(startDate, endDate);
+    }
+
     //endregion
 
     //region TasksAndSchedules
