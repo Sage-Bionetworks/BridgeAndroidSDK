@@ -70,7 +70,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     /**
      * The GUID of the last task that was loaded (used in completion)
      */
-    private String lastLoadedTaskGuid = null;
+    protected String lastLoadedTaskGuid = null;
 
     @NonNull
     protected final StorageAccessWrapper storageAccessWrapper;
