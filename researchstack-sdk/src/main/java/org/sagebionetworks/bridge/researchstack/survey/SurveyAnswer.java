@@ -78,6 +78,9 @@ public class SurveyAnswer {
   public static class DateSurveyAnswer extends SurveyAnswer {
 
     private final String dateAnswer;
+    public String getDateAnswer() {
+      return dateAnswer;
+    }
 
     public DateSurveyAnswer(StepResult result) {
       super(result);
