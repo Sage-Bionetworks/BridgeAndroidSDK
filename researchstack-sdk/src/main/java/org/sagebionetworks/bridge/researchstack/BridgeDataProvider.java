@@ -65,7 +65,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
     // set in initialize
-    private final TaskHelper taskHelper;
+    protected final TaskHelper taskHelper;
 
     /**
      * The GUID of the last task that was loaded (used in completion)
