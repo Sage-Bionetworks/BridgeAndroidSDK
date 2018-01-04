@@ -87,7 +87,7 @@ public class AuthenticationManagerTest {
     @Mock
     private ConsentDAO consentDAO;
 
-    private AtomicReference<ForConsentedUsersApi> apiAtomicReference;
+    private AtomicReference<AuthenticationManager.AuthStateHolder> authStateHolderAtomicReference;
     private AuthenticationManager spyAuthenticationManager;
 
     @Before
@@ -107,7 +107,7 @@ public class AuthenticationManagerTest {
         spyAuthenticationManager = spy(new AuthenticationManager(config, apiClientProvider,
                 accountDAO, consentDAO));
 
-        apiAtomicReference = spyAuthenticationManager.getApiReference();
+        authStateHolderAtomicReference = spyAuthenticationManager.getAuthStateReference();
     }
 
     @Test
@@ -124,16 +124,16 @@ public class AuthenticationManagerTest {
 
         SignIn equivalentSignIn = new SignIn().study(STUDY_ID).email(EMAIL).password(PASSWORD);
         ForConsentedUsersApi api = mock(ForConsentedUsersApi.class);
-        when(apiClientProvider.getClient(ForConsentedUsersApi.class, equivalentSignIn)).thenReturn(api);
+//        when(apiClientProvider.getClient(ForConsentedUsersApi.class, equivalentSignIn)).thenReturn(api);
 
         Completable completable = spyAuthenticationManager.signUp(signUp);
 
         completable.test().awaitTerminalEvent().assertCompleted();
 
-        ForConsentedUsersApi resultingApi = spyAuthenticationManager.getApiReference().get();
+        ForConsentedUsersApi resultingApi = spyAuthenticationManager.getAuthStateReference().get().forConsentedUsersApi;
         assertSame(api, resultingApi);
 
-        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, equivalentSignIn);
+//        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, equivalentSignIn);
         verify(authenticationApi).signUp(signUp);
         verify(accountDAO).setSignIn(argThat(signIn -> matches(signUp, signIn)));
         verify(accountDAO).setStudyParticipant(argThat(participant -> matches(signUp, participant)));
@@ -214,17 +214,17 @@ public class AuthenticationManagerTest {
         when(authenticationApi.signIn(signIn)).thenReturn(userSessionInfoCall);
 
         ForConsentedUsersApi mockSignedInApi = mock(ForConsentedUsersApi.class);
-        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
-                .thenReturn(mockSignedInApi);
+//        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
+//                .thenReturn(mockSignedInApi);
 
-        ForConsentedUsersApi apiBeforeSignInResult = apiAtomicReference.get();
+//        ForConsentedUsersApi apiBeforeSignInResult = authStateHolderAtomicReference.get();
 
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
-        assertSame(mockSignedInApi, apiAtomicReference.get());
-        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
+//        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
+        assertSame(mockSignedInApi, authStateHolderAtomicReference.get());
+//        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -232,7 +232,7 @@ public class AuthenticationManagerTest {
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
 
         verify(authenticationApi).signIn(signIn);
-        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
+//        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
     }
 
     @Test
@@ -256,8 +256,8 @@ public class AuthenticationManagerTest {
                 .thenReturn(signInCall);
 
         ForConsentedUsersApi mockSignedInApi = mock(ForConsentedUsersApi.class);
-        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
-                .thenReturn(mockSignedInApi);
+//        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
+//                .thenReturn(mockSignedInApi);
 
         // indicate that locally, we think we are consented
         doReturn(true)
@@ -265,19 +265,19 @@ public class AuthenticationManagerTest {
         doReturn(userSessionInfoObservable)
                 .when(spyAuthenticationManager).uploadLocalConsents();
 
-        ForConsentedUsersApi apiBeforeSignInResult = apiAtomicReference.get();
+//        ForConsentedUsersApi apiBeforeSignInResult = authStateHolderAtomicReference.get();
 
         spyAuthenticationManager.signIn(EMAIL, PASSWORD).test().awaitTerminalEvent()
                 .assertValue(userSessionInfo).assertCompleted();
 
-        assertSame(mockSignedInApi, apiAtomicReference.get());
-        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
+        assertSame(mockSignedInApi, authStateHolderAtomicReference.get());
+//        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
         verify(spyAuthenticationManager).isConsented();
         // verify there was an attempt to upload all consents
         verify(spyAuthenticationManager).uploadLocalConsents();
 
-        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
+//        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
 
         verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
@@ -345,8 +345,8 @@ public class AuthenticationManagerTest {
 
         spyAuthenticationManager.signOut().test().awaitTerminalEvent()
                 .assertCompleted();
-        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
-        assertSame(mockUnauthenticatedApi, apiResult);
+//        ForConsentedUsersApi apiResult = spyAuthenticationManager.getApiReference().get();
+//        assertSame(mockUnauthenticatedApi, apiResult);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
         verify(accountDAO).clear();
@@ -378,8 +378,8 @@ public class AuthenticationManagerTest {
 
         initSpyAuthenticationManager();
 
-        ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
-        assertSame(forConsentedUsersApi, result);
+//        ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
+//        assertSame(forConsentedUsersApi, result);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
         verify(accountDAO).getSignIn();
@@ -391,14 +391,14 @@ public class AuthenticationManagerTest {
 
         SignIn signIn = new SignIn();
         when(accountDAO.getSignIn()).thenReturn(signIn);
-        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
-                .thenReturn(forConsentedUsersApi);
+//        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
+//                .thenReturn(forConsentedUsersApi);
         initSpyAuthenticationManager();
 
-        ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
-        assertSame(forConsentedUsersApi, result);
+//        ForConsentedUsersApi result = spyAuthenticationManager.getApiReference().get();
+//        assertSame(forConsentedUsersApi, result);
 
-        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
+//        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
         verify(accountDAO).getSignIn();
     }
 
@@ -420,7 +420,7 @@ public class AuthenticationManagerTest {
 
         SignIn signIn = new SignIn();
         when(accountDAO.getSignIn()).thenReturn(signIn);
-        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(null);
+//        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(null);
 
         // execute and validate
         UserSessionInfo result = spyAuthenticationManager.getUserSessionInfo();
@@ -438,7 +438,7 @@ public class AuthenticationManagerTest {
         when(accountDAO.getSignIn()).thenReturn(signIn);
 
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
-        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
+//        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
         when(sessionProvider.getSession()).thenReturn(null);
 
         // execute and validate
@@ -454,7 +454,7 @@ public class AuthenticationManagerTest {
         when(accountDAO.getSignIn()).thenReturn(signIn);
 
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
-        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
+//        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
 
         UserSessionInfo cachedSession = new UserSessionInfo();
         when(sessionProvider.getSession()).thenReturn(cachedSession);
@@ -634,7 +634,7 @@ public class AuthenticationManagerTest {
 
         // mock api.createConsentSignature()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         UserSessionInfo userSessionInfo = new UserSessionInfo().email(EMAIL);
         Call<UserSessionInfo> mockCall = BridgeApiTestUtils.mockCallWithValue(userSessionInfo);
@@ -670,7 +670,7 @@ public class AuthenticationManagerTest {
 
         // mock api.createConsentSignature
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         Call<UserSessionInfo> mockCall1 = BridgeApiTestUtils.mockCallWithValue(session1);
         when(mockApi.createConsentSignature("subpop-1", consentSignature1)).thenReturn(mockCall1);
@@ -696,7 +696,7 @@ public class AuthenticationManagerTest {
 
         // mock api.getConsent()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         Call<ConsentSignature> mockCall = BridgeApiTestUtils.mockCallWithValue(sig);
         when(mockApi.getConsentSignature(SUBPOPULATION_GUID)).thenReturn(mockCall);
@@ -716,7 +716,7 @@ public class AuthenticationManagerTest {
 
         // mock api.getConsent() - This throws a 404. We fall back to the local consent in consentDAO.
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         Call<ConsentSignature> mockCall = BridgeApiTestUtils.mockCallWithException(EntityNotFoundException.class);
         when(mockApi.getConsentSignature(SUBPOPULATION_GUID)).thenReturn(mockCall);
@@ -736,7 +736,7 @@ public class AuthenticationManagerTest {
     public void getConsentSignature_500InternalServerError() throws Exception {
         // mock api.getConsent()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         Call<ConsentSignature> mockCall = BridgeApiTestUtils.mockCallWithException(BridgeServiceException.class);
         when(mockApi.getConsentSignature(SUBPOPULATION_GUID)).thenReturn(mockCall);
@@ -753,7 +753,7 @@ public class AuthenticationManagerTest {
     public void withdrawAll() throws Exception {
         // mock api.withdrawAllConsents()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         // Result from withdraw call is discarded. Just set a null.
         Call<UserSessionInfo> mockCall = BridgeApiTestUtils.mockCallWithValue(null);
@@ -773,7 +773,7 @@ public class AuthenticationManagerTest {
     public void withdrawConsent() throws Exception {
         // mock api.withdrawConsentFromSubpopulation()
         ForConsentedUsersApi mockApi = mock(ForConsentedUsersApi.class);
-        apiAtomicReference.set(mockApi);
+//        authStateHolderAtomicReference.set(mockApi);
 
         // Result from withdraw call is discarded. Just set a null.
         Call<UserSessionInfo> mockCall = BridgeApiTestUtils.mockCallWithValue(null);

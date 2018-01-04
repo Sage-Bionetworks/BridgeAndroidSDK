@@ -21,6 +21,7 @@ import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.asn1.pkcs.AuthenticatedSafe;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -69,7 +70,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     // minimum number of minutes from now an expiration should be
     private static final int UPLOAD_EXPIRY_WINDOW_MINUTES = 30;
 
-    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
+    private final AtomicReference<AuthenticationManager.AuthStateHolder>
+            authenticatedSafeAtomicReference;
     private final AndroidStudyUploadEncryptor encryptor;
     private final UploadDAO uploadDAO;
     private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
@@ -80,7 +82,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
     public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
-        this.apiAtomicReference = authenticationManager.getApiReference();
+        this.authenticatedSafeAtomicReference = authenticationManager.getAuthStateReference();
         authenticationManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
@@ -286,7 +288,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     Single<UploadValidationStatus> getUploadValidationStatus(@NonNull String uploadId) {
         checkNotNull(uploadId, "uploadId required");
 
-        return RxUtils.toBodySingle(apiAtomicReference.get().getUploadStatus(uploadId));
+        return RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
+                .getUploadStatus(uploadId));
     }
 
     /**
@@ -328,7 +331,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     LOG.info("S3 upload succeeded for id: " + session.getId());
 
                     // call upload complete on a computation thread
-                    RxUtils.toBodySingle(apiAtomicReference.get()
+                    RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
                             .completeUploadSession(session.getId(), false))
                             .doOnSuccess(val -> {
                                 LOG.info("Call to upload complete succeeded");
@@ -345,7 +348,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     @NonNull
     Single<UploadSession> getUploadSession(UploadFile uploadFile) {
         return RxUtils.toBodySingle(
-                apiAtomicReference.get()
+                authenticatedSafeAtomicReference.get().forConsentedUsersApi
                         .requestUploadSession(
                                 new UploadRequest()
                                         .name(uploadFile.filename)
