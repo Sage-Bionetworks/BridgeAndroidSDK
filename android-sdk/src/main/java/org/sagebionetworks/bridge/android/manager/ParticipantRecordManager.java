@@ -6,7 +6,6 @@ import android.support.annotation.Nullable;
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
-import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
@@ -15,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
-import rx.Observable;
 import rx.Single;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -31,12 +29,13 @@ public class ParticipantRecordManager {
     @NonNull
     private final AccountDAO accountDAO;
     @NonNull
-    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
+    private final AtomicReference<AuthenticationManager.AuthStateHolder>
+            authStateHolderAtomicReference;
 
     public ParticipantRecordManager(@NonNull AccountDAO accountDAO,
                                     @NonNull AuthenticationManager authenticationManager) {
         this.accountDAO = accountDAO;
-        this.apiAtomicReference = authenticationManager.getApiReference();
+        this.authStateHolderAtomicReference = authenticationManager.getAuthStateReference();
     }
 
     /**
@@ -54,7 +53,7 @@ public class ParticipantRecordManager {
      */
     @NonNull
     public Single<StudyParticipant> getParticipantRecord() {
-        return toBodySingle(apiAtomicReference.get()
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getUsersParticipantRecord())
                 .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
     }
@@ -78,7 +77,7 @@ public class ParticipantRecordManager {
             @NonNull StudyParticipant studyParticipant) {
         checkNotNull(studyParticipant);
 
-        return toBodySingle(apiAtomicReference.get()
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .updateUsersParticipantRecord(studyParticipant))
                 .doOnSuccess(
                         userSessionInfo -> {
@@ -108,7 +107,7 @@ public class ParticipantRecordManager {
         checkNotNull(startDate);
         checkNotNull(endDate);
 
-        return toBodySingle(apiAtomicReference.get()
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .emailDataToUser(startDate, endDate)).toCompletable();
     }
 }

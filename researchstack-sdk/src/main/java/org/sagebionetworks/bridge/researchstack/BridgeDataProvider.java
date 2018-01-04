@@ -138,13 +138,13 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public Observable<DataResponse> withdrawConsent(Context context, String reason) {
         logger.debug("Called withdrawConsent");
-        //TODO: allow withdrawal from specific subpopulation
 
         return withdrawAllConsents(reason).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @NonNull
     public Completable withdrawConsent(@NonNull String subpopulationGuid, @Nullable String reason) {
+        logger.debug("Called withdrawConsent for subpopulation: " + subpopulationGuid);
         return authenticationManager.withdrawConsent(subpopulationGuid, reason);
     }
 
@@ -181,6 +181,7 @@ public abstract class BridgeDataProvider extends DataProvider {
                                                @Nullable String base64Image,
                                                @Nullable String imageMimeType,
                                                @NonNull SharingScope sharingScope) {
+        logger.debug("Called giveConsent");
         return authenticationManager.giveConsent(subpopulationGuid, name, birthdate, base64Image,
                 imageMimeType, sharingScope);
     }
@@ -189,6 +190,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     public Single<ConsentSignature> getConsent(@NonNull String subpopulation) {
         checkNotNull(subpopulation);
+        logger.debug("Called getConsent");
 
         return authenticationManager.getConsent(subpopulation);
     }
@@ -201,17 +203,19 @@ public abstract class BridgeDataProvider extends DataProvider {
     public ConsentSignatureBody loadLocalConsent(Context context) {
         ConsentSignatureBody consent = createConsentSignatureBody(
                 authenticationManager.retrieveLocalConsent(bridgeConfig.getStudyId()));
-        logger.debug("loadLocalConsent called, got: ");
+        logger.debug("loadLocalConsent called, got: " + consent);
         return consent;
     }
 
     @Override
+    @Deprecated
     public void saveConsent(Context context, @NonNull TaskResult consentResult) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void saveLocalConsent(Context context, ConsentSignatureBody signatureBody) {
+        logger.debug("Called saveLocalConsent with: " + signatureBody);
         ConsentSignature consentSignature = createConsentSignature(signatureBody);
         saveLocalConsent(consentSignature);
     }
@@ -266,6 +270,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @Override
+    @Deprecated
     public void uploadConsent(Context context, @NonNull TaskResult consentResult) {
         throw new UnsupportedOperationException();
     }
@@ -281,6 +286,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public Observable<DataResponse> uploadConsent(Context context, ConsentSignatureBody signature) {
+        logger.debug("Called uploadConsent");
         return uploadConsent(bridgeConfig.getStudyId(), createConsentSignature(signature));
     }
 
@@ -325,6 +331,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
+        logger.debug("Called signUp");
+
         return authenticationManager
                 .signUp(email, password)
                 .andThen(SUCCESS_DATA_RESPONSE);
@@ -332,11 +340,12 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @Override
     public boolean isSignedUp(@Nullable Context context) {
-
-        return authenticationManager.getEmail() != null;
+        logger.debug("Called isSignedUp");
+        return isSignedUp();
     }
 
     public boolean isSignedUp() {
+        logger.debug("Called isSignedUp");
         return authenticationManager.getEmail() != null;
     }
 
@@ -350,17 +359,34 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
-    /** {@inheritDoc} */
     @NonNull
     @Override
     public Observable<DataResponse> signInWithExternalId(
             @Nullable Context context, @NonNull String externalId) {
+        logger.debug("Called signInWithExternalId");
         String email = bridgeConfig.getEmailForExternalId(externalId);
         String password = bridgeConfig.getPasswordForExternalId(externalId);
         return signIn(email, password).andThen(SUCCESS_DATA_RESPONSE);
     }
 
-    /**
+    @Override
+    public Observable<DataResponse> requestSignInLink(String email) {
+        logger.debug("Called requestSignInLink");
+        return authenticationManager.requestEmailSignIn(email)
+                .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @Override
+    public Observable<DataResponse> signInWithEmailAndToken(String email, String token) {
+        logger.debug("Called signInWithEmailAndToken");
+        return authenticationManager.signInViaEmailLink(email, token)
+                .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
+                        .setDataGroups(session.getDataGroups()))
+                .toCompletable()
+        .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    /**`
      * @param email    the participant's email
      * @param password participant's password
      * @return completion
@@ -375,6 +401,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         checkNotNull(email);
         checkNotNull(password);
 
+        logger.debug("Called signIn");
+
         return authenticationManager
                 .signIn(email, password)
                 .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
@@ -385,6 +413,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     public boolean isSignedIn() {
+     logger.debug("Called isSignedIn");
         return authenticationManager.getEmail() != null &&
             authenticationManager.getUserSessionInfo() != null;
     }
@@ -399,18 +428,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public Observable<DataResponse> signOut(Context context) {
         logger.debug("Called signOut");
-        Observable<DataResponse> dataResponse = signOut().andThen(SUCCESS_DATA_RESPONSE);
+        Observable<DataResponse> dataResponse = authenticationManager.signOut()
+                .andThen(SUCCESS_DATA_RESPONSE);
 
         // Clear all the parts of the user data whether call is successful or not
         AppPrefs.getInstance().clear();
         StorageAccess.getInstance().removePinCode(context);
 
         return dataResponse;
-    }
-
-    @NonNull
-    public Completable signOut() {
-        return authenticationManager.signOut();
     }
 
     @NonNull
@@ -423,6 +448,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     public Completable resendEmailVerification(@NonNull String email) {
         checkNotNull(email);
+
+        logger.debug("Called resendEmailVerification");
 
         return authenticationManager.resendEmailVerification(email);
     }
@@ -442,6 +469,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Completable verifyEmail(@NonNull String email, @NonNull String password) {
+        logger.debug("Called verifyEmail");
+
         return authenticationManager.signIn(checkNotNull(email), checkNotNull(password)).toCompletable();
     }
 
@@ -454,6 +483,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     public Completable forgotPassword(@NonNull String email) {
         checkNotNull(email);
+
+        logger.debug("Called forgotPassword");
 
         return authenticationManager
                 .requestPasswordReset(email);
@@ -468,6 +499,8 @@ public abstract class BridgeDataProvider extends DataProvider {
      * participant.
      */
     public void addLocalDataGroup(@NonNull String dataGroup) {
+        logger.debug("Called addLocalDataGroup for: " + dataGroup);
+
         bridgeManagerProvider.getAccountDao().addDataGroup(dataGroup);
     }
 
@@ -477,6 +510,8 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @NonNull
     public List<String> getLocalDataGroups() {
+        logger.debug("Called getLocalDataGroups");
+
         return ImmutableList.copyOf(bridgeManagerProvider.getAccountDao().getDataGroups());
     }
 
@@ -509,14 +544,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     @Nullable
     public String getUserSharingScope(Context context) {
-        logger.debug("Called getUserSharingScope");
-
         SharingScope scope = getUserSharingScope();
         return scope == null ? null : scope.toString();
     }
 
     @Nullable
     public SharingScope getUserSharingScope() {
+        logger.debug("Called getUserSharingScope");
+
         UserSessionInfo session = authenticationManager.getUserSessionInfo();
         if (session == null) {
             return null;
@@ -536,6 +571,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Single<UserSessionInfo> setUserSharingScope(@Nullable SharingScope scope) {
+        logger.debug("Called setUserSharingScope with: " + scope);
 
         return bridgeManagerProvider.getParticipantManager()
                 .updateParticipantRecord((StudyParticipant) new StudyParticipant()
@@ -547,6 +583,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Observable<StudyParticipant> getStudyParticipant() {
+        logger.debug("Called getStudyParticipant");
+
         return bridgeManagerProvider.getParticipantManager().getParticipantRecord()
                 .doOnSuccess(participant -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(participant.getDataGroups()))
@@ -555,6 +593,8 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Observable<UserSessionInfo> updateStudyParticipant(StudyParticipant studyParticipant) {
+        logger.debug("Called updateStudyParticipant");
+
         return bridgeManagerProvider.getParticipantManager().updateParticipantRecord(studyParticipant)
                 .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(session.getDataGroups()))
@@ -575,6 +615,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     public Observable<DataResponse> downloadData(LocalDate startDate,
                                             LocalDate endDate) {
+        logger.debug("Called downloadData");
+
         return bridgeManagerProvider.getParticipantManager()
                 .emailDataToParticipant(startDate, endDate).andThen(SUCCESS_DATA_RESPONSE);
     }
@@ -584,10 +626,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     //region TasksAndSchedules
 
     public Observable<Message> updateActivity(ScheduledActivity activity) {
+        logger.debug("Called updateActivity");
+
         return bridgeManagerProvider.getActivityManager().updateActivity(activity);
     }
 
     public Observable<ScheduledActivityListV4> getActivities(DateTime start, DateTime end) {
+        logger.debug("Called getActivities");
+
         return bridgeManagerProvider.getActivityManager().getActivites(start, end)
                 .toObservable();
     }
@@ -604,6 +650,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     private TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel
             task) {
+        logger.debug("Called loadTaskModels");
 
         // cache guid and createdOnDate
 
@@ -613,6 +660,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     @Override
     public Single<Task> loadTask(Context context, SchedulesAndTasksModel.TaskScheduleModel task) {
+        logger.debug("Called loadTask for: " + task);
+
         lastLoadedTaskGuid = task.taskGUID;
         // currently we only support task json files, override this method to taskClassName
         return taskHelper.loadTask(context, task);
@@ -621,6 +670,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
+        logger.debug("Called uploadTaskResult");
 
         boolean isActivity = false;
         if (taskResult.getTaskDetails().containsKey(ActiveTaskActivity.ACTIVITY_TASK_RESULT_KEY)) {
@@ -681,7 +731,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @NonNull
     protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
                                                                activityList) {
-        logger.info("translateActivities()");
+        logger.info("called translateActivities");
 
         // first, group activities by day
         ListMultimap<Integer, ScheduledActivity> activityMap = LinkedListMultimap.create();

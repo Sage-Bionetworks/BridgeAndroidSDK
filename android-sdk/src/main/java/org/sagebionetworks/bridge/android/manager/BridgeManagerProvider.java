@@ -70,7 +70,8 @@ public class BridgeManagerProvider {
         apiClientProvider = new ApiClientProvider(
                 bridgeConfig.getBaseUrl(),
                 bridgeConfig.getUserAgent(),
-                bridgeConfig.getAcceptLanguage());
+                bridgeConfig.getAcceptLanguage(),
+                bridgeConfig.getStudyId());
 
         accountDAO = new AccountDAO(applicationContext);
         consentDAO = new ConsentDAO(applicationContext);
