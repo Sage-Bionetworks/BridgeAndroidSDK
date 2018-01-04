@@ -27,6 +27,7 @@ import org.robolectric.annotation.Config;
 import org.sagebionetworks.bridge.android.BuildConfig;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @Config(constants = BuildConfig.class)
@@ -52,5 +53,29 @@ public class AccountDAOTest {
         // Set data groups and verify.
         accountDAO.setDataGroups(Lists.newArrayList("asdf", "jkl"));
         assertEquals(Lists.newArrayList("asdf", "jkl"), accountDAO.getDataGroups());
+    }
+
+    @Test
+    public void testEmail() {
+        assertNull(accountDAO.getEmail());
+
+        String email = "email@example.com";
+        accountDAO.setEmail(email);
+        assertEquals(email, accountDAO.getEmail());
+
+        accountDAO.setEmail(null);
+        assertNull(accountDAO.getEmail());
+    }
+
+    @Test
+    public void testPassword(){
+        assertNull(accountDAO.getPassword());
+
+        String password = "password";
+        accountDAO.setPassword(password);
+        assertEquals(password, accountDAO.getPassword());
+
+        accountDAO.setPassword(null);
+        assertNull(accountDAO.getPassword());
     }
 }

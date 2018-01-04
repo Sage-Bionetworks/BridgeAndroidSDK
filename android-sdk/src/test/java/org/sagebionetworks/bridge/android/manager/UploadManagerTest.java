@@ -71,7 +71,8 @@ public class UploadManagerTest {
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApiReference()).thenReturn(new AtomicReference<>(api));
+        when(authenticationManager.getAuthStateReference()).thenReturn(new AtomicReference<>(
+                new AuthenticationManager.AuthStateHolder(api,null)));
 
         spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO));
 

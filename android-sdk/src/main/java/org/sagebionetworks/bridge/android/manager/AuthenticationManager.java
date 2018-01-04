@@ -3,7 +3,9 @@ package org.sagebionetworks.bridge.android.manager;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.VisibleForTesting;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -21,6 +23,8 @@ import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.EmailSignIn;
+import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -62,31 +66,94 @@ public class AuthenticationManager {
     @NonNull
     private final ApiClientProvider apiClientProvider;
     @NonNull
-    private final AtomicReference<ForConsentedUsersApi> forConsentedUsersApiAtomicReference;
+    private final AtomicReference<AuthStateHolder> authStateHolderAtomicReference;
 
-    public AuthenticationManager(@NonNull BridgeConfig config, @NonNull ApiClientProvider
-            apiClientProvider,
+    /**
+     * Immutable wrapper used with AtomicReference.
+     */
+    public static final class AuthStateHolder {
+        @NonNull
+        public final ForConsentedUsersApi forConsentedUsersApi;
+        @Nullable
+        final UserSessionInfoProvider userSessionInfoProvider;
+
+        public AuthStateHolder(@NonNull ForConsentedUsersApi forConsentedUsersApi,
+                               @Nullable UserSessionInfoProvider userSessionInfoProvider) {
+            this.forConsentedUsersApi = forConsentedUsersApi;
+            this.userSessionInfoProvider = userSessionInfoProvider;
+        }
+    }
+
+    public AuthenticationManager(@NonNull BridgeConfig config,
+                                 @NonNull ApiClientProvider apiClientProvider,
                                  @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {
         checkNotNull(config);
-        checkNotNull(apiClientProvider);
         checkNotNull(accountDAO);
         checkNotNull(consentDAO);
 
         this.config = config;
         this.accountDAO = accountDAO;
         this.consentDAO = consentDAO;
+
         this.apiClientProvider = apiClientProvider;
 
-        this.authenticationApi = apiClientProvider.getClient(AuthenticationApi.class);
+        this.authenticationApi = apiClientProvider.getAuthenticationApi();
 
-        SignIn signIn = accountDAO.getSignIn();
-        ForConsentedUsersApi api = signIn == null ?
-                apiClientProvider.getClient(ForConsentedUsersApi.class) :
-                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn);
-
-        this.forConsentedUsersApiAtomicReference = new AtomicReference<>(api);
+        this.authStateHolderAtomicReference = new AtomicReference<>
+                (createAuthStateFromStoredCredentials());
         listeners = Lists.newArrayList();
     }
+
+    @VisibleForTesting
+    @NonNull
+    AuthStateHolder createAuthStateFromStoredCredentials() {
+        ForConsentedUsersApi forConsentedUsersApi;
+        UserSessionInfoProvider userSessionInfoProvider = null;
+
+        ApiClientProvider.AuthenticatedClientProvider provider =
+                createAuthenticatedClientProviderFromStoredCredentials();
+        if (provider != null) {
+            forConsentedUsersApi = provider.getClient(ForConsentedUsersApi.class);
+            userSessionInfoProvider = provider.getUserSessionInfoProvider();
+        } else {
+            //unauthenticated client
+            forConsentedUsersApi = apiClientProvider.getClient(ForConsentedUsersApi.class);
+        }
+
+        return new AuthStateHolder(forConsentedUsersApi, userSessionInfoProvider);
+    }
+
+    @VisibleForTesting
+    @Nullable
+    ApiClientProvider.AuthenticatedClientProvider
+    createAuthenticatedClientProviderFromStoredCredentials() {
+        String email = accountDAO.getEmail();
+        if (!Strings.isNullOrEmpty(email)) {
+            ApiClientProvider.AuthenticatedClientProviderBuilder builder =
+                    apiClientProvider
+                            .getAuthenticatedClientProviderBuilder()
+                            .withEmail(email);
+
+            boolean hasPasswordOrSession = false;
+            String password = accountDAO.getPassword();
+            if (!Strings.isNullOrEmpty(password)) {
+                hasPasswordOrSession = true;
+                builder.withPassword(email);
+            }
+
+            UserSessionInfo session = accountDAO.getUserSessionInfo();
+            if (session != null) {
+                hasPasswordOrSession = true;
+                builder.withSession(session);
+            }
+
+            if (hasPasswordOrSession) {
+                return builder.build();
+            }
+        }
+        return null;
+    }
+
 
     /**
      * Basic sign up that fills in the minimal requirements of email and password fields; in
@@ -95,22 +162,22 @@ public class AuthenticationManager {
      * notifyByEmail, and any custom attributes you've defined for the attributes field.
      *
      * @param email    participant's email
-     * @param password participant's password
+     * @param password optional participant's password. If not provided, participant will receive
+     *                an email for sign in
      * @return notifies of completion or error
      * @see #signUp(SignUp)
      */
     @NonNull
-    public Completable signUp(@NonNull final String email, @NonNull final String password) {
+    public Completable signUp(@NonNull final String email, @Nullable final String password) {
         checkNotNull(email);
-        checkNotNull(password);
 
         logger.debug("signUp called with email: " + email);
+
 
         SignUp participantSignUp = new SignUp()
                 .study(config.getStudyId())
                 .email(email)
                 .password(password);
-
         return signUp(participantSignUp);
     }
 
@@ -131,7 +198,6 @@ public class AuthenticationManager {
     public Completable signUp(@NonNull final SignUp signUp) {
         checkNotNull(signUp);
         checkNotNull(signUp.getEmail());
-        checkNotNull(signUp.getPassword());
 
         logger.debug("signUp called with signUp: " + signUp);
 
@@ -147,8 +213,11 @@ public class AuthenticationManager {
                             .password(signUp.getPassword());
 
                     accountDAO.setSignIn(signIn);
-                    forConsentedUsersApiAtomicReference.set(
-                            apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+                    accountDAO.setEmail(signUp.getEmail());
+                    accountDAO.setPassword(signUp.getPassword());
+
+                    authStateHolderAtomicReference.set(
+                            createAuthStateFromStoredCredentials()
                     );
 
                     StudyParticipant participant = new StudyParticipant();
@@ -158,6 +227,7 @@ public class AuthenticationManager {
                             .externalId(signUp.getExternalId());
 
                     accountDAO.setStudyParticipant(participant);
+
                 }).doOnError(throwable -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setStudyParticipant(null);
@@ -183,6 +253,51 @@ public class AuthenticationManager {
     }
 
     /**
+     * Request an email from Bridge server containing a link which will authenticate the
+     * participant. The link is used with {@link #signInViaEmailLink(String, String)}
+     *
+     * @param email participant's email address
+     * @return completable which requests sign in via email from Bridge
+     */
+    @NonNull
+    public Completable requestEmailSignIn(@NonNull final String email) {
+        checkNotNull(email);
+
+        return RxUtils.toBodySingle(
+                authenticationApi.requestEmailSignIn(
+                        new EmailSignInRequest()
+                                .email(email)
+                                .study(config.getStudyId())))
+                .doOnSuccess(m -> logger.debug("Email sign in request success: " + m.getMessage()))
+                .doOnError(t -> logger.debug("Email sign in request failure", t))
+                .toCompletable();
+    }
+
+    @NonNull
+    public Single<UserSessionInfo> signInViaEmailLink(@NonNull String email, @NonNull String
+            token) {
+        checkNotNull(email);
+        checkNotNull(token);
+
+        // store sign in, so we have signIn as a key to retrieve session in case of 412
+        SignIn signIn = new SignIn().email(email).study(config.getStudyId());
+        accountDAO.setSignIn(signIn);
+
+        return RxUtils.toBodySingle(
+                authenticationApi.signInViaEmail(
+                        new EmailSignIn()
+                                .email(email)
+                                .study(config.getStudyId())
+                                .token(token)))
+                .compose(signInHelper(signIn))
+                .doOnSuccess(session -> logger.debug("Successfully signed in via email"))
+                .doOnError(t -> {
+                    logger.debug("Failed to sign in via email", t);
+                    requestEmailSignIn(email).subscribe();
+                });
+    }
+
+    /**
      * On success, stores participant's email, password and session. If a
      * NotAuthenticatedException is encountered, this could mean the credentials are invalid, or the
      * user has not verified their email.
@@ -199,10 +314,10 @@ public class AuthenticationManager {
 
         logger.debug("signIn called with email: " + email);
 
-        String subpopulationGuid = config.getStudyId();
+        String studyId = config.getStudyId();
 
         SignIn signIn = new SignIn()
-                .study(subpopulationGuid)
+                .study(studyId)
                 .email(email)
                 .password(password);
 
@@ -211,34 +326,73 @@ public class AuthenticationManager {
 
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
-                .toObservable()
-                .retryWhen(retrySignInForConsentOnce(subpopulationGuid))
-                .toSingle()
-                .doOnSuccess(userSessionInfo -> {
-                    forConsentedUsersApiAtomicReference.set(
-                            apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
+                .compose(signInHelper(signIn));
+    }
+
+    /**
+     * Used to transform a raw Bridge signIn single by retrying upload of required consent if it
+     * is present locally and setting state on success/failure
+     *
+     * @param signIn signIn credentials
+     * @return
+     */
+    Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn) {
+        final String email = signIn.getEmail();
+
+        return userSessionInfoSingle -> userSessionInfoSingle
+                .onErrorResumeNext(t -> {
+                    if (t instanceof ConsentRequiredException) {
+                        logger.debug("Received ConsentRequiredException, treating as success");
+                        return Single.just(((ConsentRequiredException) t).getSession());
+                    }
+                    return Single.error(t);
+                })
+                .doOnSuccess(session -> {
+                    accountDAO.setEmail(email);
+
+                    // if we signed in with a password, save it
+                    String password = signIn.getPassword();
+                    if (!Strings.isNullOrEmpty(password)) {
+                        accountDAO.setPassword(password);
+                    }
+
+                    accountDAO.setUserSessionInfo(session);
+
+                    authStateHolderAtomicReference.set(
+                            createAuthStateFromStoredCredentials()
                     );
-                    accountDAO.setUserSessionInfo(userSessionInfo);
+
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
-                    for (AuthenticationEventListener listener : listeners) {
-                        listener.onSignedIn(email);
+
+                    if (!session.getConsented()) {
+                        // look for a missing required consent which we have locally
+                        for (Map.Entry<String, ConsentStatus> consentStatusEntry : session
+                                .getConsentStatuses().entrySet()) {
+                            String subpopulationGuid = consentStatusEntry.getKey();
+                            ConsentStatus consentStatus = consentStatusEntry.getValue();
+
+                            // required consent missing on Bridge and present locally
+                            if (consentStatus.getRequired()
+                                    && !consentStatus.getConsented()
+                                    && isConsentedInLocal(subpopulationGuid)) {
+
+                                // upload local consents, ignoring errors
+                                uploadLocalConsents()
+                                        .onErrorResumeNext(Observable.just(session))
+                                        .subscribe();
+                                break;
+                            }
+                        }
                     }
-                }).doOnError(throwable -> {
-                    // a 412 is a successful signin
-                    if (throwable instanceof ConsentRequiredException) {
-                        forConsentedUsersApiAtomicReference.set(
-                                apiClientProvider.getClient(ForConsentedUsersApi.class, signIn)
-                        );
-                        accountDAO.setUserSessionInfo(
-                                ((ConsentRequiredException) throwable).getSession());
-                        accountDAO.setStudyParticipant(
-                                new StudyParticipant()
-                                        .email(signIn.getEmail()));
-                    } else {
-                        accountDAO.setSignIn(null);
-                    }
+
+                })
+                .doOnError(t -> {
+                    accountDAO.setSignIn(null);
+                    accountDAO.setPassword(null);
+                    accountDAO.setUserSessionInfo(null);
+
                 });
     }
 
@@ -252,7 +406,7 @@ public class AuthenticationManager {
      *
      * @return a retry function that will attempt a to upload Consent one time
      */
-    Func1<? super Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
+    Func1<Observable<? extends Throwable>, ? extends Observable<UserSessionInfo>>
     retrySignInForConsentOnce(String subpopulationGuid) {
         return new Func1<Observable<? extends Throwable>, Observable<UserSessionInfo>>() {
             private int retryAttempt = 0;
@@ -266,6 +420,7 @@ public class AuthenticationManager {
                     if (!(throwable instanceof ConsentRequiredException)
                             || retryAttempt > 1
                             || (!isConsented() && !isConsentedInLocal(subpopulationGuid))) {
+
                         Observable<UserSessionInfo> obs = Observable.error(throwable);
                         return obs;
                     }
@@ -294,11 +449,6 @@ public class AuthenticationManager {
             logger.debug("Did not find saved SignIn credentials prior to calling sign out API");
         }
 
-        // once signOut method is called, prevent usage of API, regardless of success of bridge call
-        forConsentedUsersApiAtomicReference.set(
-                apiClientProvider.getClient(ForConsentedUsersApi.class)
-        );
-
         for (AuthenticationEventListener listener : listeners) {
             listener.onSignedOut(email);
         }
@@ -308,6 +458,11 @@ public class AuthenticationManager {
         // Clear relevant account information whether call was successful or not
         accountDAO.clear();
         consentDAO.clear();
+
+        // once signOut method is called, prevent usage of API, regardless of success of bridge call
+        authStateHolderAtomicReference.set(
+                createAuthStateFromStoredCredentials()
+        );
 
         return completable;
     }
@@ -330,10 +485,10 @@ public class AuthenticationManager {
 
     /**
      * Get access to bridge API for currently authenticated client.
-     *
+     * <p>
      * ForConsentedUserApi instances are bound to a specific set of credentials, and changes due to
      * signIn or signOut result in a new ForConsentedUserApi instance.
-     *
+     * <p>
      * Callers should retain the AtomicReference and retrieve the API for use and should not cache
      * or store an instance of the API itself.
      *
@@ -341,10 +496,10 @@ public class AuthenticationManager {
      * use the current credentials bound to this class
      */
     @NonNull
-    public AtomicReference<ForConsentedUsersApi> getApiReference() {
-        logger.debug("getApiReference called");
+    public AtomicReference<AuthStateHolder> getAuthStateReference() {
+        logger.debug("getAuthStateReference called");
 
-        return forConsentedUsersApiAtomicReference;
+        return authStateHolderAtomicReference;
     }
 
     /**
@@ -352,8 +507,7 @@ public class AuthenticationManager {
      */
     @Nullable
     public String getEmail() {
-        SignIn signIn = accountDAO.getSignIn();
-        return signIn == null ? null : signIn.getEmail();
+        return accountDAO.getEmail();
     }
 
     /**
@@ -367,8 +521,8 @@ public class AuthenticationManager {
 
         // TODO: a way to distinguish if session is null because we haven't signed on, or if it
         // was invalidated
-        UserSessionInfoProvider sessionProvider = apiClientProvider.getUserSessionInfoProvider
-                (accountDAO.getSignIn());
+        UserSessionInfoProvider sessionProvider =
+                authStateHolderAtomicReference.get().userSessionInfoProvider;
         if (sessionProvider != null) {
             UserSessionInfo session = sessionProvider.getSession();
 
@@ -377,7 +531,6 @@ public class AuthenticationManager {
                 return session;
             }
         }
-
         return accountDAO.getUserSessionInfo();
     }
 
@@ -385,13 +538,15 @@ public class AuthenticationManager {
      * Call Bridge to getConsent session. Cached session is updated as a side-effect.
      *
      * @return Bridge session
+     * @deprecated getUserSessionInfo should suffice for most cases
      */
     @NonNull
+    @Deprecated
     public Single<UserSessionInfo> getLatestUserSessionInfo() {
         // no-op call to the participant update API, we'll getConsent a recomputed session
         // session interceptor will update itself with the session in the response
         return RxUtils.toBodySingle(
-                getApiReference().get()
+                getAuthStateReference().get().forConsentedUsersApi
                         .updateUsersParticipantRecord(new StudyParticipant()));
     }
 
@@ -540,7 +695,7 @@ public class AuthenticationManager {
             ConsentSignature consent) {
         return Single.just(consent)
                 .flatMap(consentSignature -> RxUtils.toBodySingle(
-                        getApiReference().get()
+                        getAuthStateReference().get().forConsentedUsersApi
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
@@ -573,7 +728,8 @@ public class AuthenticationManager {
      * @param sharingScope      participant's sharing scope for the study (required)
      * @return the resulting consentSignature
      */
-    public ConsentSignature storeLocalConsent(@NonNull String subpopulationGuid, @NonNull String name,
+    public ConsentSignature storeLocalConsent(@NonNull String subpopulationGuid, @NonNull String
+            name,
                                               @NonNull LocalDate birthdate,
                                               @Nullable String base64Image,
                                               @Nullable String imageMimeType,
@@ -620,7 +776,7 @@ public class AuthenticationManager {
     public Single<ConsentSignature> getConsent(@NonNull String subpopulationGuid) {
         checkNotNull(subpopulationGuid);
 
-        return RxUtils.toBodySingle(getApiReference().get()
+        return RxUtils.toBodySingle(getAuthStateReference().get().forConsentedUsersApi
                 .getConsentSignature
                         (subpopulationGuid))
                 .onErrorResumeNext(throwable -> {
@@ -652,9 +808,10 @@ public class AuthenticationManager {
     public Completable withdrawAll(@Nullable String reason) {
 
         return RxUtils.toBodySingle(
-                getApiReference().get().withdrawAllConsents(
-                        new Withdrawal().reason(reason)
-                ))
+                getAuthStateReference().get().forConsentedUsersApi
+                        .withdrawAllConsents(
+                                new Withdrawal().reason(reason)
+                        ))
                 .toCompletable();
 
     }
@@ -671,8 +828,9 @@ public class AuthenticationManager {
         checkNotNull(subpopulationGuid);
 
         return RxUtils.toBodySingle(
-                getApiReference().get().withdrawConsentFromSubpopulation
-                        (subpopulationGuid, new Withdrawal().reason(reason)))
+                getAuthStateReference().get().forConsentedUsersApi
+                        .withdrawConsentFromSubpopulation
+                                (subpopulationGuid, new Withdrawal().reason(reason)))
                 .toCompletable();
     }
 
