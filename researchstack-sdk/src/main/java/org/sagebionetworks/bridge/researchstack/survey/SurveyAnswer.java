@@ -7,6 +7,7 @@ import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -49,8 +50,10 @@ public class SurveyAnswer {
       if (result instanceof List) {
         // TODO: verify whether answer is List or array, see MultiChoiceQuestionBody
         choiceAnswers = ImmutableList.copyOf((List) result);
-      } else {
+      } else if (result instanceof Object[]) {
         choiceAnswers = ImmutableList.of(result);
+      } else {
+        choiceAnswers = new ArrayList<>();
       }
     }
   }
