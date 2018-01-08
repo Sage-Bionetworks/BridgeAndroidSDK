@@ -36,6 +36,7 @@ import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
+import org.sagebionetworks.bridge.rest.RestUtils;
 
 import java.io.File;
 import java.lang.reflect.Type;
@@ -81,7 +82,8 @@ public class ArchiveFileFactory {
                 // TODO: you can do standard json parsing after this
                 DateTime endTime = new DateTime(result.getEndDate());
 
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").create();
+                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'z'")
+                        .create();
                 String filename = getFilename(result.getIdentifier()) + ".json";
                 String json = gson.toJson(result, TappingIntervalResult.class);
                 return new JsonArchiveFile(filename, endTime, json);
@@ -127,6 +129,7 @@ public class ArchiveFileFactory {
                 answer = new SurveyAnswer.ChoiceSurveyAnswer(stepResult);
                 break;
             case Integer:
+            case Decimal:
                 answer = new SurveyAnswer.NumericSurveyAnswer(stepResult);
                 break;
             case Boolean:
@@ -148,12 +151,11 @@ public class ArchiveFileFactory {
                 answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
                 break;
             case TimeOfDay:
-                // TODO: implement tie of day only sending the hour/min/sec
+                // TODO: implement time of day only sending the hour/min/sec
                 answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
                 break;
             case None:
             case Scale:
-            case Decimal:
             case Eligibility:
             case DateAndTime:
             case TimeInterval:
