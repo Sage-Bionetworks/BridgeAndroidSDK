@@ -35,6 +35,7 @@ import org.researchstack.backbone.result.TappingIntervalResult;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
+import org.sagebionetworks.bridge.data.JsonUtil;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.rest.RestUtils;
 
@@ -78,14 +79,10 @@ public class ArchiveFileFactory {
             return fromFileResult((FileResult) result);
         } else {
             if (result instanceof TappingIntervalResult) {
-                // TODO: replace this in RestUtils.GSON, see https://sagebionetworks.jira.com/browse/AA-59
-                // TODO: you can do standard json parsing after this
                 DateTime endTime = new DateTime(result.getEndDate());
 
-                Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'z'")
-                        .create();
                 String filename = getFilename(result.getIdentifier()) + ".json";
-                String json = gson.toJson(result, TappingIntervalResult.class);
+                String json = JsonUtil.GSON.toJson(result, TappingIntervalResult.class);
                 return new JsonArchiveFile(filename, endTime, json);
             }
         }
