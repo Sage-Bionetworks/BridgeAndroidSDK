@@ -58,13 +58,13 @@ public class SurveyAnswer {
     }
   }
 
-  public static class NumericSurveyAnswer extends SurveyAnswer {
+  public static class NumericSurveyAnswer<T extends Number> extends SurveyAnswer {
 
-    private final Integer numericAnswer;
+    private final T numericAnswer;
 
     public NumericSurveyAnswer(StepResult result) {
       super(result);
-      numericAnswer = (Integer) result.getResult();
+      numericAnswer = (T) result.getResult();
     }
   }
 
