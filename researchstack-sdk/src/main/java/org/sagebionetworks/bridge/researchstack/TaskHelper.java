@@ -212,6 +212,7 @@ public class TaskHelper {
      * Uploads the task result to Bridge with the given schema ID and default revision 1.
      *
      * @param schemaId   schema ID for this task
+     * @param metadataFile if the caller wishes to add it to the Archive
      * @param taskResult task results
      */
     public void uploadActivityResult(@NonNull String schemaId,
@@ -226,6 +227,7 @@ public class TaskHelper {
      *
      * @param schemaId         schema ID for this task
      * @param schemaRevisionId schema revision for this task
+     * @param metadataFile if the caller wishes to add it to the Archive
      * @param taskResult       task results
      */
     public void uploadActivityResult(@NonNull String schemaId, int schemaRevisionId,
@@ -241,6 +243,7 @@ public class TaskHelper {
      * createdOn are loaded from the cache when the task was originally loaded. Task ID should match
      * the survey's identifier. See loadTask().
      *
+     * @param metadataFile if the caller wishes to add it to the Archive
      * @param taskResult task results
      */
     public void uploadSurveyResult(@Nullable JsonArchiveFile metadataFile,
