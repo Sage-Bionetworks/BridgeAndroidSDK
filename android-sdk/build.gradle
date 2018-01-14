@@ -34,10 +34,10 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.13.27', {
+    api 'org.sagebionetworks.bridge:rest-client:0.13.20', {
         exclude group: 'joda-time', module: 'joda-time'
     }
-    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.4', {
+    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
         exclude group: 'com.madgag.spongycastle' //pkix renamed to bcpkix-jdk15on, causes dupes
