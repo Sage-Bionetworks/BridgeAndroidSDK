@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
+import rx.Observable;
 import rx.Single;
 
 import static com.google.common.base.Preconditions.checkNotNull;

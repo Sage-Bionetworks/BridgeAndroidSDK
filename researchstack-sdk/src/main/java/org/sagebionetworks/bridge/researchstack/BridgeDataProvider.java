@@ -66,12 +66,12 @@ public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
 
     // set in initialize
-    private final TaskHelper taskHelper;
+    protected final TaskHelper taskHelper;
 
     /**
      * The GUID of the last task that was loaded (used in completion)
      */
-    private String lastLoadedTaskGuid = null;
+    protected String lastLoadedTaskGuid = null;
 
     @NonNull
     protected final StorageAccessWrapper storageAccessWrapper;
@@ -561,6 +561,24 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(session.getDataGroups()))
                 .toObservable();
+    }
+
+    /**
+     * Make participant data available for download.
+     * <p>
+     * Request the uploaded data for this user, in a given time range (inclusive). Bridge will
+     * asynchronously gather the user's data for the given time range and email a secure link to the
+     * participant's registered email address.
+     *
+     * @param startDate The first day to include in reports that are returned (required)
+     * @param endDate   The last day to include in reports that are returned (required)
+     * @return completable
+     */
+    @NonNull
+    public Observable<DataResponse> downloadData(LocalDate startDate,
+                                            LocalDate endDate) {
+        return bridgeManagerProvider.getParticipantManager()
+                .emailDataToParticipant(startDate, endDate).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     //endregion

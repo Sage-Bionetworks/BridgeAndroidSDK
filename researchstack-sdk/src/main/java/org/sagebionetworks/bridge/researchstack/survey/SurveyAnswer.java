@@ -7,6 +7,7 @@ import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -49,19 +50,21 @@ public class SurveyAnswer {
       if (result instanceof List) {
         // TODO: verify whether answer is List or array, see MultiChoiceQuestionBody
         choiceAnswers = ImmutableList.copyOf((List) result);
-      } else {
+      } else if (result instanceof Object[]) {
         choiceAnswers = ImmutableList.of(result);
+      } else {
+        choiceAnswers = new ArrayList<>();
       }
     }
   }
 
-  public static class NumericSurveyAnswer extends SurveyAnswer {
+  public static class NumericSurveyAnswer<T extends Number> extends SurveyAnswer {
 
-    private final Integer numericAnswer;
+    private final T numericAnswer;
 
     public NumericSurveyAnswer(StepResult result) {
       super(result);
-      numericAnswer = (Integer) result.getResult();
+      numericAnswer = (T) result.getResult();
     }
   }
 
@@ -78,6 +81,9 @@ public class SurveyAnswer {
   public static class DateSurveyAnswer extends SurveyAnswer {
 
     private final String dateAnswer;
+    public String getDateAnswer() {
+      return dateAnswer;
+    }
 
     public DateSurveyAnswer(StepResult result) {
       super(result);
