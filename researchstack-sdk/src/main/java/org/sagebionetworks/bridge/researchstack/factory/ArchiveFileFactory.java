@@ -22,8 +22,6 @@ import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
 import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import org.joda.time.DateTime;
@@ -35,7 +33,6 @@ import org.researchstack.backbone.result.TappingIntervalResult;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
-import org.sagebionetworks.bridge.data.JsonUtil;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 import org.sagebionetworks.bridge.rest.RestUtils;
 
@@ -82,7 +79,7 @@ public class ArchiveFileFactory {
                 DateTime endTime = new DateTime(result.getEndDate());
 
                 String filename = getFilename(result.getIdentifier()) + ".json";
-                String json = JsonUtil.GSON.toJson(result, TappingIntervalResult.class);
+                String json = RestUtils.GSON.toJson(result, TappingIntervalResult.class);
                 return new JsonArchiveFile(filename, endTime, json);
             }
         }
