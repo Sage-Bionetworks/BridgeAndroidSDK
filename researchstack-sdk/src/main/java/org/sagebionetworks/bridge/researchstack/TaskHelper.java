@@ -3,7 +3,9 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
+import android.text.TextUtils;
 
 import com.google.common.base.Strings;
 
@@ -25,15 +27,20 @@ import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.AppPrefs;
 import org.researchstack.backbone.notification.TaskAlertReceiver;
 import org.researchstack.backbone.schedule.ScheduleHelper;
+import org.researchstack.backbone.utils.FormatHelper;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.data.ArchiveFile;
+import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
 import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -207,8 +214,11 @@ public class TaskHelper {
      * @param schemaId   schema ID for this task
      * @param taskResult task results
      */
-    public void uploadActivityResult(@NonNull String schemaId, @NonNull TaskResult taskResult) {
-        uploadTaskResult(taskResult, archiveFactory.forActivity(schemaId));
+    public void uploadActivityResult(@NonNull String schemaId,
+                                     @Nullable JsonArchiveFile metadataFile,
+                                     @NonNull TaskResult taskResult) {
+
+        uploadTaskResult(metadataFile, taskResult, archiveFactory.forActivity(schemaId));
     }
 
     /**
@@ -218,9 +228,12 @@ public class TaskHelper {
      * @param schemaRevisionId schema revision for this task
      * @param taskResult       task results
      */
-    public void uploadActivityResult(
-            @NonNull String schemaId, int schemaRevisionId, @NonNull TaskResult taskResult) {
-        uploadTaskResult(taskResult, archiveFactory.forActivity(schemaId, schemaRevisionId));
+    public void uploadActivityResult(@NonNull String schemaId, int schemaRevisionId,
+                                     @Nullable JsonArchiveFile metadataFile,
+                                     @NonNull TaskResult taskResult) {
+
+        uploadTaskResult(metadataFile, taskResult,
+                archiveFactory.forActivity(schemaId, schemaRevisionId));
     }
 
     /**
@@ -230,7 +243,9 @@ public class TaskHelper {
      *
      * @param taskResult task results
      */
-    public void uploadSurveyResult(@NonNull TaskResult taskResult) {
+    public void uploadSurveyResult(@Nullable JsonArchiveFile metadataFile,
+                                   @NonNull TaskResult taskResult) {
+
         // Figure out surveyGuid and createdOn from task.
         String taskId = taskResult.getIdentifier();
         String surveyGuid = getGuid(taskId);
@@ -238,16 +253,19 @@ public class TaskHelper {
 
         // Upload only if we have a surveyGuid/CreatedOn. Otherwise, the Archive library crashes.
         if (!Strings.isNullOrEmpty(surveyGuid) && surveyCreatedOn != null) {
-            uploadTaskResult(taskResult, archiveFactory.forSurvey(surveyGuid, surveyCreatedOn));
+            uploadTaskResult(metadataFile, taskResult,
+                    archiveFactory.forSurvey(surveyGuid, surveyCreatedOn));
         } else {
             logger.error("No surveyGuid/CreatedOn for task " + taskId +
                     ", falling back to task ID as schema ID");
-            uploadActivityResult(taskId, taskResult);
+            uploadActivityResult(taskId, metadataFile, taskResult);
         }
     }
 
     //package private for test access
-    void uploadTaskResult(TaskResult taskResult, Archive.Builder builder) {
+    void uploadTaskResult(@Nullable JsonArchiveFile metadataFile,
+                          TaskResult taskResult, Archive.Builder builder) {
+
         BridgeConfig config = bridgeManagerProvider.getBridgeConfig();
         builder.withAppVersionName(config.getAppVersionName())
                 .withPhoneInfo(config.getDeviceName());
@@ -265,6 +283,11 @@ public class TaskHelper {
             if (chronTime != null) {
                 scheduleReminderNotification(taskResult.getEndDate(), chronTime);
             }
+        }
+
+        // Add metadata file if it exists
+        if (metadataFile != null) {
+            builder.addDataFile(metadataFile);
         }
 
         // Traverse through the StepResult maps and get an ordered list of Results
@@ -293,6 +316,76 @@ public class TaskHelper {
                         }
                     }
                 });
+    }
+
+    /**
+     * Uses the scheduledActivity a json map of metadata information
+     * @param scheduledActivity if null, the metadata.json file will not be added
+     * @param dataGroups will be added to the metadata json,
+     */
+    public JsonArchiveFile createMetaDataFile(@Nullable ScheduledActivity scheduledActivity,
+                                              @Nullable List<String> dataGroups) {
+
+        if (scheduledActivity == null) {
+            logger.error("scheduledActivity is null, skipping metadata.json");
+            return null;
+        }
+
+        Map<String, String> metaDataMap = new HashMap<>();
+
+        // Set end data
+        DateTime endDate = DateTime.now();
+        if (scheduledActivity.getFinishedOn() != null) {
+            endDate = scheduledActivity.getFinishedOn();
+        }
+        metaDataMap.put("endDate", FormatHelper.DEFAULT_FORMAT
+                .format(scheduledActivity.getFinishedOn().toDate()));
+
+        // Set metadata key/values
+        if (scheduledActivity.getActivity() != null &&
+                scheduledActivity.getActivity().getTask() != null) {
+
+            Activity activity = scheduledActivity.getActivity();
+            TaskReference taskRef = activity.getTask();
+
+            String taskIdentifier = taskRef.getIdentifier();
+            if (taskIdentifier != null) {
+                metaDataMap.put("taskIdentifier", taskIdentifier);
+            }
+
+            if (activity.getLabel() != null) {
+                metaDataMap.put("activityLabel", activity.getLabel());
+            }
+        }
+
+        if (scheduledActivity.getGuid() != null) {
+            metaDataMap.put("scheduledActivityGuid", scheduledActivity.getGuid());
+        }
+
+        // iOS Needs a task run UUID, so just send one up for compliance,
+        // Android only uses UUID for active steps, and not tasks
+        metaDataMap.put("taskRunUUID", UUID.randomUUID().toString());
+
+        if (scheduledActivity.getStartedOn() != null) {
+            metaDataMap.put("startDate", FormatHelper.DEFAULT_FORMAT
+                    .format(scheduledActivity.getStartedOn().toDate()));
+        }
+
+        if (scheduledActivity.getScheduledOn() != null) {
+            metaDataMap.put("scheduledOn", FormatHelper.DEFAULT_FORMAT
+                    .format(scheduledActivity.getScheduledOn().toDate()));
+        }
+
+        if (scheduledActivity.getSchedulePlanGuid() != null) {
+            metaDataMap.put("scheduleIdentifier", scheduledActivity.getSchedulePlanGuid());
+        }
+
+        if (dataGroups != null) {
+            metaDataMap.put("dataGroups", TextUtils.join(",", dataGroups));
+        }
+
+        String metaDataJson = RestUtils.GSON.toJson(metaDataMap);
+        return new JsonArchiveFile("metadata.json", endDate, metaDataJson);
     }
 
     /**

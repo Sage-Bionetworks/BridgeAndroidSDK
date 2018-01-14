@@ -1,8 +1,11 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.sagebionetworks.bridge.android.manager.dao.ActivityListDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
@@ -21,7 +24,6 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicReference;
 
-import retrofit2.http.Query;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
@@ -36,11 +38,17 @@ public class ActivityManager {
     @NonNull
     private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
 
+    private static final String ACTIVITY_LIST_SHARED_PREFS_KEY = "ActivityListDAO";
+    private final ActivityListDAO activityListDAO;
 
-    public ActivityManager(@NonNull AuthenticationManager authenticationManager) {
+    public ActivityManager(@NonNull AuthenticationManager authenticationManager,
+                           @NonNull Context appContext) {
+
         checkNotNull(authenticationManager);
+        checkNotNull(appContext);
 
         this.apiAtomicReference = authenticationManager.getApiReference();
+        activityListDAO = new ActivityListDAO(appContext, ACTIVITY_LIST_SHARED_PREFS_KEY);
     }
 
     /**
@@ -53,6 +61,7 @@ public class ActivityManager {
                 .getScheduledActivitiesByDateRange(startTime, endTime)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
+                    activityListDAO.updateActivityList(scheduleActivityList);
                 });
     }
 
@@ -61,6 +70,9 @@ public class ActivityManager {
                 .getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
+                    if (scheduleActivityList != null) {
+                        activityListDAO.updateActivityList(scheduleActivityList.getItems());
+                    }
                 });
 
     }
@@ -73,6 +85,8 @@ public class ActivityManager {
 
         checkNotNull(scheduledActivities);
 
+        activityListDAO.updateActivityList(scheduledActivities);
+
         return toBodySingle(apiAtomicReference.get()
                 .updateScheduledActivities(scheduledActivities)).toCompletable();
     }
@@ -81,8 +95,18 @@ public class ActivityManager {
 
         checkNotNull(scheduledActivity);
 
+        activityListDAO.updateActivityList(Collections.singletonList(scheduledActivity));
+
         return toBodySingle(apiAtomicReference.get()
                 .updateScheduledActivities(Collections.singletonList(scheduledActivity))).toObservable();
+    }
+
+    public @Nullable ScheduledActivity getLocalActivity(String guid) {
+        return activityListDAO.getActivity(guid);
+    }
+
+    public void clearDAO() {
+        activityListDAO.clear();
     }
 
     private String getTimezoneOffset() {
