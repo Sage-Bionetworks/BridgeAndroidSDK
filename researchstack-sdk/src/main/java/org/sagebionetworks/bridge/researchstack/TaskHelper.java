@@ -53,6 +53,8 @@ import java.util.UUID;
 
 import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class TaskHelper {
@@ -306,7 +308,11 @@ public class TaskHelper {
                     bridgeManagerProvider.getUploadManager()
                             .processUploadFile(uploadFile)
                             .subscribeOn(Schedulers.io())
-                            .subscribe();
+                            .subscribe(() -> {
+                                logger.debug("processUploadFile success");
+                            }, throwable -> {
+                                logger.warn("processUploadFile failed");
+                            });
                 })
                 .toCompletable()
                 .observeOn(AndroidSchedulers.mainThread())
