@@ -263,15 +263,15 @@ public class TaskHelperTest {
 
         // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
         // test it here.
-        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+        doNothing().when(taskHelper).uploadTaskResult(any(), any(), any());
 
         // Execute
         TaskResult helperInput = new TaskResult(TASK_ID);
-        taskHelper.uploadActivityResult(SCHEMA_ID, helperInput);
+        taskHelper.uploadActivityResult(SCHEMA_ID, null, helperInput);
 
         // Verify backends
         verify(archiveFactory).forActivity(SCHEMA_ID);
-        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+        verify(taskHelper).uploadTaskResult(any(), same(helperInput), same(factoryOutput));
     }
 
     @Test
@@ -282,15 +282,15 @@ public class TaskHelperTest {
 
         // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
         // test it here.
-        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+        doNothing().when(taskHelper).uploadTaskResult(any(), any(), any());
 
         // Execute
         TaskResult helperInput = new TaskResult(TASK_ID);
-        taskHelper.uploadActivityResult(SCHEMA_ID, SCHEMA_REV, helperInput);
+        taskHelper.uploadActivityResult(SCHEMA_ID, SCHEMA_REV, null, helperInput);
 
         // Verify backends
         verify(archiveFactory).forActivity(SCHEMA_ID, SCHEMA_REV);
-        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+        verify(taskHelper).uploadTaskResult(any(), same(helperInput), same(factoryOutput));
     }
 
     @Test
@@ -305,15 +305,15 @@ public class TaskHelperTest {
 
         // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
         // test it here.
-        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+        doNothing().when(taskHelper).uploadTaskResult(any(), any(), any());
 
         // Execute
         TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
-        taskHelper.uploadSurveyResult(helperInput);
+        taskHelper.uploadSurveyResult(null, helperInput);
 
         // Verify backends
         verify(archiveFactory).forSurvey(SURVEY_GUID, SURVEY_CREATED_ON);
-        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+        verify(taskHelper).uploadTaskResult(any(), same(helperInput), same(factoryOutput));
     }
 
     @Test
@@ -328,15 +328,15 @@ public class TaskHelperTest {
 
         // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
         // test it here.
-        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+        doNothing().when(taskHelper).uploadTaskResult(any(), any(), any());
 
         // Execute
         TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
-        taskHelper.uploadSurveyResult(helperInput);
+        taskHelper.uploadSurveyResult(null, helperInput);
 
         // Verify backends
         verify(archiveFactory).forActivity(SURVEY_IDENTIFIER);
-        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+        verify(taskHelper).uploadTaskResult(any(), same(helperInput), same(factoryOutput));
     }
 
     @Test
@@ -351,15 +351,15 @@ public class TaskHelperTest {
 
         // Spy taskHelper.uploadTaskResult(). This is tested in the next test, so we don't need to
         // test it here.
-        doNothing().when(taskHelper).uploadTaskResult(any(), any());
+        doNothing().when(taskHelper).uploadTaskResult(any(), any(), any());
 
         // Execute
         TaskResult helperInput = new TaskResult(SURVEY_IDENTIFIER);
-        taskHelper.uploadSurveyResult(helperInput);
+        taskHelper.uploadSurveyResult(null, helperInput);
 
         // Verify backends
         verify(archiveFactory).forActivity(SURVEY_IDENTIFIER);
-        verify(taskHelper).uploadTaskResult(same(helperInput), same(factoryOutput));
+        verify(taskHelper).uploadTaskResult(any(), same(helperInput), same(factoryOutput));
     }
 
     @Test
@@ -415,7 +415,7 @@ public class TaskHelperTest {
         mockStatic(TaskAlertReceiver.class);
         when(TaskAlertReceiver.createCreateIntent(any())).thenReturn(notificationCreateIntent);
 
-        taskHelper.uploadTaskResult(taskResult, archiveBuilder);
+        taskHelper.uploadTaskResult(null, taskResult, archiveBuilder);
 
         verify(archiveFileFactory).fromResult(result1);
         verify(archiveFileFactory).fromResult(result2);

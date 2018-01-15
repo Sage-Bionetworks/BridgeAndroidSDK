@@ -392,7 +392,7 @@ public class BridgeDataProviderTest {
         dataProvider.uploadTaskResult(context, taskResult);
 
         // verify
-        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, taskResult);
+        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, null, taskResult);
     }
 
     @Test
@@ -405,7 +405,7 @@ public class BridgeDataProviderTest {
         dataProvider.uploadTaskResult(context, taskResult);
 
         // verify
-        verify(taskHelper).uploadActivityResult(TASK_ID, taskResult);
+        verify(taskHelper).uploadActivityResult(TASK_ID, null, taskResult);
     }
 
     @Test
@@ -415,7 +415,7 @@ public class BridgeDataProviderTest {
         dataProvider.uploadTaskResult(context, taskResult);
 
         // verify
-        verify(taskHelper).uploadSurveyResult(taskResult);
+        verify(taskHelper).uploadSurveyResult(null, taskResult);
     }
 
     @Test
@@ -602,7 +602,7 @@ public class BridgeDataProviderTest {
         dataProvider.uploadTaskResult(context, taskResult);
 
         // verify
-        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, taskResult);
+        verify(taskHelper).uploadActivityResult(SCHEMA_ID, SCHEMA_REV, null, taskResult);
 
         // TODO: make GUID available in ScheduledActivity constructor and get rid of this gson nonsense
         String activityJson = String.format("{\"guid\":\"%s\"}", TASK_ID);

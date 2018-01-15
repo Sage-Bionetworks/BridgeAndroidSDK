@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.content.Context;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -43,13 +45,16 @@ public class ActivityManagerTest {
 
     private ActivityManager activityManager;
 
+    @Mock
+    private Context context;
+
 
     @Before
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
         when(authenticationManager.getApiReference()).thenReturn(new AtomicReference<>(activitiesApi));
-        activityManager = new ActivityManager(authenticationManager);
+        activityManager = new ActivityManager(authenticationManager, context);
     }
 
     @Test
