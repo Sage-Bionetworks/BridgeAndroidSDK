@@ -228,7 +228,23 @@ public class AuthenticationManager {
 
                     accountDAO.setStudyParticipant(participant);
 
-                }).doOnError(throwable -> {
+                })
+                .flatMap(message -> {
+                    // if this is a password-less sign-up, request sign-in link
+                    if (Strings.isNullOrEmpty(signUp.getPassword())) {
+                        return RxUtils.toBodySingle(
+                                authenticationApi.requestEmailSignIn(
+                                        new EmailSignInRequest()
+                                                .study(config.getStudyId())
+                                                .email(signUp.getEmail())))
+                                .doOnSuccess(m ->
+                                        logger.debug("Request for email sign-in link succeeded"))
+                                .doOnError(t ->
+                                        logger.warn("Request for email sign-in link failed: ", t));
+                    }
+                    return Single.just(message);
+                })
+                .doOnError(throwable -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setStudyParticipant(null);
                 }).toCompletable();
