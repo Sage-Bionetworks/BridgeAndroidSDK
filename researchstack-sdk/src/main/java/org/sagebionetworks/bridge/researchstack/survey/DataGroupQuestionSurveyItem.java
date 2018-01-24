@@ -60,7 +60,10 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
     }
 
     /**
-     * @return true if question should be skipped when session contains data groups
+     * When the session contains any of the data groups returned by this method, this step will
+     * be skipped.
+     *
+     * @return set of data groups to check for in the session
      */
     public Set<String> getSkipOnSessionContainsAny() {
         return skipOnSessionContainsAny;
