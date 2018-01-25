@@ -71,7 +71,7 @@ public class BridgeSurveyFactory extends TaskItemFactory {
         fillQuestionStep(item, step);
         transferNavigationRules(item, step);
         step.setShouldPersist(item.shouldPersist());
-        step.setShouldSkipIfSessionContainsDataGroups(item.shouldSkipIfSessionContainsDataGroups());
+        step.setSkipOnSessionContainsAny(item.getSkipOnSessionContainsAny());
     }
 
     protected DataGroupQuestionStep dataGroupsQuestionStep(String identifier, String title, AnswerFormat format) {

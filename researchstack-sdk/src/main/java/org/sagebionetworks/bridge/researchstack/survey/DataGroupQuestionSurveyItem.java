@@ -18,19 +18,24 @@
 package org.sagebionetworks.bridge.researchstack.survey;
 
 import android.support.annotation.VisibleForTesting;
+
 import org.researchstack.backbone.model.Choice;
 import org.researchstack.backbone.model.survey.QuestionSurveyItem;
+
+import java.util.Set;
 
 /**
  * Data group question item, used to determine which data groups should apply to a user during
  * onboarding.
  */
 public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<String>> {
-    /** Custom type identifier. */
+    /**
+     * Custom type identifier.
+     */
     public static final String CUSTOM_TYPE = "dataGroups.singleChoiceText";
 
     private boolean shouldPersist;
-    private boolean shouldSkipIfSessionContainsDataGroups;
+    private Set<String> skipOnSessionContainsAny;
 
     @Override
     @VisibleForTesting
@@ -47,19 +52,24 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
         return shouldPersist;
     }
 
-    /** @see #shouldPersist */
+    /**
+     * @see #shouldPersist
+     */
     public void setShouldPersist(boolean shouldPersist) {
         this.shouldPersist = shouldPersist;
     }
 
     /**
-     * @return true if question should be skipped when session contains data groups
+     * When the session contains any of the data groups returned by this method, this step will
+     * be skipped.
+     *
+     * @return set of data groups to check for in the session
      */
-    public boolean shouldSkipIfSessionContainsDataGroups() {
-        return shouldSkipIfSessionContainsDataGroups;
+    public Set<String> getSkipOnSessionContainsAny() {
+        return skipOnSessionContainsAny;
     }
 
-    public void setShouldSkipIfSessionContainsDataGroups(boolean shouldSkipIfSessionContainsDataGroups) {
-        this.shouldSkipIfSessionContainsDataGroups = shouldSkipIfSessionContainsDataGroups;
+    public void setSkipOnSessionContainsAny(Set<String> skipOnSessionContainsAny) {
+        this.skipOnSessionContainsAny = skipOnSessionContainsAny;
     }
 }
