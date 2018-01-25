@@ -138,7 +138,7 @@ public class AuthenticationManager {
             String password = accountDAO.getPassword();
             if (!Strings.isNullOrEmpty(password)) {
                 hasPasswordOrSession = true;
-                builder.withPassword(email);
+                builder.withPassword(password);
             }
 
             UserSessionInfo session = accountDAO.getUserSessionInfo();
