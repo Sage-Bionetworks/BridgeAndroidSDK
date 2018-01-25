@@ -19,6 +19,8 @@ package org.sagebionetworks.bridge.researchstack.step;
 
 import android.support.annotation.Nullable;
 
+import com.google.common.collect.Sets;
+
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.step.NavigationExpectedAnswerQuestionStep;
@@ -26,7 +28,10 @@ import org.researchstack.backbone.task.NavigableOrderedTask;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.step.layout.DataGroupQuestionStepLayout;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Data group question step, used to determine which data groups should apply to a user during
@@ -35,7 +40,7 @@ import java.util.List;
 public class DataGroupQuestionStep extends NavigationExpectedAnswerQuestionStep
         implements NavigableOrderedTask.NavigationSkipRule {
     private boolean shouldPersist = false;
-    private boolean shouldSkipIfSessionContainsDataGroups = false;
+    private Set<String> skipOnSessionContainsAny = new HashSet<>();
 
     /**
      * Constructs the DataGroupQuestionStep
@@ -64,12 +69,12 @@ public class DataGroupQuestionStep extends NavigationExpectedAnswerQuestionStep
     }
 
 
-    public boolean shouldSkipIfSessionContainsDataGroups() {
-        return shouldSkipIfSessionContainsDataGroups;
+    public Set<String> getSkipOnSessionContainsAny() {
+        return skipOnSessionContainsAny;
     }
 
-    public void setShouldSkipIfSessionContainsDataGroups(boolean shouldSkipIfSessionContainsDataGroups) {
-        this.shouldSkipIfSessionContainsDataGroups = shouldSkipIfSessionContainsDataGroups;
+    public void setSkipOnSessionContainsAny(Set<String> skipOnSessionContainsAny) {
+        this.skipOnSessionContainsAny = skipOnSessionContainsAny;
     }
 
     /** {@inheritDoc} */
@@ -81,10 +86,9 @@ public class DataGroupQuestionStep extends NavigationExpectedAnswerQuestionStep
     @Override
     public boolean shouldSkipStep(@Nullable TaskResult result,
                                   @Nullable List<TaskResult> additionalTaskResults) {
-        return shouldSkipIfSessionContainsDataGroups
-                && !BridgeManagerProvider.getInstance()
+        return !Sets.intersection(new HashSet<>(BridgeManagerProvider.getInstance()
                 .getAuthenticationManager()
                 .getUserSessionInfo()
-                .getDataGroups().isEmpty();
+                .getDataGroups()), skipOnSessionContainsAny).isEmpty();
     }
 }
