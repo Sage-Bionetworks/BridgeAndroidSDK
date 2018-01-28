@@ -4,7 +4,7 @@ import android.support.annotation.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 
-import org.researchstack.backbone.model.survey.CompoundQuestionSurveyItem;
+import org.researchstack.backbone.model.survey.FormSurveyItem;
 import org.researchstack.backbone.model.survey.SurveyItem;
 import org.researchstack.backbone.model.survey.SurveyItemAdapter;
 import org.sagebionetworks.bridge.researchstack.survey.DataGroupQuestionSurveyItem;
@@ -22,7 +22,7 @@ public class BridgeSurveyItemAdapter extends SurveyItemAdapter {
     static final Map<String, Class<? extends SurveyItem>> TYPE_TO_CLASS =
             ImmutableMap.<String, Class<? extends SurveyItem>>builder()
                     .put(DataGroupQuestionSurveyItem.CUSTOM_TYPE, DataGroupQuestionSurveyItem.class)
-                    .put(TRACKED_SELECTION_TYPE_GSON, CompoundQuestionSurveyItem.class)
+                    .put(TRACKED_SELECTION_TYPE_GSON, FormSurveyItem.class)
                     .build();
 
     @Override
