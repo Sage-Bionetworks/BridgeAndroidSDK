@@ -34,7 +34,7 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
      */
     public static final String CUSTOM_TYPE = "dataGroups.singleChoiceText";
 
-    private boolean shouldPersist;
+    private Boolean shouldPersist;
     private Set<String> skipOnSessionContainsAny;
 
     @Override
@@ -48,14 +48,14 @@ public class DataGroupQuestionSurveyItem  extends QuestionSurveyItem<Choice<Stri
      * save the question result to local storage. This is used if there are multiple questions
      * setting multiple data groups, so we make one server call instead of multiple.
      */
-    public boolean shouldPersist() {
+    public Boolean shouldPersist() {
         return shouldPersist;
     }
 
     /**
      * @see #shouldPersist
      */
-    public void setShouldPersist(boolean shouldPersist) {
+    public void setShouldPersist(Boolean shouldPersist) {
         this.shouldPersist = shouldPersist;
     }
 

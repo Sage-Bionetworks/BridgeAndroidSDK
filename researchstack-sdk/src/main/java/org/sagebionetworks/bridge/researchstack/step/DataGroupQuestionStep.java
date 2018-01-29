@@ -17,6 +17,7 @@
 
 package org.sagebionetworks.bridge.researchstack.step;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.common.collect.Sets;
@@ -40,6 +41,7 @@ import java.util.Set;
 public class DataGroupQuestionStep extends NavigationExpectedAnswerQuestionStep
         implements NavigableOrderedTask.NavigationSkipRule {
     private boolean shouldPersist = false;
+    @NonNull
     private Set<String> skipOnSessionContainsAny = new HashSet<>();
 
     /**
@@ -69,12 +71,14 @@ public class DataGroupQuestionStep extends NavigationExpectedAnswerQuestionStep
     }
 
 
+    @NonNull
     public Set<String> getSkipOnSessionContainsAny() {
         return skipOnSessionContainsAny;
     }
 
-    public void setSkipOnSessionContainsAny(Set<String> skipOnSessionContainsAny) {
-        this.skipOnSessionContainsAny = skipOnSessionContainsAny;
+    public void setSkipOnSessionContainsAny(@Nullable Set<String> skipOnSessionContainsAny) {
+        this.skipOnSessionContainsAny = skipOnSessionContainsAny == null
+                ? new HashSet<>() : skipOnSessionContainsAny;
     }
 
     /** {@inheritDoc} */
