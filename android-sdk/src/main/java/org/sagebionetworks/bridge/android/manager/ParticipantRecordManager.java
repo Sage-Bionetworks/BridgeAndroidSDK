@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.model.DateRange;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public class ParticipantRecordManager {
     public Single<StudyParticipant> getParticipantRecord() {
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getUsersParticipantRecord())
-                .doOnSuccess(studyParticipant -> accountDAO.setStudyParticipant(studyParticipant));
+                .doOnSuccess(accountDAO::setStudyParticipant);
     }
 
 
@@ -108,6 +109,8 @@ public class ParticipantRecordManager {
         checkNotNull(endDate);
 
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .emailDataToUser(startDate, endDate)).toCompletable();
+                .emailDataToUser(
+                        new DateRange().startDate(startDate).endDate((endDate))
+                )).toCompletable();
     }
 }

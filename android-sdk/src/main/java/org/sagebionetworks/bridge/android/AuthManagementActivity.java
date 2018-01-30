@@ -22,12 +22,11 @@ public class AuthManagementActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        Uri data = intent.getData();
-        String study = data.getQueryParameter("study");
-        String email = data.getQueryParameter("email");
-        String token = data.getQueryParameter("token");
+        Uri data = getIntent().getData();
+        if (data == null) {
+            logger.warn("Intent did not contain any data, aborting.");
+            return;
+        }
 
         switch (data.getLastPathSegment()) {
             case "startSession.html":
@@ -39,25 +38,12 @@ public class AuthManagementActivity extends Activity {
             default:
                 startSession(data);
         }
-
-        BridgeManagerProvider.getInstance()
-                .getAuthenticationManager()
-                .signInViaEmailLink(email, token)
-                .subscribe(session -> {
-//                    setResult(RESULT_OK);
-                    PackageManager pm = getPackageManager();
-                    Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
-                    startActivity(launchIntentForPackage);
-                }, t -> {
-                    logger.warn("Failed to authenticated: ", t);
-                    setResult(RESULT_CANCELED);
-                });
-
-        data.getLastPathSegment();
     }
+
     void verifyEmail(Uri data) {
-
+        throw new UnsupportedOperationException("Not yet implemented");
     }
+
     void startSession(Uri data) {
         String email = data.getQueryParameter("email");
         if (email == null) {
@@ -68,10 +54,10 @@ public class AuthManagementActivity extends Activity {
                 .getAuthenticationManager()
                 .signInViaEmailLink(email, token)
                 .subscribe(session -> {
-//                    setResult(RESULT_OK);
                     PackageManager pm = getPackageManager();
                     Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
                     startActivity(launchIntentForPackage);
+                    finish();
                 }, t -> {
                     logger.warn("Failed to authenticated: ", t);
                     setResult(RESULT_CANCELED);
