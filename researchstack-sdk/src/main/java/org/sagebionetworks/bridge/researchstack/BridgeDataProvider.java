@@ -30,6 +30,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
+import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
@@ -433,6 +434,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         // Clear all the parts of the user data whether call is successful or not
         AppPrefs.getInstance().clear();
         StorageAccess.getInstance().removePinCode(context);
+        bridgeManagerProvider.getActivityManager().clearDAO();
 
         return dataResponse;
     }
@@ -680,22 +682,33 @@ public abstract class BridgeDataProvider extends DataProvider {
             }
         }
 
+        ScheduledActivity lastLoadedActivity = null;
         if (lastLoadedTaskGuid == null) {
-            logger.error("lastLoadedTaskGuid must be set for this task to complete and " +
-                    "set finishedOn and startedOn dates, and clientData on the bridge server");
+            logger.error("lastLoadedTaskGuid must be set for this task to complete");
+            logger.error("The activity or metadata.json will NOT be updated on bridge");
         } else {
-            // TODO: make GUID available in ScheduledActivity constructor and get rid of this gson nonsense
-            String activityJson = String.format("{\"guid\":\"%s\"}", lastLoadedTaskGuid);
-            ScheduledActivity activity = (new Gson()).fromJson(activityJson, ScheduledActivity.class);
+            lastLoadedActivity = bridgeManagerProvider
+                    .getActivityManager().getLocalActivity(lastLoadedTaskGuid);
+
+            if (lastLoadedActivity == null) {
+                lastLoadedActivity = new ScheduledActivity();
+            }
+            lastLoadedActivity.setGuid(lastLoadedTaskGuid);
             if (taskResult.getStartDate() != null) {
-                activity.setStartedOn(new DateTime(taskResult.getStartDate()));
+                lastLoadedActivity.setStartedOn(new DateTime(taskResult.getStartDate()));
             }
             if (taskResult.getEndDate() != null) {
-                activity.setFinishedOn(new DateTime(taskResult.getEndDate()));
+                lastLoadedActivity.setFinishedOn(new DateTime(taskResult.getEndDate()));
             }
-            bridgeManagerProvider.getActivityManager().updateActivity(activity).subscribe(message -> {
+            bridgeManagerProvider.getActivityManager().updateActivity(lastLoadedActivity).subscribe(message -> {
                 logger.info("Update activity success " + message);
             }, throwable -> logger.error(throwable.getLocalizedMessage()));
+        }
+
+        JsonArchiveFile metadataFile = null;
+        if (lastLoadedActivity != null) {
+            metadataFile = taskHelper.createMetaDataFile(lastLoadedActivity, getLocalDataGroups());
+            logger.debug("metadata.json has been successfully created " + metadataFile.toString());
         }
 
         if (isActivity) {
@@ -703,15 +716,16 @@ public abstract class BridgeDataProvider extends DataProvider {
             SchemaKey schemaKey = bridgeConfig.getTaskToSchemaMap().get(taskId);
 
             if (schemaKey != null) {
-                taskHelper.uploadActivityResult(schemaKey.getId(), schemaKey.getRevision(),
-                        taskResult);
+                taskHelper.uploadActivityResult(
+                        schemaKey.getId(), schemaKey.getRevision(),
+                        metadataFile, taskResult);
             } else {
                 logger.error("No schema key found for task " + taskId +
                         ", falling back to task ID as schema ID");
-                taskHelper.uploadActivityResult(taskId, taskResult);
+                taskHelper.uploadActivityResult(taskId, metadataFile, taskResult);
             }
         } else {
-            taskHelper.uploadSurveyResult(taskResult);
+            taskHelper.uploadSurveyResult(metadataFile, taskResult);
         }
     }
 
