@@ -56,6 +56,8 @@ public class ActivityManagerTest {
         when(authenticationManager.getAuthStateReference())
                 .thenReturn(new AtomicReference<>(
                         new AuthenticationManager.AuthStateHolder(activitiesApi, null)));
+
+        activityManager = new ActivityManager(authenticationManager, context);
     }
 
     @Test
