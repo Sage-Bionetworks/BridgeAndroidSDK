@@ -1,14 +1,21 @@
 package org.sagebionetworks.bridge.android;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.UnknownHostException;
+
+import rx.android.schedulers.AndroidSchedulers;
 
 /**
  * Created by liujoshua on 12/17/2017.
@@ -21,6 +28,8 @@ public class AuthManagementActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        getWindow().getDecorView().setBackgroundColor(Color.TRANSPARENT);
 
         Uri data = getIntent().getData();
         if (data == null) {
@@ -53,6 +62,7 @@ public class AuthManagementActivity extends Activity {
         BridgeManagerProvider.getInstance()
                 .getAuthenticationManager()
                 .signInViaEmailLink(email, token)
+                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(session -> {
                     PackageManager pm = getPackageManager();
                     Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
@@ -63,8 +73,15 @@ public class AuthManagementActivity extends Activity {
                     finish();
                 }, t -> {
                     logger.warn("Failed to authenticated: ", t);
-                    setResult(RESULT_CANCELED);
-                    finish();
+                    String errorMsg = t.getLocalizedMessage();
+                    if (t instanceof UnknownHostException) {
+                        errorMsg = "Please check your network connection and try again.";
+                    }
+                    new AlertDialog.Builder(AuthManagementActivity.this)
+                            .setMessage(errorMsg)
+                            .setCancelable(false)
+                            .setPositiveButton("Okay", (dialogInterface, i) -> finish())
+                            .create().show();
                 });
     }
 }

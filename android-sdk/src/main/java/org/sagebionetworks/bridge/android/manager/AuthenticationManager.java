@@ -309,7 +309,6 @@ public class AuthenticationManager {
                 .doOnSuccess(session -> logger.debug("Successfully signed in via email"))
                 .doOnError(t -> {
                     logger.debug("Failed to sign in via email", t);
-                    requestEmailSignIn(email).subscribe();
                 });
     }
 
