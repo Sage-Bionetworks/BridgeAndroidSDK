@@ -56,11 +56,15 @@ public class AuthManagementActivity extends Activity {
                 .subscribe(session -> {
                     PackageManager pm = getPackageManager();
                     Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
+                    launchIntentForPackage.setFlags(
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                            Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(launchIntentForPackage);
                     finish();
                 }, t -> {
                     logger.warn("Failed to authenticated: ", t);
                     setResult(RESULT_CANCELED);
+                    finish();
                 });
     }
 }

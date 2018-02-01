@@ -4,7 +4,7 @@ import android.content.Context;
 
 import com.google.gson.Gson;
 
-import org.researchstack.backbone.model.survey.CompoundQuestionSurveyItem;
+import org.researchstack.backbone.model.survey.FormSurveyItem;
 import org.researchstack.backbone.model.survey.QuestionSurveyItem;
 import org.researchstack.backbone.model.survey.SurveyItem;
 import org.researchstack.backbone.model.taskitem.TaskItem;
@@ -62,10 +62,10 @@ public class TrackedTaskItemFactory extends TaskItemFactory {
     public Step createCustomStep(Context context, SurveyItem item, boolean isSubtaskStep) {
         Step step;
         if (item.getTypeIdentifier().equals(TRACKED_SELECTION_TYPE_GSON)) {
-            if (!(item instanceof CompoundQuestionSurveyItem)) {
+            if (!(item instanceof FormSurveyItem)) {
                 throw new IllegalStateException("Error in json parsing, trackingSelection types must be CompoundQuestionSurveyItem");
             }
-            step = createCompoundStep(context, (CompoundQuestionSurveyItem)item);
+            step = createFormStep(context, (FormSurveyItem)item);
         } else {
             step = super.createSurveyStep(context, item, isSubtaskStep);
         }
