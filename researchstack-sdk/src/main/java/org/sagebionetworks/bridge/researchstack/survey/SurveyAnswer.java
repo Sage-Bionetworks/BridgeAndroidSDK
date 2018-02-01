@@ -1,13 +1,11 @@
 package org.sagebionetworks.bridge.researchstack.survey;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.utils.FormatHelper;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -40,20 +38,21 @@ public class SurveyAnswer {
     }
   }
 
-  public static class ChoiceSurveyAnswer<T> extends SurveyAnswer {
-    public final List<T> choiceAnswers;
+  public static class ChoiceSurveyAnswer extends SurveyAnswer {
+    public final List<?> choiceAnswers;
 
-    public ChoiceSurveyAnswer(StepResult<T> stepResult) {
+    public ChoiceSurveyAnswer(StepResult<?> stepResult) {
       super(stepResult);
 
-      T result = stepResult.getResult();
+      Object result = stepResult.getResult();
       if (result instanceof List) {
-        // TODO: verify whether answer is List or array, see MultiChoiceQuestionBody
         choiceAnswers = ImmutableList.copyOf((List) result);
       } else if (result instanceof Object[]) {
+        choiceAnswers = ImmutableList.copyOf((Object[]) result);
+      } else if (result != null) {
         choiceAnswers = ImmutableList.of(result);
       } else {
-        choiceAnswers = new ArrayList<>();
+        choiceAnswers = ImmutableList.of();
       }
     }
   }

@@ -79,7 +79,7 @@ public class BridgeManagerProvider {
 
         authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
         participantManager = new ParticipantRecordManager(accountDAO, authenticationManager);
-        activityManager = new ActivityManager(authenticationManager);
+        activityManager = new ActivityManager(authenticationManager, applicationContext);
         surveyManager = new SurveyManager(authenticationManager);
 
         try {
