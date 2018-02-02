@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.13.30', {
+    api 'org.sagebionetworks.bridge:rest-client:0.14.1', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
@@ -69,6 +69,7 @@ dependencies {
     }
 
     // logging to console, workaround for configuring logback
+    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     testImplementation 'org.slf4j:slf4j-simple:1.7.21'
     // avoid needing to setup timezone provider for unit tests
     testImplementation 'joda-time:joda-time:2.9.4'

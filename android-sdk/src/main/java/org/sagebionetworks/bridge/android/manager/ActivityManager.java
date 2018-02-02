@@ -36,7 +36,8 @@ public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 
     @NonNull
-    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
+    private final AtomicReference<AuthenticationManager.AuthStateHolder>
+            authStateHolderAtomicReference;
 
     private static final String ACTIVITY_LIST_SHARED_PREFS_KEY = "ActivityListDAO";
     private final ActivityListDAO activityListDAO;
@@ -47,7 +48,7 @@ public class ActivityManager {
         checkNotNull(authenticationManager);
         checkNotNull(appContext);
 
-        this.apiAtomicReference = authenticationManager.getApiReference();
+        this.authStateHolderAtomicReference = authenticationManager.getAuthStateReference();
         activityListDAO = new ActivityListDAO(appContext, ACTIVITY_LIST_SHARED_PREFS_KEY);
     }
 
@@ -57,7 +58,7 @@ public class ActivityManager {
      * @return schedule activity list
      */
     public Single<ScheduledActivityListV4> getActivites(DateTime startTime, DateTime endTime) {
-        return toBodySingle(apiAtomicReference.get()
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getScheduledActivitiesByDateRange(startTime, endTime)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
@@ -66,7 +67,7 @@ public class ActivityManager {
     }
 
     public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
-        return toBodySingle(apiAtomicReference.get()
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
@@ -86,8 +87,8 @@ public class ActivityManager {
         checkNotNull(scheduledActivities);
 
         activityListDAO.updateActivityList(scheduledActivities);
-
-        return toBodySingle(apiAtomicReference.get()
+        
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .updateScheduledActivities(scheduledActivities)).toCompletable();
     }
 
@@ -97,8 +98,9 @@ public class ActivityManager {
 
         activityListDAO.updateActivityList(Collections.singletonList(scheduledActivity));
 
-        return toBodySingle(apiAtomicReference.get()
-                .updateScheduledActivities(Collections.singletonList(scheduledActivity))).toObservable();
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                .updateScheduledActivities(Collections.singletonList(scheduledActivity)))
+                .toObservable();
     }
 
     public @Nullable ScheduledActivity getLocalActivity(String guid) {

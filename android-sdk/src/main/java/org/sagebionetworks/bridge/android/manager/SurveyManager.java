@@ -2,26 +2,29 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Survey;
-import rx.Single;
 
 import java.util.concurrent.atomic.AtomicReference;
+
+import rx.Single;
 
 /**
  * Encapsulates Bridge API calls for getting surveys.
  */
 public class SurveyManager {
     @NonNull
-    private final AtomicReference<ForConsentedUsersApi> apiAtomicReference;
+    private final AtomicReference<AuthenticationManager.AuthStateHolder>
+            authStateHolderAtomicReference;
 
     /**
      * Constructor
      */
     public SurveyManager(AuthenticationManager authenticationManager) {
-        this.apiAtomicReference = authenticationManager.getApiReference();
+        this.authStateHolderAtomicReference = authenticationManager.getAuthStateReference();
     }
 
     /**
@@ -35,9 +38,11 @@ public class SurveyManager {
     @NonNull
     public Single<Survey> getSurvey(@NonNull String guid, @Nullable DateTime createdOn) {
         if (createdOn != null) {
-            return RxUtils.toBodySingle(apiAtomicReference.get().getSurvey(guid, createdOn));
+            return RxUtils.toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                    .getSurvey(guid, createdOn));
         } else {
-            return RxUtils.toBodySingle(apiAtomicReference.get().getPublishedSurveyVersion(guid));
+            return RxUtils.toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                    .getPublishedSurveyVersion(guid));
         }
     }
 }

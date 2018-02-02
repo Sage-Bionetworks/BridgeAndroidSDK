@@ -63,7 +63,7 @@ public class TrackedTaskItemFactory extends TaskItemFactory {
         Step step;
         if (item.getTypeIdentifier().equals(TRACKED_SELECTION_TYPE_GSON)) {
             if (!(item instanceof FormSurveyItem)) {
-                throw new IllegalStateException("Error in json parsing, trackingSelection types must be FormSurveyItem");
+                throw new IllegalStateException("Error in json parsing, trackingSelection types must be CompoundQuestionSurveyItem");
             }
             step = createFormStep(context, (FormSurveyItem)item);
         } else {

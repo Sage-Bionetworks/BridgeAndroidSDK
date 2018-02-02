@@ -1,12 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="org.sagebionetworks.bridge.android"
-  >
+          xmlns:tools="http://schemas.android.com/tools"
+          package="org.sagebionetworks.bridge.android">
 
-  <application
-    android:label="@string/app_name"
-    android:supportsRtl="true"
-    >
+    <uses-permission android:name="android.permission.INTERNET" />
 
-  </application>
+    <application
+        android:label="@string/app_name"
+        android:supportsRtl="true">
+        <activity
+            android:name="org.sagebionetworks.bridge.android.AuthManagementActivity"
+            android:launchMode="singleTask">
+            <tools:validation
+                testUrl="https://webservices.sagebridge.org/mobile/startSession.html?email=test1%40sagebase.org&amp;study=study-id&amp;token=TOKEN"/>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <data
+                    android:scheme="https"
+                    android:host="webservices.sagebridge.org"
+                    android:pathPrefix="/mobile/startSession.html"/>
+            </intent-filter>
+        </activity>
+    </application>
 
 </manifest>

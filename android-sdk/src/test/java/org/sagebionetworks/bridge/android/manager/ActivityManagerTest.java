@@ -53,7 +53,10 @@ public class ActivityManagerTest {
     public void beforeTest() {
         MockitoAnnotations.initMocks(this);
 
-        when(authenticationManager.getApiReference()).thenReturn(new AtomicReference<>(activitiesApi));
+        when(authenticationManager.getAuthStateReference())
+                .thenReturn(new AtomicReference<>(
+                        new AuthenticationManager.AuthStateHolder(activitiesApi, null)));
+
         activityManager = new ActivityManager(authenticationManager, context);
     }
 

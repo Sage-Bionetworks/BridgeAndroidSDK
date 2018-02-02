@@ -26,8 +26,9 @@ public class SurveyManagerTest {
     public void setup() {
         mockApi = mock(ForConsentedUsersApi.class);
         AuthenticationManager mockAuthenticationManager = mock(AuthenticationManager.class);
-        when(mockAuthenticationManager.getApiReference()).thenReturn(new AtomicReference<>(
-                mockApi));
+        when(mockAuthenticationManager.getAuthStateReference())
+                .thenReturn(new AtomicReference<>(
+                        new AuthenticationManager.AuthStateHolder(mockApi, null)));
 
         surveyManager = new SurveyManager(mockAuthenticationManager);
     }

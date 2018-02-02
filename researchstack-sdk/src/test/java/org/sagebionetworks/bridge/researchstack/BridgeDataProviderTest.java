@@ -143,7 +143,7 @@ public class BridgeDataProviderTest {
 
         when(apiClientProvider.getClient(AuthenticationApi.class)).thenReturn(authenticationApi);
         when(apiClientProvider
-                .getClient(same(ForConsentedUsersApi.class), any(SignIn.class)))
+                .getClient(same(ForConsentedUsersApi.class)))
                 .thenReturn(forConsentedUsersApi);
 
         dataProvider =
