@@ -49,11 +49,11 @@ public class AuthManagementActivity extends Activity {
         }
     }
 
-    void verifyEmail(Uri data) {
+    protected void verifyEmail(Uri data) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    void startSession(Uri data) {
+    protected void startSession(Uri data) {
         String email = data.getQueryParameter("email");
         if (email == null) {
             BridgeManagerProvider.getInstance().getAuthenticationManager().getEmail();
@@ -64,24 +64,31 @@ public class AuthManagementActivity extends Activity {
                 .signInViaEmailLink(email, token)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(session -> {
-                    PackageManager pm = getPackageManager();
-                    Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
-                    launchIntentForPackage.setFlags(
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                            Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(launchIntentForPackage);
-                    finish();
-                }, t -> {
-                    logger.warn("Failed to authenticated: ", t);
-                    String errorMsg = t.getLocalizedMessage();
-                    if (t instanceof UnknownHostException) {
-                        errorMsg = "Please check your network connection and try again.";
-                    }
-                    new AlertDialog.Builder(AuthManagementActivity.this)
-                            .setMessage(errorMsg)
-                            .setCancelable(false)
-                            .setPositiveButton("Okay", (dialogInterface, i) -> finish())
-                            .create().show();
-                });
+                    authSuccess();
+                }, this::authFailure);
+    }
+
+    protected void authFailure(Throwable t) {
+        logger.warn("Failed to authenticated: ", t);
+        String errorMsg = t.getLocalizedMessage();
+        if (t instanceof UnknownHostException) {
+            errorMsg = "Please check your network connection and try again.";
+        }
+        new AlertDialog.Builder(AuthManagementActivity.this)
+                .setMessage(errorMsg)
+                .setCancelable(false)
+                .setPositiveButton("Okay", (dialogInterface, i) -> finish())
+                .create().show();
+    }
+
+    protected void authSuccess() {
+        PackageManager pm = getPackageManager();
+        Intent launchIntentForPackage = pm.getLaunchIntentForPackage(getPackageName());
+        if (launchIntentForPackage != null) {
+            launchIntentForPackage.addFlags(
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(launchIntentForPackage);
+        }
+        finish();
     }
 }
