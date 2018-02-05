@@ -348,6 +348,11 @@ public class AuthenticationManager {
      * Used to transform a raw Bridge signIn single by retrying upload of required consent if it
      * is present locally and setting state on success/failure
      *
+     * This will essentially couple sign in and local consent upload if one need uploaded
+     * We decided to do this because the app cannot get scheduled activities if the user
+     * is not consented.  This puts most apps into a useless state, so BOTH must succeed
+     * for the user to be considered successfully signed in.
+     *
      * @param signIn signIn credentials
      * @return
      */
@@ -380,7 +385,8 @@ public class AuthenticationManager {
                     accountDAO.setStudyParticipant(
                             new StudyParticipant()
                                     .email(signIn.getEmail()));
-
+                })
+                .flatMap(session -> {
                     if (!session.getConsented()) {
                         // look for a missing required consent which we have locally
                         for (Map.Entry<String, ConsentStatus> consentStatusEntry : session
@@ -393,21 +399,19 @@ public class AuthenticationManager {
                                     && !consentStatus.getConsented()
                                     && isConsentedInLocal(subpopulationGuid)) {
 
-                                // upload local consents, ignoring errors
-                                uploadLocalConsents()
-                                        .onErrorResumeNext(Observable.just(session))
-                                        .subscribe();
-                                break;
+                                // upload local consents, fail this sign in if consent upload fails
+                                return uploadLocalConsents()
+                                        .toSingle();
                             }
                         }
                     }
-
+                    // nothing to do, return the same session
+                    return Single.just(session);
                 })
                 .doOnError(t -> {
                     accountDAO.setSignIn(null);
                     accountDAO.setPassword(null);
                     accountDAO.setUserSessionInfo(null);
-
                 });
     }
 
