@@ -1,6 +1,8 @@
 package org.sagebionetworks.bridge.android;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
@@ -174,12 +176,26 @@ public class BridgeConfig {
 
     @NonNull
     public int getAppVersion() {
-        return BuildConfig.VERSION_CODE;
+        try {
+            PackageInfo pInfo = applicationContext.getPackageManager()
+                    .getPackageInfo(applicationContext.getPackageName(), 0);
+            return pInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            logger.error("Error retrieving application's version code, using SDK's", e);
+            return BuildConfig.VERSION_CODE;
+        }
     }
 
     @NonNull
     public String getAppVersionName() {
-        return BuildConfig.VERSION_NAME;
+        try {
+            PackageInfo pInfo = applicationContext.getPackageManager()
+                    .getPackageInfo(applicationContext.getPackageName(), 0);
+            return pInfo.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            logger.error("Error retrieving application's version name, using SDK's", e);
+            return BuildConfig.VERSION_NAME;
+        }
     }
 
     @NonNull
