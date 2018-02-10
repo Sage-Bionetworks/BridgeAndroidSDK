@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
+import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
@@ -59,10 +60,13 @@ public class ActivityManager {
      */
     public Single<ScheduledActivityListV4> getActivites(DateTime startTime, DateTime endTime) {
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .getScheduledActivitiesByDateRange(startTime, endTime)).doOnSuccess(
-                scheduleActivityList -> {
+                .getScheduledActivitiesByDateRange(startTime, endTime))
+                .doOnSuccess(scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                     activityListDAO.updateActivityList(scheduleActivityList);
+                })
+                .doOnError(throwable -> {
+                    LOG.error(throwable.getMessage());
                 });
     }
 
