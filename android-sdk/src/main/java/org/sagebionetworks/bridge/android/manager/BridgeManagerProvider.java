@@ -5,15 +5,22 @@ import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
+import com.facebook.stetho.okhttp3.StethoInterceptor;
+import com.google.common.collect.Lists;
+
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.R;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -67,11 +74,19 @@ public class BridgeManagerProvider {
         this.applicationContext = applicationContext;
         bridgeConfig = new BridgeConfig(this.applicationContext);
 
+        List<Interceptor> appInterceptors = Collections.emptyList();
+        List<Interceptor> networkInterceptors = Lists.newArrayList();
+        if (applicationContext.getResources().getBoolean(R.bool.osb_stetho_debug_bridge)) {
+            networkInterceptors.add(new StethoInterceptor());
+        }
+
         apiClientProvider = new ApiClientProvider(
                 bridgeConfig.getBaseUrl(),
                 bridgeConfig.getUserAgent(),
                 bridgeConfig.getAcceptLanguage(),
-                bridgeConfig.getStudyId());
+                bridgeConfig.getStudyId(),
+                networkInterceptors,
+                appInterceptors);
 
         accountDAO = new AccountDAO(applicationContext);
         consentDAO = new ConsentDAO(applicationContext);

@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.14.1', {
+    api 'org.sagebionetworks.bridge:rest-client:0.14.6', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
@@ -54,6 +54,12 @@ dependencies {
     implementation 'com.madgag.spongycastle:prov:1.58.0.0'
     // marked api due to propagation of CMSException
     api 'com.madgag.spongycastle:bcpkix-jdk15on:1.58.0.0'
+
+    // Debug library for
+    implementation 'com.facebook.stetho:stetho:1.5.0'
+    // for OkHttp3, if you're using an older version,
+    // check the stetho website
+    implementation 'com.facebook.stetho:stetho-okhttp3:1.5.0'
 
 
     implementation 'com.jakewharton.rxbinding:rxbinding:0.4.0'
