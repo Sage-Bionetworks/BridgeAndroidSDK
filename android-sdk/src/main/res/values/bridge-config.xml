@@ -4,7 +4,7 @@
   <string name="osb_base_url" translatable="false">https://webservices.sagebridge.org/</string>
   <string name="osb_study_id" translatable="false">sample-study</string>
   <string name="osb_study_name" translatable="false">SampleStudy</string>
-
+  <bool name="osb_stetho_debug_bridge">false</bool>
   <!--private-->
   <integer name="osb_android_sdk_version">1</integer>
 </resources>
