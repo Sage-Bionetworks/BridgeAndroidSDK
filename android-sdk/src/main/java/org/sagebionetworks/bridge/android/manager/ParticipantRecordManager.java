@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
 import rx.Single;
+import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
@@ -56,7 +57,8 @@ public class ParticipantRecordManager {
     public Single<StudyParticipant> getParticipantRecord() {
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getUsersParticipantRecord())
-                .doOnSuccess(accountDAO::setStudyParticipant);
+                .doOnSuccess(accountDAO::setStudyParticipant)
+                .doOnError(throwable -> logger.error(throwable.getLocalizedMessage()));
     }
 
 

@@ -60,6 +60,12 @@ dependencies {
     // marked api due to propagation of CMSException
     api 'com.madgag.spongycastle:bcpkix-jdk15on:1.58.0.0'
 
+    // Debug library for
+    implementation 'com.facebook.stetho:stetho:1.5.0'
+    // for OkHttp3, if you're using an older version,
+    // check the stetho website
+    implementation 'com.facebook.stetho:stetho-okhttp3:1.5.0'
+
 
     implementation 'com.jakewharton.rxbinding:rxbinding:0.4.0'
     implementation 'com.jakewharton.rxbinding:rxbinding-appcompat-v7:0.4.0'

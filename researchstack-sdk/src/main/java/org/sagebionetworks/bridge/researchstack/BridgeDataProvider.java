@@ -54,6 +54,7 @@ import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -587,6 +588,9 @@ public abstract class BridgeDataProvider extends DataProvider {
         return bridgeManagerProvider.getParticipantManager().getParticipantRecord()
                 .doOnSuccess(participant -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(participant.getDataGroups()))
+                .doOnError(throwable -> {
+                    logger.error(throwable.getMessage());
+                })
                 .toObservable();
     }
 
@@ -634,6 +638,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.debug("Called getActivities");
 
         return bridgeManagerProvider.getActivityManager().getActivities(start, end)
+                .doOnSuccess(scheduleActivityList -> logger.debug("Got scheduled activity list"))
+                .doOnError(throwable -> logger.error(throwable.getMessage()))
                 .toObservable();
     }
 
