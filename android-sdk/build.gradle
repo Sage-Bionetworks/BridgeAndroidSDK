@@ -11,12 +11,17 @@ android {
         // versionCode and versionName are used by the SDK to identify the app to Bridge server
         versionCode 1
         versionName "version 1.0.2, build 1"
+
     }
 
     buildTypes {
+        debug {
+            minifyEnabled false
+            consumerProguardFiles 'proguard-rules.pro'
+        }
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            consumerProguardFiles 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -34,7 +39,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.14.1', {
+    api 'org.sagebionetworks.bridge:rest-client:0.14.6', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
