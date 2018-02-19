@@ -5,8 +5,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.sagebionetworks.bridge.android.manager.dao.ActivityListDAO;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import rx.Completable;
@@ -57,29 +58,13 @@ public class ActivityManager {
      * @param endTime end time for the activity list
      * @return schedule activity list
      */
-    public Single<ScheduledActivityListV4> getActivites(DateTime startTime, DateTime endTime) {
+    public Single<ScheduledActivityListV4> getActivities(DateTime startTime, DateTime endTime) {
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
                 .getScheduledActivitiesByDateRange(startTime, endTime)).doOnSuccess(
                 scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                     activityListDAO.updateActivityList(scheduleActivityList);
                 });
-    }
-
-    public Single<ScheduledActivityList> getActivities(String offset, int daysAhead, int minimumPerSchedule) {
-        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .getScheduledActivities(offset, daysAhead, minimumPerSchedule)).doOnSuccess(
-                scheduleActivityList -> {
-                    LOG.debug("Got scheduled activity list");
-                    if (scheduleActivityList != null) {
-                        activityListDAO.updateActivityList(scheduleActivityList.getItems());
-                    }
-                });
-
-    }
-
-    public Single<ScheduledActivityList> getActivities(int daysAhead, int minimumPerSchedule) {
-        return getActivities(getTimezoneOffset(), daysAhead, minimumPerSchedule);
     }
 
     public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
@@ -111,14 +96,4 @@ public class ActivityManager {
         activityListDAO.clear();
     }
 
-    private String getTimezoneOffset() {
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"),
-                Locale.getDefault());
-        Date currentLocalTime = calendar.getTime();
-        DateFormat date = new SimpleDateFormat("Z");
-        String localTime = date.format(currentLocalTime);
-        String offset = localTime.substring(0, 3) + ":"+ localTime.substring(3, 5);
-
-        return offset;
-    }
 }
