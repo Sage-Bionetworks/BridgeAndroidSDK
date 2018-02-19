@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Context;
 
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -13,6 +14,7 @@ import org.sagebionetworks.bridge.rest.exceptions.BridgeSDKException;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,29 +64,32 @@ public class ActivityManagerTest {
 
     @Test
     public void getActivities_success() throws IOException {
-        String offset = "";
+        ScheduledActivityListV4 list = mock(ScheduledActivityListV4.class);
+        Call<ScheduledActivityListV4> activityCall = successCall(list);
 
-        ScheduledActivityList list = mock(ScheduledActivityList.class);
-        Call<ScheduledActivityList> activityCall = successCall(list);
-        when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
+        DateTime start = new DateTime().minusDays(1);
+        DateTime end = new DateTime().plusDays(1);
+        when(activitiesApi.getScheduledActivitiesByDateRange(start, end)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
+        Single<ScheduledActivityListV4> single = activityManager.getActivities(start, end);
         single.test().awaitTerminalEvent().assertCompleted();
 
-        verify(activitiesApi).getScheduledActivities(offset, 0, 0);
+        verify(activitiesApi).getScheduledActivitiesByDateRange(start, end);
     }
 
     @Test
     public void getActivities_failure() throws IOException {
-        String offset = "";
+        Call<ScheduledActivityListV4> activityCall = errorCall(new BridgeSDKException("Failed",
+                500));
 
-        Call<ScheduledActivityList> activityCall = errorCall(new BridgeSDKException("Failed", 500));
-        when(activitiesApi.getScheduledActivities(offset, 0, 0)).thenReturn(activityCall);
+        DateTime start = new DateTime().minusDays(1);
+        DateTime end = new DateTime().plusDays(1);
+        when(activitiesApi.getScheduledActivitiesByDateRange(start, end)).thenReturn(activityCall);
 
-        Single<ScheduledActivityList> single = activityManager.getActivities(offset, 0, 0);
+        Single<ScheduledActivityListV4> single = activityManager.getActivities(start, end);
         single.test().awaitTerminalEvent().assertNotCompleted();
 
-        verify(activitiesApi).getScheduledActivities(offset, 0, 0);
+        verify(activitiesApi).getScheduledActivitiesByDateRange(start, end);
     }
 
     @Test

@@ -6,9 +6,8 @@ import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.gson.Gson;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -48,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 
 import rx.Completable;
@@ -561,14 +560,13 @@ public abstract class BridgeDataProvider extends DataProvider {
         return session.getSharingScope();
     }
 
-
     @Override
     public void setUserSharingScope(Context context, String scope) {
         StudyParticipant participant = new StudyParticipant();
         SharingScope sharingScope = RestUtils.GSON.fromJson(scope, SharingScope.class);
         participant.setSharingScope(sharingScope);
 
-        setUserSharingScope(sharingScope).subscribe();
+        setUserSharingScope(sharingScope).toBlocking().value();
     }
 
     @NonNull
@@ -639,7 +637,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<ScheduledActivityListV4> getActivities(DateTime start, DateTime end) {
         logger.debug("Called getActivities");
 
-        return bridgeManagerProvider.getActivityManager().getActivites(start, end)
+        return bridgeManagerProvider.getActivityManager().getActivities(start, end)
                 .doOnSuccess(scheduleActivityList -> logger.debug("Got scheduled activity list"))
                 .doOnError(throwable -> logger.error(throwable.getMessage()))
                 .toObservable();
@@ -650,9 +648,11 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Single<SchedulesAndTasksModel> loadTasksAndSchedules(Context context) {
         logger.info("loadTasksAndSchedules()");
 
-        // TODO: figure out the correct arguments to pass here
+        DateTime now = DateTime.now();
         return bridgeManagerProvider.getActivityManager()
-                .getActivities(4, 0).map(this::translateActivities);
+                .getActivities(now, now.plusDays(14))
+                .map(ScheduledActivityListV4::getItems)
+                .map(this::translateActivities);
     }
 
     private TaskModel loadTaskModel(Context context, SchedulesAndTasksModel.TaskScheduleModel
@@ -744,37 +744,23 @@ public abstract class BridgeDataProvider extends DataProvider {
         return translateActivities(activityList.getItems());
     }
 
-    //
-    // NOTE: this is a crude translation and needs to be updated to properly
-    //       handle schedules and filters
-    @NonNull
-    protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
-                                                               activityList) {
-        logger.info("called translateActivities");
-
-        // first, group activities by day
-        ListMultimap<Integer, ScheduledActivity> activityMap = LinkedListMultimap.create();
-        for (ScheduledActivity sa : activityList) {
-            int day = sa.getScheduledOn().dayOfYear().get();
-            activityMap.put(day, sa);
-        }
-
-        // Sort the days. There aren't that many days, so this should be relatively quick.
-        List<Integer> dayList = new ArrayList<>(activityMap.keySet());
-        Collections.sort(dayList);
-
-        // Convert from Bridge activities to ResearchKit task model
+    SchedulesAndTasksModel translateSchedules(@NonNull Collection<Collection<ScheduledActivity>>
+                                                      activitiesBySchedule) {
         SchedulesAndTasksModel model = new SchedulesAndTasksModel();
         model.schedules = new ArrayList<>();
-        for (int day : dayList) {
-            List<ScheduledActivity> aList = activityMap.get(day);
+
+        for (Collection<ScheduledActivity> activities : activitiesBySchedule) {
+            List<ScheduledActivity> aList = Lists.newArrayList(activities);
             ScheduledActivity temp = aList.get(0);
 
             SchedulesAndTasksModel.ScheduleModel sm = new SchedulesAndTasksModel.ScheduleModel();
-            sm.scheduleType = "once";
+            sm.scheduleType = temp.getPersistent() ? "persistent" : "once";
+
+            DateTime scheduledOn = temp.getScheduledOn();
             sm.scheduledOn = temp.getScheduledOn().toDate();
-            model.schedules.add(sm);
             sm.tasks = new ArrayList<>();
+
+            model.schedules.add(sm);
 
             for (ScheduledActivity sa : aList) {
                 Activity activity = sa.getActivity();
@@ -807,5 +793,21 @@ public abstract class BridgeDataProvider extends DataProvider {
         }
 
         return model;
+    }
+    //
+    // NOTE: this is a crude translation and needs to be updated to properly
+    //       handle schedules and filters
+    @NonNull
+    protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
+                                                               activityList) {
+        logger.info("called translateActivities");
+
+        // group activities by day
+        return translateSchedules(
+                Multimaps.index(
+                        activityList,
+                        sa -> sa.getScheduledOn().toLocalDate()
+
+                ).asMap().values());
     }
 }

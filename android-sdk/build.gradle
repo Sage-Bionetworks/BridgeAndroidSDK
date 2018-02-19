@@ -11,12 +11,12 @@ android {
         // versionCode and versionName are used by the SDK to identify the app to Bridge server
         versionCode 1
         versionName "version 1.0.2, build 1"
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {

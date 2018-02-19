@@ -49,6 +49,7 @@ import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
@@ -457,12 +458,13 @@ public class BridgeDataProviderTest {
         ScheduledActivity taskScheduledActivity2 = makeScheduledActivity(day2, taskActivity2,
                 true);
 
-        ScheduledActivityList scheduledActivityList = new ScheduledActivityList()
+        ScheduledActivityListV4 scheduledActivityList = new ScheduledActivityListV4()
                 .items(ImmutableList.of(surveyScheduledActivity2, surveyScheduledActivity1,
                         taskScheduledActivity2, taskScheduledActivity1));
 
         // Mock Bridge call
-        when(activityManager.getActivities(anyInt(), anyInt())).thenReturn(Single.just(
+        when(activityManager.getActivities(any(DateTime.class), any(DateTime.class))).thenReturn
+                (Single.just(
                 scheduledActivityList));
 
         // Execute and validate
@@ -472,8 +474,32 @@ public class BridgeDataProviderTest {
                 .schedules;
         assertEquals(2, scheduleModelList.size());
 
+        // Original order preserved by day then task
+        // Day 2
+        SchedulesAndTasksModel.ScheduleModel scheduleDay2 = scheduleModelList.get(0);
+        assertEquals("persistent", scheduleDay2.scheduleType);
+        assertEquals(day2.toDate(), scheduleDay2.scheduledOn);
+        List<SchedulesAndTasksModel.TaskScheduleModel> taskModelListDay2 = scheduleDay2.tasks;
+        assertEquals(2, taskModelListDay2.size());
+
+        SurveyTaskScheduleModel surveyScheduleModel2 = (SurveyTaskScheduleModel) taskModelListDay2
+                .get(0);
+        assertEquals("survey-2-guid", surveyScheduleModel2.surveyGuid);
+        assertEquals(surveyCreatedOn2, surveyScheduleModel2.surveyCreatedOn);
+        assertEquals("Survey 2", surveyScheduleModel2.taskTitle);
+        assertTrue(surveyScheduleModel2.taskIsOptional);
+        assertEquals(ActivityType.SURVEY.toString(), surveyScheduleModel2.taskType);
+        assertEquals("2 questions", surveyScheduleModel2.taskCompletionTime);
+
+        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel2 = taskModelListDay2.get(1);
+        assertEquals("Task 2", taskScheduleModel2.taskTitle);
+        assertEquals("task-2", taskScheduleModel2.taskID);
+        assertTrue(taskScheduleModel2.taskIsOptional);
+        assertEquals(ActivityType.TASK.toString(), taskScheduleModel2.taskType);
+        assertEquals("2 minutes", taskScheduleModel2.taskCompletionTime);
+
         // Day 1
-        SchedulesAndTasksModel.ScheduleModel scheduleDay1 = scheduleModelList.get(0);
+        SchedulesAndTasksModel.ScheduleModel scheduleDay1 = scheduleModelList.get(1);
         assertEquals("once", scheduleDay1.scheduleType);
         assertEquals(day1.toDate(), scheduleDay1.scheduledOn);
         List<SchedulesAndTasksModel.TaskScheduleModel> taskModelListDay1 = scheduleDay1.tasks;
@@ -496,31 +522,8 @@ public class BridgeDataProviderTest {
         assertEquals(ActivityType.TASK.toString(), taskScheduleModel1.taskType);
         assertEquals("1 minute", taskScheduleModel1.taskCompletionTime);
 
-        // Day 2
-        SchedulesAndTasksModel.ScheduleModel scheduleDay2 = scheduleModelList.get(1);
-        assertEquals("once", scheduleDay2.scheduleType);
-        assertEquals(day2.toDate(), scheduleDay2.scheduledOn);
-        List<SchedulesAndTasksModel.TaskScheduleModel> taskModelListDay2 = scheduleDay2.tasks;
-        assertEquals(2, taskModelListDay2.size());
-
-        SurveyTaskScheduleModel surveyScheduleModel2 = (SurveyTaskScheduleModel) taskModelListDay2
-                .get(0);
-        assertEquals("survey-2-guid", surveyScheduleModel2.surveyGuid);
-        assertEquals(surveyCreatedOn2, surveyScheduleModel2.surveyCreatedOn);
-        assertEquals("Survey 2", surveyScheduleModel2.taskTitle);
-        assertTrue(surveyScheduleModel2.taskIsOptional);
-        assertEquals(ActivityType.SURVEY.toString(), surveyScheduleModel2.taskType);
-        assertEquals("2 questions", surveyScheduleModel2.taskCompletionTime);
-
-        SchedulesAndTasksModel.TaskScheduleModel taskScheduleModel2 = taskModelListDay2.get(1);
-        assertEquals("Task 2", taskScheduleModel2.taskTitle);
-        assertEquals("task-2", taskScheduleModel2.taskID);
-        assertTrue(taskScheduleModel2.taskIsOptional);
-        assertEquals(ActivityType.TASK.toString(), taskScheduleModel2.taskType);
-        assertEquals("2 minutes", taskScheduleModel2.taskCompletionTime);
-
         // Verify back-end call
-        verify(activityManager).getActivities(4, 0);
+        verify(activityManager).getActivities(any(DateTime.class), any(DateTime.class));
     }
 
     // Helper method to make a ScheduledActivity. This is because there are no setters for
