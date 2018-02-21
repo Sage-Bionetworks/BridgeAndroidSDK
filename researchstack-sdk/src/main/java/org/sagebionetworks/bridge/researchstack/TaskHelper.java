@@ -275,7 +275,7 @@ public class TaskHelper {
         builder.withAppVersionName(config.getAppVersionName())
                 .withPhoneInfo(config.getDeviceName());
 
-        String taskId = taskResult.getIdentifier();
+        final String taskId = taskResult.getIdentifier();
 
         // Update/Create TaskNotificationService
         if (appPrefs.isTaskReminderEnabled()) {
@@ -308,8 +308,10 @@ public class TaskHelper {
                     bridgeManagerProvider.getUploadManager()
                             .processUploadFile(uploadFile)
                             .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(() -> {
                                 logger.debug("processUploadFile success");
+                                onUploadSuccess(taskId);
                             }, throwable -> {
                                 logger.warn("processUploadFile failed");
                             });
@@ -325,6 +327,14 @@ public class TaskHelper {
                         }
                     }
                 });
+    }
+
+    /**
+     * Called when an upload has succeeded
+     * @param taskId of the upload
+     */
+    protected void onUploadSuccess(String taskId) {
+        // No-op, can be implemented by sub-class for feedback about the upload process
     }
 
     /**
