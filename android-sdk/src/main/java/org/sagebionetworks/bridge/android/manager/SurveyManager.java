@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -10,11 +11,16 @@ import org.sagebionetworks.bridge.rest.model.Survey;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import rx.Single;
 
 /**
  * Encapsulates Bridge API calls for getting surveys.
  */
+@AnyThread
+@Singleton
 public class SurveyManager {
     @NonNull
     private final AtomicReference<AuthenticationManager.AuthStateHolder>
@@ -23,6 +29,7 @@ public class SurveyManager {
     /**
      * Constructor
      */
+    @Inject
     public SurveyManager(AuthenticationManager authenticationManager) {
         this.authStateHolderAtomicReference = authenticationManager.getAuthStateReference();
     }

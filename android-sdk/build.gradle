@@ -51,6 +51,11 @@ dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
+    implementation 'com.google.dagger:dagger-android:2.14.1'
+    implementation 'com.google.dagger:dagger-android-support:2.14.1'
+    annotationProcessor 'com.google.dagger:dagger-android-processor:2.14.1'
+    annotationProcessor "com.google.dagger:dagger-compiler:2.14.1"
+
     implementation 'com.squareup.okhttp3:okhttp:3.9.1'
     implementation 'com.squareup.okio:okio:1.14.0'
 
@@ -64,7 +69,6 @@ dependencies {
     // for OkHttp3, if you're using an older version,
     // check the stetho website
     implementation 'com.facebook.stetho:stetho-okhttp3:1.5.0'
-
 
     implementation 'com.jakewharton.rxbinding:rxbinding:0.4.0'
     implementation 'com.jakewharton.rxbinding:rxbinding-appcompat-v7:0.4.0'

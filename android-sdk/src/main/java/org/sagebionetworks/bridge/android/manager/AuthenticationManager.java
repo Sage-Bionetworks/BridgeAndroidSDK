@@ -39,6 +39,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
@@ -50,6 +53,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
+@Singleton
 public class AuthenticationManager {
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
@@ -84,6 +88,7 @@ public class AuthenticationManager {
         }
     }
 
+    @Inject
     public AuthenticationManager(@NonNull BridgeConfig config,
                                  @NonNull ApiClientProvider apiClientProvider,
                                  @NonNull AccountDAO accountDAO, @NonNull ConsentDAO consentDAO) {

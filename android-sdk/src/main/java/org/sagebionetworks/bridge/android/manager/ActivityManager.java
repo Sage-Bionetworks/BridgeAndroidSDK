@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Context;
+import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -25,6 +26,9 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
@@ -33,7 +37,8 @@ import rx.functions.Action1;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
-
+@AnyThread
+@Singleton
 public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 
@@ -43,7 +48,8 @@ public class ActivityManager {
 
     private static final String ACTIVITY_LIST_SHARED_PREFS_KEY = "ActivityListDAO";
     private final ActivityListDAO activityListDAO;
-
+    
+    @Inject
     public ActivityManager(@NonNull AuthenticationManager authenticationManager,
                            @NonNull Context appContext) {
 

@@ -1,201 +1,80 @@
+/*
+ *    Copyright 2018 Sage Bionetworks
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
 package org.sagebionetworks.bridge.android.manager;
 
-import android.app.Application;
 import android.content.Context;
-import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 
-import com.facebook.stetho.okhttp3.StethoInterceptor;
-import com.google.common.collect.Lists;
-
+import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.R;
+import org.sagebionetworks.bridge.android.di.ApplicationModule;
+import org.sagebionetworks.bridge.android.di.BridgeServiceModule;
+import org.sagebionetworks.bridge.android.di.S3Module;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
-import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import javax.inject.Singleton;
 
-import okhttp3.Interceptor;
-import okhttp3.OkHttpClient;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import dagger.Component;
 
 /**
- * This class contains configuration and performs setup of dependencies for a Bridge Application.
- * <p>
- * A call to {@link #getInstance()} returns a BridgeManagerProvider instance that is usable
- * globally. The managers made available by BridgeManagerProvider maintain and share state across
- * the Application.
+ * Created by liujoshua on 2/22/2018.
  */
-@AnyThread
-public class BridgeManagerProvider {
-    private static BridgeManagerProvider instance;
 
-    /**
-     * @return singleton instance
-     */
-    @NonNull
-    public static BridgeManagerProvider getInstance() {
-        checkState(instance != null, "BridgeManagerProvider has not been initialized. " +
-                "Call init(Context) in your Application#onCreate()");
-
-        return instance;
+@Singleton
+@Component(modules = {ApplicationModule.class, BridgeServiceModule.class, S3Module.class})
+public interface BridgeManagerProvider {
+    static BridgeManagerProvider getInstance() {
+        return BridgeApplication.getBridgeManagerProvider();
     }
-
-    /**
-     * Allows injection of singleton instance for testing purposes.
-     *
-     * @param bridgeManagerProvider instance to be returned by {@link #getInstance()}
-     */
-    public static void init(@NonNull BridgeManagerProvider bridgeManagerProvider) {
-        checkNotNull(bridgeManagerProvider);
-        instance = bridgeManagerProvider;
-    }
-
-    /**
-     * Intended to be called in {@link Application#onCreate()}
-     *
-     * @param applicationContext application's global context
-     */
-    public static void init(@NonNull Context applicationContext) {
-        checkNotNull(applicationContext);
-        checkState(instance == null, "BridgeManagerProvider has already been initialized");
-
-        instance = new BridgeManagerProvider(applicationContext);
-    }
-
-    private BridgeManagerProvider(@NonNull Context applicationContext) {
-        this.applicationContext = applicationContext;
-        bridgeConfig = new BridgeConfig(this.applicationContext);
-
-        List<Interceptor> appInterceptors = Collections.emptyList();
-        List<Interceptor> networkInterceptors = Lists.newArrayList();
-        if (applicationContext.getResources().getBoolean(R.bool.osb_stetho_debug_bridge)) {
-            networkInterceptors.add(new StethoInterceptor());
-        }
-
-        apiClientProvider = new ApiClientProvider(
-                bridgeConfig.getBaseUrl(),
-                bridgeConfig.getUserAgent(),
-                bridgeConfig.getAcceptLanguage(),
-                bridgeConfig.getStudyId(),
-                networkInterceptors,
-                appInterceptors);
-
-        accountDAO = new AccountDAO(applicationContext);
-        consentDAO = new ConsentDAO(applicationContext);
-        uploadDAO = new UploadDAO(applicationContext);
-
-        authenticationManager = new AuthenticationManager(bridgeConfig, apiClientProvider, accountDAO, consentDAO);
-        participantManager = new ParticipantRecordManager(accountDAO, authenticationManager);
-        activityManager = new ActivityManager(authenticationManager, applicationContext);
-        surveyManager = new SurveyManager(authenticationManager);
-
-        try {
-            studyUploadEncryptor = new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());
-        } catch (Exception e) {
-            throw new RuntimeException("Could not create StudyUploadEncryptor", e);
-        }
-
-        s3OkHttpClient = new OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true).build();
-
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO, s3OkHttpClient);
-    }
-
+    
     @NonNull
-    private final Context applicationContext;
+    ActivityManager getActivityManager();
+    
     @NonNull
-    private final BridgeConfig bridgeConfig;
+    AuthenticationManager getAuthenticationManager();
+    
     @NonNull
-    private final ApiClientProvider apiClientProvider;
+    Context getApplicationContext();
+    
     @NonNull
-    private final AuthenticationManager authenticationManager;
+    BridgeConfig getBridgeConfig();
+    
     @NonNull
-    private final ParticipantRecordManager participantManager;
+    ApiClientProvider getApiClientProvider();
+    
     @NonNull
-    private final ActivityManager activityManager;
+    AccountDAO getAccountDao();
+    
     @NonNull
-    private final ConsentDAO consentDAO;
+    ConsentDAO getConsentDao();
+    
     @NonNull
-    private final AccountDAO accountDAO;
+    SurveyManager getSurveyManager();
+    
     @NonNull
-    private final SurveyManager surveyManager;
+    UploadManager getUploadManager();
+    
     @NonNull
-    private final UploadDAO uploadDAO;
+    AndroidStudyUploadEncryptor getStudyUploadEncryptor();
+    
     @NonNull
-    private final AndroidStudyUploadEncryptor studyUploadEncryptor;
-    @NonNull
-    private final UploadManager uploadManager;
-    @NonNull
-    private final OkHttpClient s3OkHttpClient;
-
-    @NonNull
-    public Context getApplicationContext() {
-        return applicationContext;
-    }
-
-    @NonNull
-    public BridgeConfig getBridgeConfig() {
-        return bridgeConfig;
-    }
-
-    @NonNull
-    public ApiClientProvider getApiClientProvider() {
-        return apiClientProvider;
-    }
-
-    @NonNull
-    public AuthenticationManager getAuthenticationManager() {
-        return authenticationManager;
-    }
-
-    @NonNull
-    public ActivityManager getActivityManager() {
-        return activityManager;
-    }
-
-    @NonNull
-    public AccountDAO getAccountDao() {
-        return accountDAO;
-    }
-
-    @NonNull
-    public ConsentDAO getConsentDao() {
-        return consentDAO;
-    }
-
-    /** Survey Manager, used to call Bridge to get surveys. */
-    @NonNull
-    public SurveyManager getSurveyManager() {
-        return surveyManager;
-    }
-
-    @NonNull
-    public UploadManager getUploadManager() {
-        return uploadManager;
-    }
-
-    @NonNull
-    public AndroidStudyUploadEncryptor getStudyUploadEncryptor() {
-        return studyUploadEncryptor;
-    }
-
-    @NonNull
-    public OkHttpClient getS3OkHttpClient() {
-        return s3OkHttpClient;
-    }
-
-    public ParticipantRecordManager getParticipantManager() {
-        return participantManager;
-    }
+    ParticipantRecordManager getParticipantManager();
 }

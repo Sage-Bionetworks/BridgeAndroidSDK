@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
@@ -33,6 +34,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
@@ -61,6 +66,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * made, e.g. whether the file has been uploaded, whether the validation succeeded, failed or a
  * duplicate archive was detected.
  */
+@AnyThread
+@Singleton
 public class UploadManager implements AuthenticationManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";
@@ -74,8 +81,9 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     private final UploadDAO uploadDAO;
     private final OkHttpClient s3OkHttpClient;
 
+    @Inject
     public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
-            encryptor, UploadDAO uploadDAO, OkHttpClient s3Okhttp3Client) {
+            encryptor, UploadDAO uploadDAO, @Named("s3OkHttp3Client") OkHttpClient s3Okhttp3Client) {
         this.authenticatedSafeAtomicReference = authenticationManager.getAuthStateReference();
         authenticationManager.addEventListener(this);
         this.encryptor = encryptor;
