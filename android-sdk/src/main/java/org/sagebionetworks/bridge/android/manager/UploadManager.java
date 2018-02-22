@@ -72,18 +72,15 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
             authenticatedSafeAtomicReference;
     private final AndroidStudyUploadEncryptor encryptor;
     private final UploadDAO uploadDAO;
-    private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.MINUTES)
-            .retryOnConnectionFailure(true).build();
+    private final OkHttpClient s3OkHttpClient;
 
     public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
-            encryptor, UploadDAO uploadDAO) {
+            encryptor, UploadDAO uploadDAO, OkHttpClient s3Okhttp3Client) {
         this.authenticatedSafeAtomicReference = authenticationManager.getAuthStateReference();
         authenticationManager.addEventListener(this);
         this.encryptor = encryptor;
         this.uploadDAO = uploadDAO;
+        this.s3OkHttpClient = s3Okhttp3Client;
     }
 
     public static class UploadFile {
@@ -427,7 +424,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl)
-                .client(okHttpClient).build();
+                .client(s3OkHttpClient).build();
 
         return retrofit.create(S3Service.class);
     }

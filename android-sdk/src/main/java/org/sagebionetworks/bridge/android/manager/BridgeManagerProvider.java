@@ -107,9 +107,9 @@ public class BridgeManagerProvider {
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(false).build();
+                .retryOnConnectionFailure(true).build();
 
-        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO);
+        uploadManager = new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO, s3OkHttpClient);
     }
 
     @NonNull
