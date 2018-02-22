@@ -86,13 +86,15 @@ public abstract class BridgeDataProvider extends DataProvider {
     private final AuthenticationManager authenticationManager;
 
     //used by tests to mock service
-    BridgeDataProvider(ResearchStackDAO researchStackDAO, StorageAccessWrapper storageAccessWrapper,
+    BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, ResearchStackDAO researchStackDAO,
+                       StorageAccessWrapper
+            storageAccessWrapper,
                        TaskHelper taskHelper) {
         this.researchStackDAO = researchStackDAO;
         this.storageAccessWrapper = storageAccessWrapper;
         this.taskHelper = taskHelper;
 
-        this.bridgeManagerProvider = BridgeManagerProvider.getInstance();
+        this.bridgeManagerProvider = bridgeManagerProvider;
 
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
