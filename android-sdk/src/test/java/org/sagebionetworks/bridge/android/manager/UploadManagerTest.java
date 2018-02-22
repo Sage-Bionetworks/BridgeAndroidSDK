@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Response;
 import rx.Completable;
@@ -59,6 +60,8 @@ public class UploadManagerTest {
     private File archive;
     @Mock
     private S3Service s3Service;
+    @Mock
+    private OkHttpClient okHttpClient;
 
     private UploadManager spyUploadManager;
 
@@ -74,7 +77,7 @@ public class UploadManagerTest {
         when(authenticationManager.getAuthStateReference()).thenReturn(new AtomicReference<>(
                 new AuthenticationManager.AuthStateHolder(api,null)));
 
-        spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO));
+        spyUploadManager = spy(new UploadManager(authenticationManager, studyUploadEncryptor, uploadDAO, okHttpClient));
 
         uploadFile = new UploadManager.UploadFile();
         uploadFile.filename = FILENAME;
