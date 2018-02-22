@@ -15,13 +15,11 @@ import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.data.Archive;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.UploadRequest;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.sagebionetworks.bridge.rest.model.UploadValidationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.asn1.pkcs.AuthenticatedSafe;
 import org.spongycastle.cms.CMSException;
 
 import java.io.File;
@@ -77,8 +75,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(false).build();
+            .writeTimeout(15, TimeUnit.MINUTES)
+            .retryOnConnectionFailure(true).build();
 
     public UploadManager(AuthenticationManager authenticationManager, AndroidStudyUploadEncryptor
             encryptor, UploadDAO uploadDAO) {
@@ -149,7 +147,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                                 processUploadForCachedSession(
                                         uploadFile,
                                         uploadDAO.getUploadSession(uploadFile.filename)
-                                )));
+                                ))).doOnError(t -> LOG.warn("Failed to process upload files"))
+                .onErrorComplete();
     }
 
     /**
@@ -213,6 +212,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                 sessionSingle,
                 statusSingle,
                 this::processUploadForValidationStatus
+        ).doOnError(t ->
+                LOG.warn("Failed to process upload for cached session for file: {}", uploadFile.filename, t)
         ).flatMapCompletable(i -> i);
     }
 
@@ -289,7 +290,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
         checkNotNull(uploadId, "uploadId required");
 
         return RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
-                .getUploadStatus(uploadId));
+                .getUploadStatus(uploadId)).doOnError(t ->
+                LOG.warn("Failed to retrieve validation status for upload with id: {}", uploadId, t));
     }
 
     /**
@@ -319,7 +321,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                 });
 
         RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
-
+        LOG.info("Attempting S3 upload for file: {}, sessionId: {}", uploadFile.filename, session.getId());
         return sessionSingle.flatMap(freshSession -> RxUtils.toBodySingle(
                 getS3Service(freshSession)
                         .uploadToS3(
@@ -328,7 +330,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                                 uploadFile.md5Hash,
                                 uploadFile.contentType)))
                 .doOnSuccess(aVoid -> {
-                    LOG.info("S3 upload succeeded for id: " + session.getId());
+                    LOG.info("S3 upload succeeded for file: {}, sessionId: {}", uploadFile.filename, session.getId());
 
                     // call upload complete on a computation thread
                     RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
@@ -337,12 +339,14 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                                 LOG.info("Call to upload complete succeeded");
                             })
                             .onErrorReturn((t) -> {
-                                LOG.info("Failed to call upload complete, server will recover", t);
+                                LOG.info("Call to upload complete failed, server will recover", t);
                                 return null; // return doesn't matter, becomes completable
                             })
                             .subscribe();
-
-                }).toCompletable();
+    
+                }).doOnError(t ->
+                        LOG.warn("S3 upload failed forfile: {}, sessionId: {}", uploadFile.filename, session.getId())
+                ).toCompletable();
     }
 
     @NonNull
@@ -359,7 +363,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     LOG.info("Received processUploadFiles session with id: " + uploadSession
                             .getId());
                     uploadDAO.putUploadSession(uploadFile.filename, uploadSession);
-                });
+                })
+                .doOnError(t -> LOG.warn("Failed to get upload session for file: " + uploadFile.filename, t));
     }
 
     @WorkerThread

@@ -313,7 +313,7 @@ public class TaskHelper {
                                 logger.debug("processUploadFile success");
                                 onUploadSuccess(taskId);
                             }, throwable -> {
-                                logger.warn("processUploadFile failed");
+                                logger.warn("processUploadFile failed", throwable);
                             });
                 })
                 .toCompletable()

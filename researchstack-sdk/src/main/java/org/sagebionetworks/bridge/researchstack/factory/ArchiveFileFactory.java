@@ -169,6 +169,9 @@ public class ArchiveFileFactory {
 
         int lastIndex = file.getName().lastIndexOf(".");
         String fileExtension = ".json";
+        if (fileResult.getContentType().equals("video/mp4")) {
+            fileExtension = ".mp4";
+        }
         if (lastIndex >= 0) {
             fileExtension = file.getName().substring(lastIndex, file.getName().length());
         }
