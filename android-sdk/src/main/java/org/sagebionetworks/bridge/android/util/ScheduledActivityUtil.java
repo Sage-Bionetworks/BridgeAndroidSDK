@@ -25,6 +25,7 @@ import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimaps;
 
+import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 
@@ -51,6 +52,20 @@ public class ScheduledActivityUtil {
                     checkNotNull(scheduledActivity);
 
                     return scheduledActivity.getSchedulePlanGuid();
+                }
+            };
+    
+    /**
+     * Function that returns the schedule plan guid for a scheduled activity.
+     */
+    public static final Function<ScheduledActivity, LocalDate> TO_SCHEDULE_ON_LOCAL_DATE =
+            new Function<ScheduledActivity, LocalDate>() {
+                @NonNull
+                @Override
+                public LocalDate apply(@NonNull ScheduledActivity scheduledActivity) {
+                    checkNotNull(scheduledActivity);
+                    
+                    return scheduledActivity.getScheduledOn().toLocalDate();
                 }
             };
 
@@ -89,6 +104,21 @@ public class ScheduledActivityUtil {
 
         return ImmutableMultimap.copyOf(
                 Multimaps.index(activities.iterator(), TO_SCHEDULE_PLAN_GUID)
+        );
+    }
+    
+    /**
+     * Groups scheduled activities by scheduledOn's local date, maintaining order of scheduled activities.
+     * @param activities scheduled activities
+     * @return scheduled activities grouped by scheduled date
+     */
+    @NonNull
+    public static ImmutableMultimap<LocalDate, ScheduledActivity> groupByLocalDate(
+            @NonNull List<ScheduledActivity> activities) {
+        checkNotNull(activities);
+        
+        return ImmutableMultimap.copyOf(
+                Multimaps.index(activities.iterator(), TO_SCHEDULE_ON_LOCAL_DATE)
         );
     }
 
