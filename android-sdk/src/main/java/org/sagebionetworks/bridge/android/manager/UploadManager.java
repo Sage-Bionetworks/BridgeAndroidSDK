@@ -12,6 +12,7 @@ import com.google.common.io.Files;
 
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
+import org.sagebionetworks.bridge.android.manager.upload.FileUploadRequestBody;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
@@ -31,16 +32,13 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.RequestBody;
 import retrofit2.Retrofit;
 import rx.Completable;
 import rx.Observable;
@@ -145,15 +143,15 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
      */
     @NonNull
     public Completable processUploadFiles() {
-        return Completable.mergeDelayError(
+        return Completable.concat(
                 getUploadFilenames()
                         .map(uploadDAO::getUploadFile)
                         .map(uploadFile ->
                                 processUploadForCachedSession(
                                         uploadFile,
                                         uploadDAO.getUploadSession(uploadFile.filename)
-                                ))).doOnError(t -> LOG.warn("Failed to process upload files"))
-                .onErrorComplete();
+                                ).doOnError(t -> LOG.warn("Failed to process upload file: {}", uploadFile, t)))
+                        .onErrorReturn(t -> Completable.complete()));
     }
 
     /**
@@ -324,9 +322,11 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     // reuse current upload session
                     return Single.just(session);
                 });
-
-        RequestBody requestBody = RequestBody.create(MediaType.parse(uploadFile.contentType), file);
+    
         LOG.info("Attempting S3 upload for file: {}, sessionId: {}", uploadFile.filename, session.getId());
+        
+        FileUploadRequestBody requestBody = new FileUploadRequestBody(file, uploadFile.contentType,
+                l -> LOG.trace("File {}: Uploaded {} of {} bytes", uploadFile.filename, l, uploadFile.fileLength));
         return sessionSingle.flatMap(freshSession -> RxUtils.toBodySingle(
                 getS3Service(freshSession)
                         .uploadToS3(
@@ -350,7 +350,8 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                             .subscribe();
     
                 }).doOnError(t ->
-                        LOG.warn("S3 upload failed forfile: {}, sessionId: {}", uploadFile.filename, session.getId())
+                        LOG.warn("S3 upload failed for file: {}, sessionId: {}",
+                                uploadFile.filename, session.getId(), t)
                 ).toCompletable();
     }
 
