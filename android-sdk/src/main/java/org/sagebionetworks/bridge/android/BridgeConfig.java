@@ -29,6 +29,9 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import static android.content.res.AssetManager.ACCESS_BUFFER;
 import static android.os.Build.VERSION;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -43,6 +46,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </ul>
  */
 @AnyThread
+@Singleton
 public class BridgeConfig {
     private static final Logger logger = LoggerFactory.getLogger(BridgeConfig.class);
 
@@ -88,6 +92,7 @@ public class BridgeConfig {
     private final String externalIdPasswordFormat;
     private final Map<String, SchemaKey> taskToSchemaMap;
 
+    @Inject
     public BridgeConfig(@NonNull Context context) {
         checkNotNull(context);
 

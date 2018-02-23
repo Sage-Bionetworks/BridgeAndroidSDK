@@ -123,8 +123,7 @@ public class BridgeDataProviderTest {
     @Before
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
-
-        BridgeManagerProvider.init(bridgeManagerProvider);
+        
 
         when(bridgeManagerProvider.getApplicationContext()).thenReturn(context);
         when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
@@ -148,7 +147,7 @@ public class BridgeDataProviderTest {
                 .thenReturn(forConsentedUsersApi);
 
         dataProvider =
-                new BridgeDataProvider(researchStackDAO, storageAccess, taskHelper) {
+                new BridgeDataProvider(bridgeManagerProvider, researchStackDAO, storageAccess, taskHelper) {
 
                     @Override
                     public void processInitialTaskResult(Context context, TaskResult taskResult) {

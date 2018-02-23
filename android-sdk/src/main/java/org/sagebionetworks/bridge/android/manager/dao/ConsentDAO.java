@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
+import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -12,11 +13,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by jyliu on 2/8/2017.
  */
+@AnyThread
+@Singleton
 public class ConsentDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(ConsentDAO.class);
 
@@ -25,6 +31,7 @@ public class ConsentDAO extends SharedPreferencesJsonDAO {
     // in case we store additional consent objects, let's "namespace" the subpopulation key
     private static final String CONSENT_KEY_PREFIX = "subpopulation-";
 
+    @Inject
     public ConsentDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
     }

@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
+import android.support.annotation.AnyThread;
 
 import com.google.common.collect.Sets;
 
@@ -11,10 +12,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 /**
  * Created by jyliu on 3/10/2017.
  */
-
+@AnyThread
+@Singleton
 public class UploadDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(UploadDAO.class);
 
@@ -22,6 +27,7 @@ public class UploadDAO extends SharedPreferencesJsonDAO {
     private static final String UPLOAD_FILE_PREFIX = "uploadFile-";
     private static final String UPLOAD_SESSION_PREFIX = "uploadSession-";
 
+    @Inject
     public UploadDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
     }

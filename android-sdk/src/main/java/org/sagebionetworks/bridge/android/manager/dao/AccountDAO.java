@@ -13,10 +13,14 @@ import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 /**
  * Created by jyliu on 2/8/2017.
  */
 @AnyThread
+@Singleton
 public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final TypeToken<List<String>> STRING_LIST = new TypeToken<List<String>>(){};
 
@@ -28,6 +32,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
 
+    @Inject
     public AccountDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
     }

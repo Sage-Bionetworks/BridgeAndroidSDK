@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -14,6 +15,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import dagger.Component;
 import rx.Completable;
 import rx.Single;
 import rx.functions.Action1;
@@ -25,6 +30,8 @@ import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySin
  * Any authenticated user may use this class's methods. The user does not need to have consented to
  * the study in order to manage their participant record.
  */
+@AnyThread
+@Singleton
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 
@@ -34,6 +41,7 @@ public class ParticipantRecordManager {
     private final AtomicReference<AuthenticationManager.AuthStateHolder>
             authStateHolderAtomicReference;
 
+    @Inject
     public ParticipantRecordManager(@NonNull AccountDAO accountDAO,
                                     @NonNull AuthenticationManager authenticationManager) {
         this.accountDAO = accountDAO;
