@@ -26,6 +26,9 @@
 # Bridge Data
 -dontwarn org.sagebionetworks.bridge.data.StudyUploadEncryptor*
 
+# Dagger 2
+-dontwarn com.google.errorprone.annotations.**
+
 # SpongyCastle
 -keep class org.spongycastle.crypto.* { *; }
 -keep class org.spongycastle.crypto.agreement.** { *; }
