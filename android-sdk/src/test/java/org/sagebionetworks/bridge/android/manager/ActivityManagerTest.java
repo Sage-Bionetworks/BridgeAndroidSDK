@@ -3,6 +3,8 @@ package org.sagebionetworks.bridge.android.manager;
 import android.content.Context;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDate;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -26,6 +28,7 @@ import retrofit2.Response;
 import rx.Completable;
 import rx.Single;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,7 +38,7 @@ import static org.mockito.Mockito.when;
  */
 
 public class ActivityManagerTest {
-
+    
     @Mock
     private BridgeConfig config;
     @Mock
@@ -61,7 +64,23 @@ public class ActivityManagerTest {
 
         activityManager = new ActivityManager(authenticationManager, context);
     }
+    
+    @Test
+    public void testGetActivities_differentOffsets() throws Exception {
 
+    
+        Call<ScheduledActivityListV4> activityCall = errorCall(new BridgeSDKException("Failed",
+                500));
+        when(activitiesApi.getScheduledActivitiesByDateRange(any(), any())).thenReturn(activityCall);
+    
+        DateTime start = DateTime.parse("2018-03-09T23:00:00.000-08:00");
+        DateTime end = DateTime.parse("2018-03-14T23:00:00.000-07:00");
+        activityManager.getActivities(start, end);
+    
+        DateTime newEnd = DateTime.parse("2018-03-14T22:00:00.000-08:00");
+        verify(activitiesApi).getScheduledActivitiesByDateRange(start, newEnd);
+    }
+    
     @Test
     public void getActivities_success() throws IOException {
         ScheduledActivityListV4 list = mock(ScheduledActivityListV4.class);

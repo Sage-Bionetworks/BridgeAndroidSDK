@@ -10,20 +10,12 @@ import org.joda.time.DateTimeZone;
 import org.sagebionetworks.bridge.android.manager.dao.ActivityListDAO;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
@@ -32,7 +24,6 @@ import javax.inject.Singleton;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-import rx.functions.Action1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
@@ -65,9 +56,19 @@ public class ActivityManager {
      * @param endTime end time for the activity list
      * @return schedule activity list
      */
-    public Single<ScheduledActivityListV4> getActivities(DateTime startTime, DateTime endTime) {
+    public Single<ScheduledActivityListV4> getActivities(@NonNull DateTime startTime, @NonNull DateTime endTime) {
+        DateTime requestEndTime = endTime;
+    
+        int startOffset = startTime.getZone().getOffset(startTime);
+        int endOffset = endTime.getZone().getOffset(endTime);
+        if (startOffset != endOffset) {
+            requestEndTime = endTime.toDateTime(DateTimeZone.forOffsetMillis(startOffset));
+            LOG.warn("Correcting for mismatched offset. startTime: {}, endTime: {}, newEndTime: {}", startTime,
+                    endTime, requestEndTime);
+        }
+        
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .getScheduledActivitiesByDateRange(startTime, endTime))
+                .getScheduledActivitiesByDateRange(startTime, requestEndTime))
                 .doOnSuccess(scheduleActivityList -> {
                     LOG.debug("Got scheduled activity list");
                     activityListDAO.updateActivityList(scheduleActivityList);
