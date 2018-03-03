@@ -6,12 +6,16 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.gson.reflect.TypeToken;
+
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -32,6 +36,8 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
 
+    private final ReadWriteLock sessionReadWriteLock = new ReentrantReadWriteLock(true);
+    
     @Inject
     public AccountDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
@@ -81,11 +87,33 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
 
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
-        return getValue(KEY_SESSION_INFO, UserSessionInfo.class);
+        Lock readLock = sessionReadWriteLock.readLock();
+        readLock.lock();
+        try {
+            return getValue(KEY_SESSION_INFO, UserSessionInfo.class);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     public void setUserSessionInfo(@Nullable UserSessionInfo userSessionInfo) {
-        setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
+        Lock writeLock = sessionReadWriteLock.writeLock();
+        writeLock.lock();
+        try {
+            // the server is only guaranteed to send the reauth token on sign in, it is not sent in all UserSessionInfo
+            // responses for security reasons. If the currently stored session contains a token and the new session
+            // does not, copy over the token from the previous session
+            if (userSessionInfo != null && userSessionInfo.getReauthToken() == null) {
+                UserSessionInfo previous = getUserSessionInfo();
+                if (previous != null) {
+                    userSessionInfo.setReauthToken(previous.getReauthToken());
+                }
+            }
+            
+            setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
+        } finally {
+            writeLock.unlock();;
+        }
     }
 
 
