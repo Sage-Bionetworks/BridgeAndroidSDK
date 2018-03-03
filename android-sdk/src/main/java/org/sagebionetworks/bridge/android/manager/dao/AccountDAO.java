@@ -112,7 +112,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
             
             setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
         } finally {
-            writeLock.unlock();;
+            writeLock.unlock();
         }
     }
 
