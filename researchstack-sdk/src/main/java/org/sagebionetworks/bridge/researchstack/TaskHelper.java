@@ -320,13 +320,22 @@ public class TaskHelper {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(() -> {
                     logger.debug("Successfully queued upload");
-                    for (Result result : results) {
-                        if (result instanceof FileResult) {
-                            FileResult fileResult = (FileResult) result;
-                            DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
-                        }
-                    }
+                    removeDataLoggerFiles(results, taskId);
                 });
+    }
+
+    /**
+     * Remove any data logger files that needed to stick around until the archive is created
+     * @param resultList List of results that could contain data logger FileResults
+     * @param taskId of the task that contained these results
+     */
+    protected void removeDataLoggerFiles(List<Result> resultList, String taskId) {
+        for (Result result : resultList) {
+            if (result instanceof FileResult) {
+                FileResult fileResult = (FileResult) result;
+                DataLoggerManager.getInstance().deleteFileStatus(fileResult.getFile());
+            }
+        }
     }
 
     /**
