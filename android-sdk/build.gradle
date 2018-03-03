@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.15.0', {
+    api 'org.sagebionetworks.bridge:rest-client:0.14.6', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
@@ -56,7 +56,7 @@ dependencies {
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.14.1'
     annotationProcessor "com.google.dagger:dagger-compiler:2.14.1"
 
-    implementation 'com.squareup.okhttp3:okhttp:3.9.1'
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.squareup.okio:okio:1.14.0'
 
     implementation 'com.madgag.spongycastle:core:1.58.0.0'
