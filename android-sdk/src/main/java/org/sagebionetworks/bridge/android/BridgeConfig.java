@@ -161,7 +161,7 @@ public class BridgeConfig {
     }
 
     public int getSdkVersion() {
-        return applicationContext.getResources().getInteger(R.integer.osb_android_sdk_version);
+        return BuildConfig.VERSION_CODE;
     }
 
     @NonNull

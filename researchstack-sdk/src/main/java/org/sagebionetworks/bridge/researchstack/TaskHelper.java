@@ -10,23 +10,23 @@ import android.text.TextUtils;
 import com.google.common.base.Strings;
 
 import org.joda.time.DateTime;
+import org.researchstack.backbone.AppPrefs;
 import org.researchstack.backbone.ResourceManager;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
 import org.researchstack.backbone.model.survey.factory.SurveyFactory;
+import org.researchstack.backbone.notification.TaskAlertReceiver;
 import org.researchstack.backbone.result.FileResult;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.result.TappingIntervalResult;
 import org.researchstack.backbone.result.TaskResult;
 import org.researchstack.backbone.result.logger.DataLoggerManager;
+import org.researchstack.backbone.schedule.ScheduleHelper;
 import org.researchstack.backbone.storage.NotificationHelper;
 import org.researchstack.backbone.storage.database.AppDatabase;
 import org.researchstack.backbone.storage.database.TaskNotification;
 import org.researchstack.backbone.task.Task;
-import org.researchstack.backbone.AppPrefs;
-import org.researchstack.backbone.notification.TaskAlertReceiver;
-import org.researchstack.backbone.schedule.ScheduleHelper;
 import org.researchstack.backbone.utils.FormatHelper;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
@@ -48,13 +48,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class TaskHelper {
@@ -270,9 +269,13 @@ public class TaskHelper {
     //package private for test access
     void uploadTaskResult(@Nullable JsonArchiveFile metadataFile,
                           TaskResult taskResult, Archive.Builder builder) {
-
+    
         BridgeConfig config = bridgeManagerProvider.getBridgeConfig();
-        builder.withAppVersionName(config.getAppVersionName())
+        String appVersionString = String.format(Locale.ENGLISH, "version %s, build %d",
+                config.getAppVersionName(),
+                config.getAppVersion());
+        
+        builder.withAppVersionName(appVersionString)
                 .withPhoneInfo(config.getDeviceName());
 
         final String taskId = taskResult.getIdentifier();
