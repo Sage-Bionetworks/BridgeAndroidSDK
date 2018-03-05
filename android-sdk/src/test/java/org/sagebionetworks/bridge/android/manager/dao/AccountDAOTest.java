@@ -25,10 +25,12 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.sagebionetworks.bridge.android.BuildConfig;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @Config(constants = BuildConfig.class)
 @RunWith(RobolectricTestRunner.class)
@@ -53,6 +55,45 @@ public class AccountDAOTest {
         // Set data groups and verify.
         accountDAO.setDataGroups(Lists.newArrayList("asdf", "jkl"));
         assertEquals(Lists.newArrayList("asdf", "jkl"), accountDAO.getDataGroups());
+    }
+    
+    @Test
+    public void testSetUserSessionInfo_MergesReauthToken() {
+        String reauthToken = "reauthToken";
+        String sessionToken = "sessionToken";
+        UserSessionInfo userSessionInfo = new UserSessionInfo()
+                .sessionToken(sessionToken)
+                .reauthToken(reauthToken);
+        
+        accountDAO.setUserSessionInfo(userSessionInfo);
+        
+        UserSessionInfo retrievedUserSessionInfo = accountDAO.getUserSessionInfo();
+        
+        assertEquals(userSessionInfo, retrievedUserSessionInfo);
+        
+        String newSessionToken = "newSessionToken";
+        UserSessionInfo newUserSessionInfo = new UserSessionInfo()
+                .sessionToken(newSessionToken);
+        
+        accountDAO.setUserSessionInfo(newUserSessionInfo);
+        
+        retrievedUserSessionInfo = accountDAO.getUserSessionInfo();
+        
+        assertEquals(newSessionToken, retrievedUserSessionInfo.getSessionToken()); // check this isn't the old session
+        assertEquals(reauthToken, retrievedUserSessionInfo.getReauthToken()); // check new session has old reauth token
+        
+        String newReauthToken = "newReauthToken";
+        String evenNewerSessionToken = "evenNewerSessionToken";
+        UserSessionInfo evenNewerSession = new UserSessionInfo()
+                .sessionToken(evenNewerSessionToken)
+                .reauthToken(newReauthToken);
+        
+        accountDAO.setUserSessionInfo(evenNewerSession);
+        
+        retrievedUserSessionInfo = accountDAO.getUserSessionInfo();
+        
+        assertEquals(evenNewerSessionToken, retrievedUserSessionInfo.getSessionToken());
+        assertEquals(newReauthToken, retrievedUserSessionInfo.getReauthToken()); // check we wrote a new reauth token
     }
 
     @Test
