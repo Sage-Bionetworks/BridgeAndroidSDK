@@ -387,14 +387,17 @@ public class TaskHelperTest {
         when(taskResult.getEndDate()).thenReturn(endDate);
         when(taskResult.getResults()).thenReturn(stepResults);
 
-        String appVersionName = "appversion";
+        String appVersionName = "1.0.5";
         String phoneInfo = "Android";
         when(bridgeConfig.getAppVersionName()).thenReturn(appVersionName);
+        when(bridgeConfig.getAppVersion()).thenReturn(2);
         when(bridgeConfig.getDeviceName()).thenReturn(phoneInfo);
+        
+        String archiveAppVersion = "version 1.0.5, build 2";
 
         Archive archive = mock(Archive.class);
         Archive.Builder archiveBuilder = mock(Archive.Builder.class);
-        when(archiveBuilder.withAppVersionName(appVersionName)).thenReturn(archiveBuilder);
+        when(archiveBuilder.withAppVersionName(archiveAppVersion)).thenReturn(archiveBuilder);
         when(archiveBuilder.withPhoneInfo(phoneInfo)).thenReturn(archiveBuilder);
         when(archiveBuilder.build()).thenReturn(archive);
 
@@ -421,7 +424,7 @@ public class TaskHelperTest {
         verify(archiveFileFactory).fromResult(result2);
 
         verify(archiveBuilder).withPhoneInfo(phoneInfo);
-        verify(archiveBuilder).withAppVersionName(appVersionName);
+        verify(archiveBuilder).withAppVersionName(archiveAppVersion);
 
         verify(uploadManager).queueUpload(any(), eq(archive));
         verify(uploadManager).processUploadFile(any());
