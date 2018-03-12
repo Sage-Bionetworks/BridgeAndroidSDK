@@ -14,6 +14,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.rest.RestUtils;
+import org.sagebionetworks.bridge.rest.model.ClientInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
@@ -233,8 +234,15 @@ public class BridgeConfig {
      */
     @NonNull
     public final String getUserAgent() {
-        return getStudyName() + "/" + getAppVersion() + " (" + getDeviceName() + "; Android "
-                + VERSION.RELEASE + ") BridgeAndroidSDK/" + getSdkVersion();
+        ClientInfo clientInfo = new ClientInfo()
+                .appName(getStudyName())
+                .appVersion(getAppVersion())
+                .deviceName(getDeviceName())
+                .osName("Android")
+                .osVersion(VERSION.RELEASE)
+                .sdkName("BridgeAndroidSDK")
+                .sdkVersion(getSdkVersion());
+        return RestUtils.getUserAgent(clientInfo);
     }
 
     @NonNull
