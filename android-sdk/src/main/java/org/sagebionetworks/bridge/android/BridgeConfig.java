@@ -234,7 +234,7 @@ public class BridgeConfig {
     @NonNull
     public final String getUserAgent() {
         return getStudyName() + "/" + getAppVersion() + " (" + getDeviceName() + "; Android "
-                + VERSION.RELEASE + ") BridgeSDK/" + getSdkVersion();
+                + VERSION.RELEASE + ") BridgeAndroidSDK/" + getSdkVersion();
     }
 
     @NonNull
