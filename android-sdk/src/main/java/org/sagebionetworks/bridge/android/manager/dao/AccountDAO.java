@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 
 import com.google.gson.reflect.TypeToken;
 
+import org.sagebionetworks.bridge.rest.UserSessionInfoProvider;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -103,12 +104,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
             // the server is only guaranteed to send the reauth token on sign in, it is not sent in all UserSessionInfo
             // responses for security reasons. If the currently stored session contains a token and the new session
             // does not, copy over the token from the previous session
-            if (userSessionInfo != null && userSessionInfo.getReauthToken() == null) {
-                UserSessionInfo previous = getUserSessionInfo();
-                if (previous != null) {
-                    userSessionInfo.setReauthToken(previous.getReauthToken());
-                }
-            }
+            UserSessionInfoProvider.mergeReauthToken(getUserSessionInfo(), userSessionInfo);
             
             setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
         } finally {
