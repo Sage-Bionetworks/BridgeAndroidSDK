@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
@@ -242,7 +243,12 @@ public class BridgeConfig {
                 .osVersion(VERSION.RELEASE)
                 .sdkName("BridgeAndroidSDK")
                 .sdkVersion(getSdkVersion());
-        return RestUtils.getUserAgent(clientInfo);
+        String userAgent = RestUtils.getUserAgent(clientInfo);
+        if (!Strings.isNullOrEmpty(userAgent)) {
+            return userAgent;
+        }
+        return getStudyName() + "/" + getAppVersion() + " (" + getDeviceName() + "; Android/"
+                + VERSION.RELEASE + ") BridgeAndroidSDK/" + getSdkVersion();
     }
 
     @NonNull
