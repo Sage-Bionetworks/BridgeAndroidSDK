@@ -9,8 +9,8 @@ android {
         targetSdkVersion 26
 
         // versionCode is used to identify the app User-Agent to Bridge server
-        versionCode 2
-        versionName "android-sdk v1.1.0"
+        versionCode 3
+        versionName "android-sdk v1.1.1"
         consumerProguardFiles 'proguard-rules.pro'
     }
 
