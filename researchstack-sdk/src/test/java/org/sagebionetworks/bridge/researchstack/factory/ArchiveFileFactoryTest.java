@@ -110,7 +110,5 @@ public class ArchiveFileFactoryTest {
         ByteSourceArchiveFile archiveFile = archiveFileFactory.fromFileResult(fileResult);
 
         assertEquals("identifier.json", archiveFile.getFilename());
-        
-        verify(file);
     }
 }
