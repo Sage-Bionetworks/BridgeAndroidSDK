@@ -162,11 +162,15 @@ public class ArchiveFileFactory {
     }
 
     @VisibleForTesting
+    @Nullable
     ByteSourceArchiveFile fromFileResult(FileResult fileResult) {
         DateTime endTime = new DateTime(fileResult.getEndDate());
 
         File file = fileResult.getFile();
-
+        if (!(file.isFile() && file.exists() && file.canRead())) {
+            return null;
+        }
+        
         int lastIndex = file.getName().lastIndexOf(".");
         String fileExtension = ".json";
         if (fileResult.getContentType().equals("video/mp4")) {

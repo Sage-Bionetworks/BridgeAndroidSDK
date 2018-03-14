@@ -20,6 +20,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -82,6 +83,9 @@ public class ArchiveFileFactoryTest {
 
         File file = mock(File.class);
         when(file.getName()).thenReturn(filename);
+        when(file.canRead()).thenReturn(true);
+        when(file.exists()).thenReturn(true);
+        when(file.isFile()).thenReturn(true);
 
         FileResult fileResult = new FileResult(identifier, file, contentType);
         ByteSourceArchiveFile archiveFile = archiveFileFactory.fromFileResult(fileResult);
@@ -97,6 +101,10 @@ public class ArchiveFileFactoryTest {
 
         File file = mock(File.class);
         when(file.getName()).thenReturn(filename);
+        when(file.canRead()).thenReturn(true);
+        when(file.exists()).thenReturn(true);
+        when(file.isFile()).thenReturn(true);
+        
 
         FileResult fileResult = new FileResult(identifier, file, contentType);
         ByteSourceArchiveFile archiveFile = archiveFileFactory.fromFileResult(fileResult);
