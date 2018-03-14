@@ -324,7 +324,7 @@ public class TaskHelper {
                 .subscribe(() -> {
                     logger.debug("Successfully queued upload");
                     removeDataLoggerFiles(results, taskId);
-                });
+                }, t -> logger.warn("Failed to queue upload", t));
     }
 
     /**

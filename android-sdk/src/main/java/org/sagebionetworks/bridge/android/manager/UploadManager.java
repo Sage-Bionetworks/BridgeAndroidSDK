@@ -374,7 +374,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
     }
 
     @WorkerThread
-    @NonNull
+    @Nullable
     UploadFile persist(String filename, Archive archive) throws IOException,
             CMSException, NoSuchAlgorithmException {
         File file = getFile(filename);
@@ -390,21 +390,14 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
         }
 
         LOG.debug("Writing archive with filename: " + filename + ", with contents: " + archive);
-
-        OutputStream os = sink.openBufferedStream();
-        try {
-            DigestOutputStream md5OutStream = new DigestOutputStream(os, md5);
-
-            OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream);
-            try {
-                archive.writeTo(encryptedOutputStream);
-            } finally {
-                encryptedOutputStream.close();
-            }
+    
+        try (OutputStream os = sink.openBufferedStream();
+             DigestOutputStream md5OutStream = new DigestOutputStream(os, md5);
+             OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream)) {
+            archive.writeTo(encryptedOutputStream);
         } catch (CMSException e) {
-            e.printStackTrace();
-        } finally {
-            os.close();
+            LOG.warn("Failed to write archive with filename: {}", filename, e);
+            return null;
         }
 
         String md5Hash = BaseEncoding.base64().encode(md5.digest());
