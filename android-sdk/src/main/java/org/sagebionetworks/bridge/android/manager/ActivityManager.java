@@ -59,12 +59,17 @@ public class ActivityManager {
     public Single<ScheduledActivityListV4> getActivities(@NonNull DateTime startTime, @NonNull DateTime endTime) {
         DateTime requestEndTime = endTime;
     
-        int startOffset = startTime.getZone().getOffset(startTime);
-        int endOffset = endTime.getZone().getOffset(endTime);
-        if (startOffset != endOffset) {
-            requestEndTime = endTime.toDateTime(DateTimeZone.forOffsetMillis(startOffset));
-            LOG.warn("Correcting for mismatched offset. startTime: {}, endTime: {}, newEndTime: {}", startTime,
-                    endTime, requestEndTime);
+        try {
+            int startOffset = startTime.getZone().getOffset(startTime);
+            int endOffset = endTime.getZone().getOffset(endTime);
+            if (startOffset != endOffset) {
+                requestEndTime = endTime.toDateTime(DateTimeZone.forOffsetMillis(startOffset));
+                LOG.warn("Correcting for mismatched offset. startTime: {}, endTime: {}, newEndTime: {}", startTime,
+                        endTime, requestEndTime);
+            }
+        } catch (Exception e) {
+            // in case we do something wrong with JodaTime
+            return Single.error(e);
         }
         
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
