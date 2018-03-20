@@ -132,17 +132,6 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     }
 
     @Nullable
-    @Deprecated
-    public SignIn getSignIn() {
-        return getValue(KEY_SIGN_IN, SignIn.class);
-    }
-
-    @Deprecated
-    public void setSignIn(@Nullable SignIn signIn) {
-        setValue(KEY_SIGN_IN, signIn, SignIn.class);
-    }
-
-    @Nullable
     public StudyParticipant getStudyParticipant() {
         return getValue(KEY_STUDY_PARTICIPANT, StudyParticipant.class);
     }
