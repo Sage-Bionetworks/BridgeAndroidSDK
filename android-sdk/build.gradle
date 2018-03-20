@@ -10,7 +10,7 @@ android {
 
         // versionCode is used to identify the app User-Agent to Bridge server
         versionCode 4
-        versionName "android-sdk v1.1.2"
+        versionName "android-sdk v1.2.0"
         consumerProguardFiles 'proguard-rules.pro'
     }
 

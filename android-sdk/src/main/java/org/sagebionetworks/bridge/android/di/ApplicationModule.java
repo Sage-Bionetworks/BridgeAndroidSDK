@@ -18,6 +18,14 @@
 package org.sagebionetworks.bridge.android.di;
 
 import android.content.Context;
+import android.net.TrafficStats;
+
+import org.sagebionetworks.bridge.android.util.okhttp.DelegatingSocketFactory;
+
+import java.io.IOException;
+import java.net.Socket;
+
+import javax.net.SocketFactory;
 
 import dagger.Module;
 import dagger.Provides;
@@ -36,5 +44,17 @@ public class ApplicationModule {
     @Provides
     Context getApplicatonContext() {
         return applicationContext;
+    }
+    
+    @Provides
+    SocketFactory getSocketFactory() {
+        return new DelegatingSocketFactory(SocketFactory.getDefault()) {
+            @Override
+            protected Socket configureSocket(Socket socket) throws IOException {
+                // https://github.com/square/okhttp/issues/3537
+                TrafficStats.tagSocket(socket);
+                return socket;
+            }
+        };
     }
 }

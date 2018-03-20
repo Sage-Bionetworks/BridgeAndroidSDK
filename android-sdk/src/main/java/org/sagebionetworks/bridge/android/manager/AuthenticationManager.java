@@ -372,7 +372,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 })
                 .doOnSuccess(session -> {
                     accountDAO.setEmail(email);
-
+                    
+                    // we must set here, since we're not receiving session change callbacks until we create an
+                    // authenticated retrofit/okhttp client
+                    accountDAO.setUserSessionInfo(session);
+                    
                     // if we signed in with a password, save it
                     String password = signIn.getPassword();
                     if (!Strings.isNullOrEmpty(password)) {
