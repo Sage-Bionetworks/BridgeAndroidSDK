@@ -142,7 +142,6 @@ public class AuthenticationManagerTest {
 
 //        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, equivalentSignIn);
         verify(authenticationApi).signUp(signUp);
-        verify(accountDAO).setSignIn(argThat(signIn -> matches(signUp, signIn)));
         verify(accountDAO).setStudyParticipant(argThat(participant -> matches(signUp, participant)));
     }
 
@@ -156,7 +155,6 @@ public class AuthenticationManagerTest {
         spyAuthenticationManager.signUp(signUp).test().awaitTerminalEvent().assertError(BridgeSDKException.class);
 
         verify(authenticationApi).signUp(signUp);
-        verify(accountDAO).setSignIn(null);
         verify(accountDAO).setStudyParticipant(null);
     }
 
@@ -233,7 +231,6 @@ public class AuthenticationManagerTest {
         assertSame(mockSignedInApi, authStateHolderAtomicReference.get());
 //        assertNotSame(mockSignedInApi, apiBeforeSignInResult);
 
-        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
@@ -286,7 +283,6 @@ public class AuthenticationManagerTest {
 
 //        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
 
-        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
@@ -330,7 +326,6 @@ public class AuthenticationManagerTest {
         // verify there was an attempt to upload all consents
         verify(spyAuthenticationManager).uploadLocalConsents();
 
-        verify(accountDAO, atLeastOnce()).setSignIn(signIn);
         verify(accountDAO).setUserSessionInfo(userSessionInfo);
         verify(accountDAO).setStudyParticipant(
                 argThat(participant -> EMAIL.equals(participant.getEmail())));
@@ -379,7 +374,6 @@ public class AuthenticationManagerTest {
     public void getApi_NewInstanceWithNullSignIn() throws Exception {
         ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
 
-        when(accountDAO.getSignIn()).thenReturn(null);
         when(apiClientProvider.getClient(ForConsentedUsersApi.class))
                 .thenReturn(forConsentedUsersApi);
 
@@ -389,7 +383,6 @@ public class AuthenticationManagerTest {
 //        assertSame(forConsentedUsersApi, result);
 
         verify(apiClientProvider).getClient(ForConsentedUsersApi.class);
-        verify(accountDAO).getSignIn();
     }
 
     @Test
@@ -397,7 +390,6 @@ public class AuthenticationManagerTest {
         ForConsentedUsersApi forConsentedUsersApi = mock(ForConsentedUsersApi.class);
 
         SignIn signIn = new SignIn();
-        when(accountDAO.getSignIn()).thenReturn(signIn);
 //        when(apiClientProvider.getClient(ForConsentedUsersApi.class, signIn))
 //                .thenReturn(forConsentedUsersApi);
         initSpyAuthenticationManager();
@@ -406,17 +398,14 @@ public class AuthenticationManagerTest {
 //        assertSame(forConsentedUsersApi, result);
 
 //        verify(apiClientProvider).getClient(ForConsentedUsersApi.class, signIn);
-        verify(accountDAO).getSignIn();
     }
 
     @Test
     public void getEmail() throws Exception {
-        when(accountDAO.getSignIn()).thenReturn(new SignIn().email(EMAIL));
 
         String email = spyAuthenticationManager.getEmail();
 
         assertEquals(EMAIL, email);
-        verify(accountDAO).getSignIn();
     }
 
     @Test
@@ -426,7 +415,6 @@ public class AuthenticationManagerTest {
         when(accountDAO.getUserSessionInfo()).thenReturn(previousSession);
 
         SignIn signIn = new SignIn();
-        when(accountDAO.getSignIn()).thenReturn(signIn);
 //        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(null);
 
         // execute and validate
@@ -442,7 +430,6 @@ public class AuthenticationManagerTest {
         when(accountDAO.getUserSessionInfo()).thenReturn(previousSession);
 
         SignIn signIn = new SignIn();
-        when(accountDAO.getSignIn()).thenReturn(signIn);
 
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
 //        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
@@ -458,7 +445,6 @@ public class AuthenticationManagerTest {
     public void getUserSessionInfo_WithCachedSession() {
         // mock dependencies
         SignIn signIn = new SignIn();
-        when(accountDAO.getSignIn()).thenReturn(signIn);
 
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
 //        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);

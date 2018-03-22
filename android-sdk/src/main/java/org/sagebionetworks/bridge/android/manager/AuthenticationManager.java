@@ -54,7 +54,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 @Singleton
-public class AuthenticationManager {
+public class AuthenticationManager implements UserSessionInfoProvider.UserSessionInfoChangeListener{
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
     @NonNull
@@ -71,7 +71,7 @@ public class AuthenticationManager {
     private final ApiClientProvider apiClientProvider;
     @NonNull
     private final AtomicReference<AuthStateHolder> authStateHolderAtomicReference;
-
+    
     /**
      * Immutable wrapper used with AtomicReference.
      */
@@ -137,6 +137,7 @@ public class AuthenticationManager {
             ApiClientProvider.AuthenticatedClientProviderBuilder builder =
                     apiClientProvider
                             .getAuthenticatedClientProviderBuilder()
+                            .addUserSessionInfoChangeListener(this)
                             .withEmail(email);
 
             boolean hasPasswordOrSession = false;
@@ -158,8 +159,12 @@ public class AuthenticationManager {
         }
         return null;
     }
-
-
+    
+    @Override
+    public void onChange(UserSessionInfo userSessionInfo) {
+        accountDAO.setUserSessionInfo(userSessionInfo);
+    }
+    
     /**
      * Basic sign up that fills in the minimal requirements of email and password fields; in
      * general, you would also want to fill in any of the following information available at
@@ -217,7 +222,6 @@ public class AuthenticationManager {
                             .email(signUp.getEmail())
                             .password(signUp.getPassword());
 
-                    accountDAO.setSignIn(signIn);
                     accountDAO.setEmail(signUp.getEmail());
                     accountDAO.setPassword(signUp.getPassword());
 
@@ -250,7 +254,6 @@ public class AuthenticationManager {
                     return Single.just(message);
                 })
                 .doOnError(throwable -> {
-                    accountDAO.setSignIn(null);
                     accountDAO.setStudyParticipant(null);
                 }).toCompletable();
     }
@@ -300,9 +303,7 @@ public class AuthenticationManager {
         checkNotNull(email);
         checkNotNull(token);
 
-        // store sign in, so we have signIn as a key to retrieve session in case of 412
         SignIn signIn = new SignIn().email(email).study(config.getStudyId());
-        accountDAO.setSignIn(signIn);
 
         return RxUtils.toBodySingle(
                 authenticationApi.signInViaEmail(
@@ -341,9 +342,6 @@ public class AuthenticationManager {
                 .email(email)
                 .password(password);
 
-        // store sign in, so we have signIn as a key to retrieve session in case of 412
-        accountDAO.setSignIn(signIn);
-
         return RxUtils.toBodySingle(
                 authenticationApi.signIn(signIn))
                 .compose(signInHelper(signIn));
@@ -374,15 +372,17 @@ public class AuthenticationManager {
                 })
                 .doOnSuccess(session -> {
                     accountDAO.setEmail(email);
-
+                    
+                    // we must set here, since we're not receiving session change callbacks until we create an
+                    // authenticated retrofit/okhttp client
+                    accountDAO.setUserSessionInfo(session);
+                    
                     // if we signed in with a password, save it
                     String password = signIn.getPassword();
                     if (!Strings.isNullOrEmpty(password)) {
                         accountDAO.setPassword(password);
                     }
-
-                    accountDAO.setUserSessionInfo(session);
-
+                    
                     authStateHolderAtomicReference.set(
                             createAuthStateFromStoredCredentials()
                     );
@@ -414,7 +414,6 @@ public class AuthenticationManager {
                     return Single.just(session);
                 })
                 .doOnError(t -> {
-                    accountDAO.setSignIn(null);
                     accountDAO.setPassword(null);
                     accountDAO.setUserSessionInfo(null);
                 });
@@ -463,16 +462,8 @@ public class AuthenticationManager {
     public Completable signOut() {
         logger.debug("signOut called");
 
-        final String email;
-
-        SignIn signIn = accountDAO.getSignIn();
-        if (signIn != null) {
-            email = signIn.getEmail();
-        } else {
-            email = null;
-            logger.debug("Did not find saved SignIn credentials prior to calling sign out API");
-        }
-
+        String email = accountDAO.getEmail();
+        
         for (AuthenticationEventListener listener : listeners) {
             listener.onSignedOut(email);
         }
@@ -542,19 +533,7 @@ public class AuthenticationManager {
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
         logger.debug("getUserSessionInfo called");
-
-        // TODO: a way to distinguish if session is null because we haven't signed on, or if it
-        // was invalidated
-        UserSessionInfoProvider sessionProvider =
-                authStateHolderAtomicReference.get().userSessionInfoProvider;
-        if (sessionProvider != null) {
-            UserSessionInfo session = sessionProvider.getSession();
-
-            if (session != null) {
-                accountDAO.setUserSessionInfo(session);
-                return session;
-            }
-        }
+        
         return accountDAO.getUserSessionInfo();
     }
 
@@ -724,7 +703,6 @@ public class AuthenticationManager {
                                         subpopulationGuid,
                                         consentSignature))
                         // Make sure the consent info from the user session is updated
-                        .doOnSuccess(accountDAO::setUserSessionInfo)
                         .doOnError(e ->
                                 logger.info("Couldn't upload consent to Bridge, " +
                                         "subpopulationGuid: " + subpopulationGuid, e)

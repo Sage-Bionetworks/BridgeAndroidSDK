@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Singleton;
+import javax.net.SocketFactory;
 
 import dagger.Module;
 import dagger.Provides;
@@ -47,7 +48,8 @@ public class BridgeServiceModule {
     @Provides
     @Singleton
     ApiClientProvider getApiClientProvider(Context applicationContext,
-                                           BridgeConfig bridgeConfig) {
+                                           BridgeConfig bridgeConfig,
+                                           SocketFactory socketFactory) {
     
         List<Interceptor> appInterceptors = Collections.emptyList();
         List<Interceptor> networkInterceptors = Lists.newArrayList();
@@ -60,6 +62,7 @@ public class BridgeServiceModule {
                 bridgeConfig.getUserAgent(),
                 bridgeConfig.getAcceptLanguage(),
                 bridgeConfig.getStudyId(),
+                socketFactory,
                 networkInterceptors,
                 appInterceptors);
     }

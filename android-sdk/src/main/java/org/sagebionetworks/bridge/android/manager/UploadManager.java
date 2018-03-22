@@ -275,7 +275,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
         return Completable.fromAction(() -> {
             if (getFile(filename).delete()) {
-                LOG.warn("Successfully deleted upload file: " + filename + ", "
+                LOG.info("Successfully deleted upload file: " + filename + ", "
                         + "removing upload from queue");
             } else {
                 LOG.warn("Failed to delete upload file: " + filename);

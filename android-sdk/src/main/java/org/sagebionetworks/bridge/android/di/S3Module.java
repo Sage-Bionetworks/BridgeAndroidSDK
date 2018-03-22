@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
+import javax.net.SocketFactory;
 
 import dagger.Module;
 import dagger.Provides;
@@ -34,8 +35,9 @@ public class S3Module {
     @Provides
     @Singleton
     @Named("s3OkHttp3Client")
-    OkHttpClient getS3OkHttp3Client() {
+    OkHttpClient getS3OkHttp3Client(SocketFactory socketFactory) {
         return new OkHttpClient.Builder()
+                .socketFactory(socketFactory)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
