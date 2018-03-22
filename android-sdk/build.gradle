@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.15.5', {
+    api 'org.sagebionetworks.bridge:rest-client:0.15.6', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
