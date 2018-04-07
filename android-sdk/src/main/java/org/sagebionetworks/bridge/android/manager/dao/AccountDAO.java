@@ -4,11 +4,8 @@ import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-
 import com.google.gson.reflect.TypeToken;
-
 import org.sagebionetworks.bridge.rest.UserSessionInfoProvider;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
@@ -27,18 +24,21 @@ import javax.inject.Singleton;
 @AnyThread
 @Singleton
 public class AccountDAO extends SharedPreferencesJsonDAO {
-    private static final TypeToken<List<String>> STRING_LIST = new TypeToken<List<String>>(){};
+    private static final TypeToken<List<String>> STRING_LIST = new TypeToken<List<String>>() {
+    };
 
-    private static final String PREFERENCES_FILE  = "accounts";
+    private static final String PREFERENCES_FILE = "accounts";
     private static final String KEY_DATA_GROUPS = "dataGroups";
     private static final String KEY_SESSION_INFO = "session";
     private static final String KEY_STUDY_PARTICIPANT = "participant";
-    private static final String KEY_SIGN_IN = "signIn";
     private static final String KEY_EMAIL = "email";
+    private static final String KEY_PHONE_REGION = "phoneRegion";
+    private static final String KEY_PHONE_NUMBER = "phoneNumber";
+
     private static final String KEY_PASSWORD = "password";
 
     private final ReadWriteLock sessionReadWriteLock = new ReentrantReadWriteLock(true);
-    
+
     @Inject
     public AccountDAO(Context applicationContext) {
         super(applicationContext, PREFERENCES_FILE);
@@ -105,7 +105,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
             // responses for security reasons. If the currently stored session contains a token and the new session
             // does not, copy over the token from the previous session
             UserSessionInfoProvider.mergeReauthToken(getUserSessionInfo(), userSessionInfo);
-            
+
             setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
         } finally {
             writeLock.unlock();
@@ -123,6 +123,27 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     }
 
     @Nullable
+    public String getPhoneRegion() {
+        return getValue(KEY_PHONE_REGION, String.class);
+
+    }
+
+    @Nullable
+    public void setPhoneRegion(@Nullable String phoneRegion) {
+        setValue(KEY_PHONE_REGION, phoneRegion, String.class);
+    }
+
+    @Nullable
+    public String getPhoneNumber() {
+        return getValue(KEY_PHONE_NUMBER, String.class);
+    }
+
+    @Nullable
+    public void setPhoneNumber(@Nullable String phoneNumber) {
+        setValue(KEY_PHONE_NUMBER, phoneNumber, String.class);
+    }
+
+    @Nullable
     public String getPassword() {
         return getValue(KEY_PASSWORD, String.class);
     }
@@ -137,6 +158,6 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     }
 
     public void setStudyParticipant(@Nullable StudyParticipant studyParticipant) {
-        setValue(KEY_STUDY_PARTICIPANT,studyParticipant, StudyParticipant.class);
+        setValue(KEY_STUDY_PARTICIPANT, studyParticipant, StudyParticipant.class);
     }
 }

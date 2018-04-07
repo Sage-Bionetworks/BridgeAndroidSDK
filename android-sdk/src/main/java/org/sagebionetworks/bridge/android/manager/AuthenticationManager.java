@@ -144,31 +144,37 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     ApiClientProvider.AuthenticatedClientProvider
     createAuthenticatedClientProviderFromStoredCredentials() {
         String email = accountDAO.getEmail();
-        if (!Strings.isNullOrEmpty(email)) {
-            ApiClientProvider.AuthenticatedClientProviderBuilder builder =
-                    apiClientProvider
-                            .getAuthenticatedClientProviderBuilder()
-                            .addUserSessionInfoChangeListener(this)
-                            .withEmail(email);
 
-            boolean hasPasswordOrSession = false;
-            String password = accountDAO.getPassword();
-            if (!Strings.isNullOrEmpty(password)) {
-                hasPasswordOrSession = true;
-                builder.withPassword(password);
-            }
-
-            UserSessionInfo session = accountDAO.getUserSessionInfo();
-            if (session != null) {
-                hasPasswordOrSession = true;
-                builder.withSession(session);
-            }
-
-            if (hasPasswordOrSession) {
-                return builder.build();
-            }
+        String phoneRegion = accountDAO.getPhoneRegion();
+        String phoneNumber = accountDAO.getPhoneNumber();
+        Phone phone = null;
+        if (!Strings.isNullOrEmpty(phoneNumber)) {
+            phone = new Phone().number(phoneNumber).regionCode(phoneRegion);
         }
-        return null;
+
+        // need either email or phone to identify user
+        if (Strings.isNullOrEmpty(email) && phone == null) {
+            return null;
+        }
+
+        String password = accountDAO.getPassword();
+        UserSessionInfo session = accountDAO.getUserSessionInfo();
+
+        // need either password or session to authenticate
+        if (Strings.isNullOrEmpty(password) && session == null) {
+            return null;
+        }
+
+        ApiClientProvider.AuthenticatedClientProviderBuilder builder =
+                apiClientProvider
+                        .getAuthenticatedClientProviderBuilder()
+                        .addUserSessionInfoChangeListener(this)
+                        .withPassword(password)
+                        .withSession(session)
+                        .withEmail(email)
+                        .withPhone(phone);
+
+        return builder.build();
     }
 
     @Override
@@ -234,6 +240,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
                     accountDAO.setEmail(signUp.getEmail());
                     accountDAO.setPassword(signUp.getPassword());
+                    Phone phone = signUp.getPhone();
+                    if (phone != null) {
+                        accountDAO.setPhoneRegion(phone.getRegionCode());
+                        accountDAO.setPhoneNumber(phone.getNumber());
+                    }
 
                     authStateHolderAtomicReference.set(
                             createAuthStateFromStoredCredentials()
@@ -426,6 +437,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         final String email = signIn.getEmail();
 
         return userSessionInfoSingle -> userSessionInfoSingle
+                .doOnSubscribe(accountDAO::clear)
                 .onErrorResumeNext(t -> {
                     if (t instanceof ConsentRequiredException) {
                         logger.debug("Received ConsentRequiredException, treating as success");
@@ -435,16 +447,17 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 })
                 .doOnSuccess(session -> {
                     accountDAO.setEmail(email);
+                    accountDAO.setPassword(signIn.getPassword());
+
+                    Phone phone = signIn.getPhone();
+                    if (phone != null) {
+                        accountDAO.setPhoneRegion(phone.getRegionCode());
+                        accountDAO.setPhoneNumber(phone.getNumber());
+                    }
 
                     // we must set here, since we're not receiving session change callbacks until we create an
                     // authenticated retrofit/okhttp client
                     accountDAO.setUserSessionInfo(session);
-
-                    // if we signed in with a password, save it
-                    String password = signIn.getPassword();
-                    if (!Strings.isNullOrEmpty(password)) {
-                        accountDAO.setPassword(password);
-                    }
 
                     authStateHolderAtomicReference.set(
                             createAuthStateFromStoredCredentials()
@@ -477,8 +490,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     return Single.just(session);
                 })
                 .doOnError(t -> {
-                    accountDAO.setPassword(null);
-                    accountDAO.setUserSessionInfo(null);
+                    accountDAO.clear();
                 });
     }
 
