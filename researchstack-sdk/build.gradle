@@ -8,7 +8,6 @@ repositories {
 // todo make pom include sage s3 repo for rest-client
 android {
   compileSdkVersion 26
-  buildToolsVersion '26.0.2'
 
   defaultConfig {
     minSdkVersion 19
