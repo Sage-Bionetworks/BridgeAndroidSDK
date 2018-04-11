@@ -10,6 +10,7 @@ android:
     - tools
     - build-tools-27.0.3
     - android-27
+    - android-26
 
     # RS components
     - extra-android-m2repository
