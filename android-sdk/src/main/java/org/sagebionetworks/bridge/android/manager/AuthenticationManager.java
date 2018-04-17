@@ -4,11 +4,9 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
-
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -25,6 +23,9 @@ import org.sagebionetworks.bridge.rest.model.ConsentStatus;
 import org.sagebionetworks.bridge.rest.model.Email;
 import org.sagebionetworks.bridge.rest.model.EmailSignIn;
 import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
+import org.sagebionetworks.bridge.rest.model.Phone;
+import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
+import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SignUp;
@@ -47,6 +48,7 @@ import rx.Observable;
 import rx.Single;
 import rx.functions.Func1;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -54,30 +56,39 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @AnyThread
 @Singleton
-public class AuthenticationManager implements UserSessionInfoProvider.UserSessionInfoChangeListener{
+public class AuthenticationManager implements UserSessionInfoProvider.UserSessionInfoChangeListener {
+
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
 
     @NonNull
     private final AccountDAO accountDAO;
+
     @NonNull
     private final ConsentDAO consentDAO;
+
     @NonNull
     private final BridgeConfig config;
+
     @NonNull
     private final AuthenticationApi authenticationApi;
+
     @NonNull
     private final List<AuthenticationEventListener> listeners;
+
     @NonNull
     private final ApiClientProvider apiClientProvider;
+
     @NonNull
     private final AtomicReference<AuthStateHolder> authStateHolderAtomicReference;
-    
+
     /**
      * Immutable wrapper used with AtomicReference.
      */
     public static final class AuthStateHolder {
+
         @NonNull
         public final ForConsentedUsersApi forConsentedUsersApi;
+
         @Nullable
         final UserSessionInfoProvider userSessionInfoProvider;
 
@@ -133,38 +144,44 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     ApiClientProvider.AuthenticatedClientProvider
     createAuthenticatedClientProviderFromStoredCredentials() {
         String email = accountDAO.getEmail();
-        if (!Strings.isNullOrEmpty(email)) {
-            ApiClientProvider.AuthenticatedClientProviderBuilder builder =
-                    apiClientProvider
-                            .getAuthenticatedClientProviderBuilder()
-                            .addUserSessionInfoChangeListener(this)
-                            .withEmail(email);
 
-            boolean hasPasswordOrSession = false;
-            String password = accountDAO.getPassword();
-            if (!Strings.isNullOrEmpty(password)) {
-                hasPasswordOrSession = true;
-                builder.withPassword(password);
-            }
-
-            UserSessionInfo session = accountDAO.getUserSessionInfo();
-            if (session != null) {
-                hasPasswordOrSession = true;
-                builder.withSession(session);
-            }
-
-            if (hasPasswordOrSession) {
-                return builder.build();
-            }
+        String phoneRegion = accountDAO.getPhoneRegion();
+        String phoneNumber = accountDAO.getPhoneNumber();
+        Phone phone = null;
+        if (!Strings.isNullOrEmpty(phoneNumber)) {
+            phone = new Phone().number(phoneNumber).regionCode(phoneRegion);
         }
-        return null;
+
+        // need either email or phone to identify user
+        if (Strings.isNullOrEmpty(email) && phone == null) {
+            return null;
+        }
+
+        String password = accountDAO.getPassword();
+        UserSessionInfo session = accountDAO.getUserSessionInfo();
+
+        // need either password or session to authenticate
+        if (Strings.isNullOrEmpty(password) && session == null) {
+            return null;
+        }
+
+        ApiClientProvider.AuthenticatedClientProviderBuilder builder =
+                apiClientProvider
+                        .getAuthenticatedClientProviderBuilder()
+                        .addUserSessionInfoChangeListener(this)
+                        .withPassword(password)
+                        .withSession(session)
+                        .withEmail(email)
+                        .withPhone(phone);
+
+        return builder.build();
     }
-    
+
     @Override
     public void onChange(UserSessionInfo userSessionInfo) {
         accountDAO.setUserSessionInfo(userSessionInfo);
     }
-    
+
     /**
      * Basic sign up that fills in the minimal requirements of email and password fields; in
      * general, you would also want to fill in any of the following information available at
@@ -173,7 +190,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      *
      * @param email    participant's email
      * @param password optional participant's password. If not provided, participant will receive
-     *                an email for sign in
+     *                 an email for sign in
      * @return notifies of completion or error
      * @see #signUp(SignUp)
      */
@@ -182,7 +199,6 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         checkNotNull(email);
 
         logger.debug("signUp called with email: " + email);
-
 
         SignUp participantSignUp = new SignUp()
                 .study(config.getStudyId())
@@ -224,6 +240,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
                     accountDAO.setEmail(signUp.getEmail());
                     accountDAO.setPassword(signUp.getPassword());
+                    Phone phone = signUp.getPhone();
+                    if (phone != null) {
+                        accountDAO.setPhoneRegion(phone.getRegionCode());
+                        accountDAO.setPhoneNumber(phone.getNumber());
+                    }
 
                     authStateHolderAtomicReference.set(
                             createAuthStateFromStoredCredentials()
@@ -297,6 +318,60 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 .toCompletable();
     }
 
+    /**
+     * Request an SMS from Bridge server containing a sign in link which will authenticate the participant.
+     *
+     * @param regionCode  CLDR two-letter region code describing the region in which the phone number was issued.
+     * @param phoneNumber the phone number (can be formatted in any way that's useful for end users).
+     * @return completable which requests a phone sign in from Bridge
+     */
+    @NonNull
+    public Completable requestPhoneSignIn(@NonNull String regionCode, @NonNull String phoneNumber) {
+        checkArgument(!Strings.isNullOrEmpty(regionCode));
+        checkArgument(!Strings.isNullOrEmpty(phoneNumber));
+
+        Phone phone = new Phone().regionCode(regionCode).number(phoneNumber);
+        return RxUtils.toBodySingle(
+                authenticationApi.requestPhoneSignIn(
+                        new PhoneSignInRequest()
+                                .phone(phone)
+                                .study(config.getStudyId())))
+                .doOnSuccess(m -> logger.debug("Phone sign in request success: " + m.getMessage()))
+                .doOnError(t -> logger.debug("Phone sign in request failure", t))
+                .toCompletable();
+    }
+
+    /**
+     * @param regionCode  CLDR two-letter region code describing the region in which the phone number was issued.
+     * @param phoneNumber the phone number (can be formatted in any way that's useful for end users).
+     * @param token       phone authentication token
+     * @return single which contains an authenticated session from Bridge
+     */
+    @NonNull
+    public Single<UserSessionInfo> signInViaPhoneLink(@NonNull String regionCode, @NonNull String phoneNumber,
+                                                      @NonNull String token) {
+        checkArgument(!Strings.isNullOrEmpty(regionCode));
+        checkArgument(!Strings.isNullOrEmpty(phoneNumber));
+        checkArgument(!Strings.isNullOrEmpty(token));
+
+        Phone phone = new Phone().regionCode(regionCode).number(phoneNumber);
+
+        PhoneSignIn phoneSignIn = new PhoneSignIn()
+                .study(config.getStudyId())
+                .phone(phone)
+                .token(token);
+
+        SignIn signIn = new SignIn().phone(phone).study(config.getStudyId());
+
+        return RxUtils.toBodySingle(
+                authenticationApi.signInViaPhone(phoneSignIn))
+                .compose(signInHelper(signIn))
+                .doOnSuccess(session -> logger.debug("Successfully signed in via phone"))
+                .doOnError(t -> {
+                    logger.debug("Failed to sign in via phone", t);
+                });
+    }
+
     @NonNull
     public Single<UserSessionInfo> signInViaEmailLink(@NonNull String email, @NonNull String
             token) {
@@ -350,19 +425,19 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     /**
      * Used to transform a raw Bridge signIn single by retrying upload of required consent if it
      * is present locally and setting state on success/failure
-     *
+     * <p>
      * This will essentially couple sign in and local consent upload if one need uploaded
      * We decided to do this because the app cannot get scheduled activities if the user
      * is not consented.  This puts most apps into a useless state, so BOTH must succeed
      * for the user to be considered successfully signed in.
      *
      * @param signIn signIn credentials
-     * @return
      */
     Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn) {
         final String email = signIn.getEmail();
 
         return userSessionInfoSingle -> userSessionInfoSingle
+                .doOnSubscribe(accountDAO::clear)
                 .onErrorResumeNext(t -> {
                     if (t instanceof ConsentRequiredException) {
                         logger.debug("Received ConsentRequiredException, treating as success");
@@ -372,17 +447,18 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 })
                 .doOnSuccess(session -> {
                     accountDAO.setEmail(email);
-                    
+                    accountDAO.setPassword(signIn.getPassword());
+
+                    Phone phone = signIn.getPhone();
+                    if (phone != null) {
+                        accountDAO.setPhoneRegion(phone.getRegionCode());
+                        accountDAO.setPhoneNumber(phone.getNumber());
+                    }
+
                     // we must set here, since we're not receiving session change callbacks until we create an
                     // authenticated retrofit/okhttp client
                     accountDAO.setUserSessionInfo(session);
-                    
-                    // if we signed in with a password, save it
-                    String password = signIn.getPassword();
-                    if (!Strings.isNullOrEmpty(password)) {
-                        accountDAO.setPassword(password);
-                    }
-                    
+
                     authStateHolderAtomicReference.set(
                             createAuthStateFromStoredCredentials()
                     );
@@ -414,8 +490,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     return Single.just(session);
                 })
                 .doOnError(t -> {
-                    accountDAO.setPassword(null);
-                    accountDAO.setUserSessionInfo(null);
+                    accountDAO.clear();
                 });
     }
 
@@ -463,7 +538,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         logger.debug("signOut called");
 
         String email = accountDAO.getEmail();
-        
+
         for (AuthenticationEventListener listener : listeners) {
             listener.onSignedOut(email);
         }
@@ -533,7 +608,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     @Nullable
     public UserSessionInfo getUserSessionInfo() {
         logger.debug("getUserSessionInfo called");
-        
+
         return accountDAO.getUserSessionInfo();
     }
 
@@ -560,7 +635,6 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     public void removeEventListener(AuthenticationEventListener listener) {
         listeners.remove(listener);
     }
-
 
     // region Consent
 
@@ -837,6 +911,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     }
 
     public interface AuthenticationEventListener {
+
         void onSignedOut(String email);
 
         void onSignedIn(String email);
