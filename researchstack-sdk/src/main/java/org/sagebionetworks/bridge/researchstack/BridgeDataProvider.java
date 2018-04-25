@@ -4,18 +4,12 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
-
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.researchstack.backbone.AppPrefs;
-import org.researchstack.backbone.DataProvider;
-import org.researchstack.backbone.DataResponse;
-import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.StorageAccess;
+import org.researchstack.backbone.*;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
@@ -33,28 +27,17 @@ import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.model.Activity;
-import org.sagebionetworks.bridge.rest.model.ConsentSignature;
-import org.sagebionetworks.bridge.rest.model.Message;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
-import org.sagebionetworks.bridge.rest.model.SharingScope;
-import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action0;
-import rx.functions.Action1;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -340,6 +323,17 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
+    @NonNull
+    public Observable<DataResponse> signUp(@NonNull Phone phone) {
+        checkNotNull(phone);
+
+        logger.debug("Called signUp using phone");
+
+        return authenticationManager
+                .signUp(phone)
+                .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
     @Override
     public boolean isSignedUp(@Nullable Context context) {
         logger.debug("Called isSignedUp");
@@ -376,6 +370,12 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.debug("Called requestSignInLink");
         return authenticationManager.requestEmailSignIn(email)
                 .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @Override
+    public Observable<DataResponse> requestPhoneSignIn(String regionCode, String phoneNumber) {
+        logger.debug("Called requestSMS");
+        return authenticationManager.requestPhoneSignIn(regionCode, phoneNumber).andThen(SUCCESS_DATA_RESPONSE);
     }
 
     @Override

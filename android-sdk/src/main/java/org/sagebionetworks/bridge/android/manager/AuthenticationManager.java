@@ -18,35 +18,20 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.model.ConsentSignature;
-import org.sagebionetworks.bridge.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.rest.model.Email;
-import org.sagebionetworks.bridge.rest.model.EmailSignIn;
-import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
-import org.sagebionetworks.bridge.rest.model.Phone;
-import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
-import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
-import org.sagebionetworks.bridge.rest.model.SharingScope;
-import org.sagebionetworks.bridge.rest.model.SignIn;
-import org.sagebionetworks.bridge.rest.model.SignUp;
-import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
-import org.sagebionetworks.bridge.rest.model.Withdrawal;
+import org.sagebionetworks.bridge.rest.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Func1;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -274,6 +259,79 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     }
                     return Single.just(message);
                 })
+                .doOnError(throwable -> {
+                    accountDAO.setStudyParticipant(null);
+                }).toCompletable();
+    }
+
+    /**
+     * Signs up just using a phone number. No username/password will be stored at this time.
+     * <p>
+     *
+     * @param phone  participant's phone number.
+     *               To prevent accidental improper settings, study will be set to the studyId
+     *               provided in the Bridge, consent will be set to false, and account status
+     *               will be cleared.
+     * @return notifies of completion or error
+     */
+    @NonNull
+    public Completable signUp(@NonNull final Phone phone) {
+        checkNotNull(phone);
+
+        logger.debug("signUp called with phone: " + phone);
+
+        SignUp signUp = new SignUp().phone(phone);
+        signUp.study(config.getStudyId())
+                .consent(false)
+                .status(null);
+
+        return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
+                .doOnSuccess(message -> {
+                    SignIn signIn = new SignIn()
+                            .study(config.getStudyId())
+                            .email(signUp.getEmail())
+                            .password(signUp.getPassword());
+
+                    if (signUp.getEmail() != null) {
+                        accountDAO.setEmail(signUp.getEmail());
+                    }
+                    if (signUp.getPassword() != null) {
+                        accountDAO.setPassword(signUp.getPassword());
+                    }
+                    Phone signUpPhone = signUp.getPhone();
+                    if (signUpPhone != null) {
+                        accountDAO.setPhoneRegion(signUpPhone.getRegionCode());
+                        accountDAO.setPhoneNumber(signUpPhone.getNumber());
+                    }
+
+                    authStateHolderAtomicReference.set(
+                            createAuthStateFromStoredCredentials()
+                    );
+
+                    StudyParticipant participant = new StudyParticipant();
+                    participant.email(signUp.getEmail())
+                            .firstName(signUp.getFirstName())
+                            .lastName(signUp.getLastName())
+                            .externalId(signUp.getExternalId());
+
+                    accountDAO.setStudyParticipant(participant);
+
+                })
+//                .flatMap(message -> {
+//                    // if this is a password-less sign-up, request sign-in link
+//                    if (Strings.isNullOrEmpty(signUp.getPassword())) {
+//                        return RxUtils.toBodySingle(
+//                                authenticationApi.requestEmailSignIn(
+//                                        new EmailSignInRequest()
+//                                                .study(config.getStudyId())
+//                                                .email(signUp.getEmail())))
+//                                .doOnSuccess(m ->
+//                                        logger.debug("Request for email sign-in link succeeded"))
+//                                .doOnError(t ->
+//                                        logger.warn("Request for email sign-in link failed: ", t));
+//                    }
+//                    return Single.just(message);
+//                })
                 .doOnError(throwable -> {
                     accountDAO.setStudyParticipant(null);
                 }).toCompletable();
