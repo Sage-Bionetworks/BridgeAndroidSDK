@@ -4,12 +4,18 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
+
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.researchstack.backbone.*;
+import org.researchstack.backbone.AppPrefs;
+import org.researchstack.backbone.DataProvider;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
@@ -27,17 +33,29 @@ import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.model.*;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.Phone;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
-import rx.Single;
-import rx.functions.Action0;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import rx.Completable;
+import rx.Observable;
+import rx.Single;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
@@ -50,12 +68,6 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     // set in initialize
     protected final TaskHelper taskHelper;
-
-    /**
-     * The GUID of the last task that was loaded (used in completion)
-     */
-    protected String lastLoadedTaskGuid = null;
-
     @NonNull
     protected final StorageAccessWrapper storageAccessWrapper;
     @NonNull
@@ -64,14 +76,17 @@ public abstract class BridgeDataProvider extends DataProvider {
     protected final BridgeManagerProvider bridgeManagerProvider;
     @NonNull
     protected final BridgeConfig bridgeConfig;
-
     @NonNull
     private final AuthenticationManager authenticationManager;
+    /**
+     * The GUID of the last task that was loaded (used in completion)
+     */
+    protected String lastLoadedTaskGuid = null;
 
     //used by tests to mock service
     BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, ResearchStackDAO researchStackDAO,
                        StorageAccessWrapper
-            storageAccessWrapper,
+                               storageAccessWrapper,
                        TaskHelper taskHelper) {
         this.researchStackDAO = researchStackDAO;
         this.storageAccessWrapper = storageAccessWrapper;
@@ -385,10 +400,12 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(session.getDataGroups()))
                 .toCompletable()
-        .andThen(SUCCESS_DATA_RESPONSE);
+                .andThen(SUCCESS_DATA_RESPONSE);
     }
 
-    /**`
+    /**
+     * `
+     *
      * @param email    the participant's email
      * @param password participant's password
      * @return completion
@@ -415,9 +432,9 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     public boolean isSignedIn() {
-     logger.debug("Called isSignedIn");
+        logger.debug("Called isSignedIn");
         return authenticationManager.getEmail() != null &&
-            authenticationManager.getUserSessionInfo() != null;
+                authenticationManager.getUserSessionInfo() != null;
     }
 
     @Deprecated
@@ -619,7 +636,7 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @NonNull
     public Observable<DataResponse> downloadData(LocalDate startDate,
-                                            LocalDate endDate) {
+                                                 LocalDate endDate) {
         logger.debug("Called downloadData");
 
         return bridgeManagerProvider.getParticipantManager()
@@ -741,6 +758,21 @@ public abstract class BridgeDataProvider extends DataProvider {
     public abstract void processInitialTaskResult(Context context, TaskResult taskResult);
     //endregion
 
+    /**
+     * Call this method to attempt to upload data that previously failed
+     * Should be called at a time when there are no other files being uploaded
+     * and we should be fairly certain the users internet is working
+     */
+    public void completePreviouslyFailedUploads() {
+        bridgeManagerProvider.getUploadManager().processUploadFiles()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(() -> {
+                    logger.debug("Successfully uploaded previously failed uploads");
+                }, throwable -> {
+                    logger.error("Failed to upload previously failed uploads");
+                });
+    }
+
     @NonNull
     protected SchedulesAndTasksModel translateActivities(@NonNull ScheduledActivityList activityList) {
         return translateActivities(activityList.getItems());
@@ -796,12 +828,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         return model;
     }
+
     //
     // NOTE: this is a crude translation and needs to be updated to properly
     //       handle schedules and filters
     @NonNull
     protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
-                                                               activityList) {
+                                                                 activityList) {
         logger.info("called translateActivities");
 
         // group activities by day
