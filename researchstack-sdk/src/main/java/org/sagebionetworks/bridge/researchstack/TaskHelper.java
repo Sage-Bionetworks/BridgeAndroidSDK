@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
@@ -267,6 +268,7 @@ public class TaskHelper {
     }
 
     //package private for test access
+    @SuppressLint("RxLeakedSubscription") // upload should run as long as it needs to, no early unsubscribe
     void uploadTaskResult(@Nullable JsonArchiveFile metadataFile,
                           TaskResult taskResult, Archive.Builder builder) {
     
