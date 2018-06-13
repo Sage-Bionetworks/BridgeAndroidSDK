@@ -47,6 +47,7 @@ dependencies {
     api 'io.reactivex:rxandroid:1.2.1'
     api 'com.squareup.retrofit2:retrofit:2.3.0'
     api 'com.squareup.retrofit2:adapter-rxjava:2.3.0'
+    api 'nl.littlerobots.rxlint:rxlint:1.6.1'
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 

@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$/ResearchStack/backbone" />
             <option value="$PROJECT_DIR$/android-sdk" />
             <option value="$PROJECT_DIR$/researchstack-sdk" />
+            <option value="$PROJECT_DIR$/test-utils" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
