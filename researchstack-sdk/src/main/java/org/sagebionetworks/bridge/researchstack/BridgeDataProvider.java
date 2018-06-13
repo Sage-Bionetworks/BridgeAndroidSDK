@@ -1,5 +1,6 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -693,6 +694,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         return taskHelper.loadTask(context, task);
     }
 
+    @SuppressLint("RxLeakedSubscription")    // upload should run as long as it needs to, no early unsubscribe
     @Override
     public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
@@ -725,6 +727,7 @@ public abstract class BridgeDataProvider extends DataProvider {
             if (taskResult.getEndDate() != null) {
                 lastLoadedActivity.setFinishedOn(new DateTime(taskResult.getEndDate()));
             }
+
             bridgeManagerProvider.getActivityManager().updateActivity(lastLoadedActivity).subscribe(message -> {
                 logger.info("Update activity success " + message);
             }, throwable -> logger.error(throwable.getLocalizedMessage()));
