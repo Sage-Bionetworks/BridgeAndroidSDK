@@ -47,7 +47,10 @@ public interface BridgeManagerProvider {
     
     @NonNull
     ActivityManager getActivityManager();
-    
+
+    @NonNull
+    AppConfigManager getAppConfigManager();
+
     @NonNull
     AuthenticationManager getAuthenticationManager();
     
