@@ -4,6 +4,7 @@ import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
+import android.util.Log;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -265,9 +266,42 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     }
 
     /**
-     * @param email participant's email address
+     * Signs up just using a phone number. No username/password will be stored at this time.
+     * <p>
+     *
+     * @param phone  participant's phone number.
+     *               To prevent accidental improper settings, study will be set to the studyId
+     *               provided in the Bridge, consent will be set to false, and account status
+     *               will be cleared.
      * @return notifies of completion or error
      */
+    @NonNull
+    public Completable signUp(@NonNull final Phone phone) {
+        checkNotNull(phone);
+
+        logger.debug("signUp called with phone: " + phone);
+
+        SignUp signUp = new SignUp().phone(phone);
+        signUp.study(config.getStudyId())
+                .consent(false)
+                .status(null);
+
+        return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
+                .doOnSuccess(message -> {
+                    Log.d("Phone Signup", "Signup Success");
+
+                })
+                .doOnError(throwable -> {
+                    Log.e("Phone Signup", "Error signing up");
+                    accountDAO.setStudyParticipant(null);
+                }).toCompletable();
+    }
+
+
+        /**
+         * @param email participant's email address
+         * @return notifies of completion or error
+         */
     @NonNull
     public Completable resendEmailVerification(@NonNull final String email) {
         checkNotNull(email);
