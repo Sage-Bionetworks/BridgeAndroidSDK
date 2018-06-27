@@ -396,9 +396,13 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
-    /**
-     * `
-     *
+    @NonNull
+    public Single<UserSessionInfo> signInWithPhoneAndToken(@NonNull String regionCode, @NonNull String phoneNumber,
+                                               @NonNull String token) {
+        return authenticationManager.signInViaPhoneLink(regionCode, phoneNumber, token);
+    }
+
+    /**`
      * @param email    the participant's email
      * @param password participant's password
      * @return completion
