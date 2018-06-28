@@ -33,6 +33,7 @@ import org.researchstack.backbone.ui.ActiveTaskActivity;
 import org.researchstack.backbone.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
+import org.sagebionetworks.bridge.android.manager.AppConfigManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -45,13 +46,12 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ActivityType;
+import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
-import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -69,7 +69,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.atLeastOnce;
@@ -118,6 +117,8 @@ public class BridgeDataProviderTest {
     @Mock
     private ActivityManager activityManager;
     @Mock
+    private AppConfigManager appConfigManager;
+    @Mock
     protected AuthenticationManager authenticationManager;
 
     @Before
@@ -130,6 +131,7 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getAccountDao()).thenReturn(accountDAO);
         when(bridgeManagerProvider.getConsentDao()).thenReturn(consentDAO);
         when(bridgeManagerProvider.getActivityManager()).thenReturn(activityManager);
+        when(bridgeManagerProvider.getAppConfigManager()).thenReturn(appConfigManager);
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
 
         pinCodeConfig = mock(PinCodeConfig.class);
@@ -271,6 +273,17 @@ public class BridgeDataProviderTest {
         dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
 
         verify(authenticationManager).withdrawAll(reasonString);
+    }
+
+    @Test
+    public void getAppConfig() {
+        // Set up mock.
+        when(appConfigManager.getAppConfig()).thenReturn(Single.just(new AppConfig().guid(
+                "dummy-app-config-guid")));
+
+        // Execute and validate.
+        AppConfig result = ((BridgeDataProvider) dataProvider).getAppConfig().toBlocking().value();
+        assertEquals("dummy-app-config-guid", result.getGuid());
     }
 
     @Test

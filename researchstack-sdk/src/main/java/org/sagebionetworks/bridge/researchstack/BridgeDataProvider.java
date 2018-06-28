@@ -35,6 +35,7 @@ import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.Phone;
@@ -133,6 +134,18 @@ public abstract class BridgeDataProvider extends DataProvider {
     public String getStudyId() {
         return bridgeConfig.getStudyId();
     }
+
+    //region AppConfig
+
+    /**
+     * Get app config from the cache, or fall back to server if there is no value in the cache.
+     */
+    @NonNull
+    public Single<AppConfig> getAppConfig() {
+        return bridgeManagerProvider.getAppConfigManager().getAppConfig();
+    }
+
+    //endregion
 
     //region Consent
 
@@ -402,6 +415,12 @@ public abstract class BridgeDataProvider extends DataProvider {
                         .setDataGroups(session.getDataGroups()))
                 .toCompletable()
                 .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @NonNull
+    public Single<UserSessionInfo> signInWithPhoneAndToken(@NonNull String regionCode, @NonNull String phoneNumber,
+                                                           @NonNull String token) {
+        return authenticationManager.signInViaPhoneLink(regionCode, phoneNumber, token);
     }
 
     /**
@@ -694,7 +713,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         return taskHelper.loadTask(context, task);
     }
 
-    @SuppressLint("RxLeakedSubscription")    // upload should run as long as it needs to, no early unsubscribe
+    @SuppressLint("RxLeakedSubscription")
+    // upload should run as long as it needs to, no early unsubscribe
     @Override
     public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
@@ -766,9 +786,10 @@ public abstract class BridgeDataProvider extends DataProvider {
      * Should be called at a time when there are no other files being uploaded
      * and we should be fairly certain the users internet is working
      */
-    public void completePreviouslyFailedUploads() {
+    @SuppressLint("RxLeakedSubscription")
+    public void retryPreviouslyFailedUploads() {
         bridgeManagerProvider.getUploadManager().processUploadFiles()
-                .observeOn(AndroidSchedulers.mainThread())
+                .observeOn(AndroidSchedulers.mainThead())
                 .subscribe(() -> {
                     logger.debug("Successfully uploaded previously failed uploads");
                 }, throwable -> {
