@@ -545,7 +545,7 @@ public class BridgeDataProviderTest {
         ScheduledActivity scheduledActivity = mock(ScheduledActivity.class);
         when(scheduledActivity.getScheduledOn()).thenReturn(scheduledOn);
         when(scheduledActivity.getActivity()).thenReturn(activity);
-        when(scheduledActivity.getPersistent()).thenReturn(persistent);
+        when(scheduledActivity.isPersistent()).thenReturn(persistent);
         when(scheduledActivity.getGuid()).thenReturn(activity.getGuid());
         return scheduledActivity;
     }
