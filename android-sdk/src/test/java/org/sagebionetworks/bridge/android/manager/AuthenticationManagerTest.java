@@ -26,7 +26,7 @@ import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.ConsentStatus;
-import org.sagebionetworks.bridge.rest.model.Email;
+import org.sagebionetworks.bridge.rest.model.Identifier;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
 import org.sagebionetworks.bridge.rest.model.SignIn;
@@ -113,14 +113,14 @@ public class AuthenticationManagerTest {
     }
 
     @Test
-    public void signUpEmail() throws Exception {
+    public void signUpIdentifier() throws Exception {
         SignUp signUp = new SignUp().study(STUDY_ID).email(EMAIL).password(PASSWORD);
 
         testSignUp_helper(signUp);
     }
 
     @Test
-    public void signUpEmailNoPassword() {
+    public void signUpIdentifierNoPassword() {
 
     }
 
@@ -199,7 +199,7 @@ public class AuthenticationManagerTest {
         Message message = mock(Message.class);
         Call<Message> messageCall = successCall(message);
 
-        Email email = new Email().study(STUDY_ID).email(EMAIL);
+        Identifier email = new Identifier().study(STUDY_ID).email(EMAIL);
 
         when(authenticationApi.resendEmailVerification(email))
                 .thenReturn(messageCall);
@@ -356,18 +356,18 @@ public class AuthenticationManagerTest {
     }
 
     @Test
-    public void requestPasswordResetForEmail() throws Exception {
+    public void requestPasswordResetForIdentifier() throws Exception {
         Message message = mock(Message.class);
         Call<Message> messageCall = successCall(message);
 
-        Email email = new Email().study(STUDY_ID).email(EMAIL);
+        SignIn signIn = new SignIn().study(STUDY_ID).email(EMAIL);
 
-        when(authenticationApi.requestResetPassword(email))
+        when(authenticationApi.requestResetPassword(signIn))
                 .thenReturn(messageCall);
 
         spyAuthenticationManager.requestPasswordReset(EMAIL).test().awaitTerminalEvent().assertCompleted();
 
-        verify(authenticationApi).requestResetPassword(email);
+        verify(authenticationApi).requestResetPassword(signIn);
     }
 
     @Test
@@ -429,8 +429,6 @@ public class AuthenticationManagerTest {
         UserSessionInfo previousSession = new UserSessionInfo();
         when(accountDAO.getUserSessionInfo()).thenReturn(previousSession);
 
-        SignIn signIn = new SignIn();
-
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
 //        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
         when(sessionProvider.getSession()).thenReturn(null);
@@ -444,8 +442,6 @@ public class AuthenticationManagerTest {
     @Test
     public void getUserSessionInfo_WithCachedSession() {
         // mock dependencies
-        SignIn signIn = new SignIn();
-
         UserSessionInfoProvider sessionProvider = mock(UserSessionInfoProvider.class);
 //        when(apiClientProvider.getUserSessionInfoProvider(signIn)).thenReturn(sessionProvider);
 
