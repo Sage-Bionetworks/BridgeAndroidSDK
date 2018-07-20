@@ -1,3 +1,6 @@
 [submodule "ResearchStack"]
 	path = ResearchStack
 	url = https://github.com/ResearchStack/ResearchStack.git
+[submodule "SageResearch-Android"]
+	path = SageResearch-Android
+	url = https://github.com/Sage-Bionetworks/SageResearch-Android.git

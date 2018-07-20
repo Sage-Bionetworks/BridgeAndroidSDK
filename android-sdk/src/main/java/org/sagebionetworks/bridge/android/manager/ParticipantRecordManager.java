@@ -119,7 +119,7 @@ public class ParticipantRecordManager {
         checkNotNull(endDate);
 
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .emailDataToUser(
+                .sendDataToUser(
                         new DateRange().startDate(startDate).endDate((endDate))
                 )).toCompletable();
     }
