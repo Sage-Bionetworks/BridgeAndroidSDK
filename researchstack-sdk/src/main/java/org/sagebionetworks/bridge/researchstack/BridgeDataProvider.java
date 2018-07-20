@@ -756,36 +756,36 @@ public abstract class BridgeDataProvider extends DataProvider {
             ScheduledActivity temp = aList.get(0);
 
             SchedulesAndTasksModel.ScheduleModel sm = new SchedulesAndTasksModel.ScheduleModel();
-            sm.scheduleType = temp.getPersistent() ? "persistent" : "once";
+            sm.scheduleType = temp.isPersistent() ? "persistent" : "once";
 
             DateTime scheduledOn = temp.getScheduledOn();
-            sm.scheduledOn = temp.getScheduledOn().toDate();
-            sm.tasks = new ArrayList<>();
+                sm.scheduledOn = temp.getScheduledOn().toDate();
+                sm.tasks = new ArrayList<>();
 
-            model.schedules.add(sm);
+                model.schedules.add(sm);
 
-            for (ScheduledActivity sa : aList) {
-                Activity activity = sa.getActivity();
+                for (ScheduledActivity sa : aList) {
+                    Activity activity = sa.getActivity();
 
-                SchedulesAndTasksModel.TaskScheduleModel tsm;
-                if (activity.getSurvey() != null) {
-                    // This is a survey. Use the subclass.
-                    SurveyTaskScheduleModel surveyTaskScheduleModel = new SurveyTaskScheduleModel();
-                    surveyTaskScheduleModel.surveyGuid = activity.getSurvey().getGuid();
-                    surveyTaskScheduleModel.surveyCreatedOn = activity.getSurvey().getCreatedOn();
-                    tsm = surveyTaskScheduleModel;
-                } else {
-                    // This is a non-survey. Use the base TaskScheduleModel.
-                    tsm = new SchedulesAndTasksModel.TaskScheduleModel();
-                }
+                    SchedulesAndTasksModel.TaskScheduleModel tsm;
+                    if (activity.getSurvey() != null) {
+                        // This is a survey. Use the subclass.
+                        SurveyTaskScheduleModel surveyTaskScheduleModel = new SurveyTaskScheduleModel();
+                        surveyTaskScheduleModel.surveyGuid = activity.getSurvey().getGuid();
+                        surveyTaskScheduleModel.surveyCreatedOn = activity.getSurvey().getCreatedOn();
+                        tsm = surveyTaskScheduleModel;
+                    } else {
+                        // This is a non-survey. Use the base TaskScheduleModel.
+                        tsm = new SchedulesAndTasksModel.TaskScheduleModel();
+                    }
 
-                tsm.taskTitle = activity.getLabel();
-                tsm.taskCompletionTime = activity.getLabelDetail();
-                if (activity.getTask() != null) {
-                    tsm.taskID = activity.getTask().getIdentifier();
-                }
-                tsm.taskIsOptional = sa.getPersistent();
-                tsm.taskType = activity.getActivityType().toString();
+                    tsm.taskTitle = activity.getLabel();
+                    tsm.taskCompletionTime = activity.getLabelDetail();
+                    if (activity.getTask() != null) {
+                        tsm.taskID = activity.getTask().getIdentifier();
+                    }
+                    tsm.taskIsOptional = sa.isPersistent();
+                    tsm.taskType = activity.getActivityType().toString();
                 if (sa.getFinishedOn() != null) {
                     tsm.taskFinishedOn = sa.getFinishedOn().toDate();
                 }
