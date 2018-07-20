@@ -310,7 +310,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         return RxUtils.toBodySingle(
                 authenticationApi.resendEmailVerification(
-                        new Email()
+                        new Identifier()
                                 .study(config.getStudyId())
                                 .email(email)))
                 .toCompletable();
@@ -487,7 +487,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                                     .email(signIn.getEmail()));
                 })
                 .flatMap(session -> {
-                    if (!session.getConsented()) {
+                    if (!session.isConsented()) {
                         // look for a missing required consent which we have locally
                         for (Map.Entry<String, ConsentStatus> consentStatusEntry : session
                                 .getConsentStatuses().entrySet()) {
@@ -495,8 +495,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             ConsentStatus consentStatus = consentStatusEntry.getValue();
 
                             // required consent missing on Bridge and present locally
-                            if (consentStatus.getRequired()
-                                    && !consentStatus.getConsented()
+                            if (consentStatus.isRequired()
+                                    && !consentStatus.isConsented()
                                     && isConsentedInLocal(subpopulationGuid)) {
 
                                 // upload local consents, fail this sign in if consent upload fails
@@ -588,7 +588,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         logger.debug("requestPasswordReset called with email: " + email);
 
-        return RxUtils.toBodySingle(authenticationApi.requestResetPassword(new Email().study
+        return RxUtils.toBodySingle(authenticationApi.requestResetPassword(new SignIn().study
                 (config.getStudyId()).email(email))).toCompletable();
     }
 
@@ -679,7 +679,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         if (consentStatus == null) {
             return false;
         }
-        return consentStatus.getSignedMostRecentConsent();
+        return consentStatus.isSignedMostRecentConsent();
     }
 
     @Nullable
@@ -695,7 +695,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     // treat presense of consent in DAO as having consented
     boolean isConsentedInSessionOrLocal(UserSessionInfo session, String subpopulationGuid) {
         ConsentStatus subpopulationStatus = getConsentStatusFromSession(subpopulationGuid);
-        if (subpopulationStatus != null && subpopulationStatus.getConsented()) {
+        if (subpopulationStatus != null && subpopulationStatus.isConsented()) {
             return true;
         }
         return isConsentedInLocal(subpopulationGuid);
@@ -711,7 +711,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     public boolean isConsented() {
         UserSessionInfo userSessionInfo = getUserSessionInfo();
         if (userSessionInfo != null) {
-            if (userSessionInfo.getConsented()) {
+            if (userSessionInfo.isConsented()) {
                 return true;
             }
 
@@ -743,7 +743,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         for (Map.Entry<String, ConsentStatus> consentStatus
                 : userSessionInfo.getConsentStatuses().entrySet()) {
-            if (consentStatus.getValue().getRequired()) {
+            if (consentStatus.getValue().isRequired()) {
                 subpopulations.add(consentStatus.getKey());
             }
         }
@@ -757,7 +757,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      */
     public boolean isConsentedMostRecent() {
         UserSessionInfo userSessionInfo = getUserSessionInfo();
-        return userSessionInfo == null ? false : userSessionInfo.getSignedMostRecentConsent();
+        return userSessionInfo == null ? false : userSessionInfo.isSignedMostRecentConsent();
     }
 
     /**
