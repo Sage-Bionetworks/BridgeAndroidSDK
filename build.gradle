@@ -21,6 +21,7 @@ allprojects {
 buildscript {
   ext.kotlin_version = '1.2.41'
   ext.dokka_version = '0.9.17'
+  ext.support_library_version = '27.1.1'
 
   repositories {
     jcenter()
@@ -35,8 +36,11 @@ buildscript {
     // SageResearch
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     classpath "org.jetbrains.dokka:dokka-android-gradle-plugin:$dokka_version"
-//    classpath "org.jetbrains.dokka:dokka-fatjar:$dokka_version"
     classpath 'com.jakewharton:butterknife-gradle-plugin:8.4.0'
+
+    // code quality
+    classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.13'
+    classpath 'com.chaitanyapramod.gradle:findbugs-android:1.0'
 
     // NOTE: Do not place your application dependencies here; they belong
     // in the individual module build.gradle files
@@ -51,50 +55,49 @@ if (JavaVersion.current().isJava8Compatible()) {
     }
   }
 }
-
-subprojects {
-  afterEvaluate { project ->
-
-    // These two projects are JARed and DOCed using their own build.gradle files
-    if (!project.projectDir.absolutePath.contains("backbone") && !project.projectDir.absolutePath.contains("skin")) {
-
-      sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
-      }
-
-      task sourcesJar(type: Jar) {
-        from android.sourceSets.main.java.srcDirs
-        classifier = 'sources'
-      }
-
-      task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-        outputFormat = "javadoc"
-        outputDirectory = "$buildDir/dokkaJavadoc"
-      }
-
-      task javadoc(type: Javadoc) {
-        source = android.sourceSets.main.java.srcDirs
-        classpath += configurations.compile
-        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-
-        // Exclude generated files
-        exclude '**/*.kt' // < ---- Exclude all kotlin files from javadoc file.
-        exclude '**/BuildConfig.java'
-        exclude '**/R.java'
-      }
-
-      task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
-        classifier = 'javadoc'
-        from dokkaJavadoc.outputDirectory
-      }
-      artifacts {
-        archives javadocJar
-        archives sourcesJar
-      }
-    }
-  }
-
-}
+// This was causing pmd, findbugs, checkstyles to run "Main" tasks, e.g. :domain:pmdMain
+//subprojects {
+//  afterEvaluate { project ->
+//
+//    // These two projects are JARed and DOCed using their own build.gradle files
+//    if (!project.projectDir.absolutePath.contains("backbone") && !project.projectDir.absolutePath.contains("skin")) {
+//
+//      sourceSets {
+//        main.java.srcDirs += 'src/main/kotlin'
+//      }
+//
+//      task sourcesJar(type: Jar) {
+//        from android.sourceSets.main.java.srcDirs
+//        classifier = 'sources'
+//      }
+//
+//      task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+//        outputFormat = "javadoc"
+//        outputDirectory = "$buildDir/dokkaJavadoc"
+//      }
+//
+//      task javadoc(type: Javadoc) {
+//        source = android.sourceSets.main.java.srcDirs
+//        classpath += configurations.compile
+//        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+//
+//        // Exclude generated files
+//        exclude '**/*.kt' // < ---- Exclude all kotlin files from javadoc file.
+//        exclude '**/BuildConfig.java'
+//        exclude '**/R.java'
+//      }
+//
+//      task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
+//        classifier = 'javadoc'
+//        from dokkaJavadoc.outputDirectory
+//      }
+//      artifacts {
+//        archives javadocJar
+//        archives sourcesJar
+//      }
+//    }
+//  }
+//}
 
 task clean(type: Delete) {
   delete rootProject.buildDir
