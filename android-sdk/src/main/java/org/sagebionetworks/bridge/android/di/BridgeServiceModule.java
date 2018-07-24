@@ -17,27 +17,29 @@
 
 package org.sagebionetworks.bridge.android.di;
 
-import android.app.Application;
 import android.content.Context;
 import android.net.TrafficStats;
-import android.support.annotation.NonNull;
+
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.google.common.collect.Lists;
-import dagger.Module;
-import dagger.Provides;
-import okhttp3.Interceptor;
+
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.R;
 import org.sagebionetworks.bridge.android.util.okhttp.DelegatingSocketFactory;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
-import javax.inject.Singleton;
-import javax.net.SocketFactory;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
+
+import javax.inject.Singleton;
+import javax.net.SocketFactory;
+
+import dagger.Module;
+import dagger.Provides;
+import okhttp3.Interceptor;
 
 /**
  * Created by liujoshua on 2/22/2018.
@@ -45,12 +47,6 @@ import java.util.List;
 @Module
 public class BridgeServiceModule {
     public BridgeServiceModule() {
-    }
-
-    @NonNull
-    @Provides
-    public Context getApplicationContext(Application application) {
-        return application.getApplicationContext();
     }
 
     @Provides

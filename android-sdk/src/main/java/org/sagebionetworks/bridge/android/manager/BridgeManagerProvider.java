@@ -24,6 +24,7 @@ import dagger.BindsInstance;
 import dagger.Component;
 import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.di.BridgeManagerProviderModule;
 import org.sagebionetworks.bridge.android.di.BridgeServiceModule;
 import org.sagebionetworks.bridge.android.di.S3Module;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -38,7 +39,7 @@ import javax.inject.Singleton;
  */
 
 @Singleton
-@Component(modules = {BridgeServiceModule.class, S3Module.class})
+@Component(modules = {BridgeManagerProviderModule.class, BridgeServiceModule.class, S3Module.class})
 public interface BridgeManagerProvider {
     static BridgeManagerProvider getInstance() {
         return BridgeApplication.getBridgeManagerProvider();
