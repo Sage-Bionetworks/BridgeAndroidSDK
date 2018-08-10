@@ -149,13 +149,15 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         String phoneRegion = accountDAO.getPhoneRegion();
         String phoneNumber = accountDAO.getPhoneNumber();
+        String externalId = accountDAO.getExternalId();
+
         Phone phone = null;
         if (!Strings.isNullOrEmpty(phoneNumber)) {
             phone = new Phone().number(phoneNumber).regionCode(phoneRegion);
         }
 
-        // need either email or phone to identify user
-        if (Strings.isNullOrEmpty(email) && phone == null) {
+        // need either email, phone, or externalId to identify user
+        if (Strings.isNullOrEmpty(email) && phone == null && Strings.isNullOrEmpty(externalId)) {
             return null;
         }
 
@@ -174,7 +176,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                         .withPassword(password)
                         .withSession(session)
                         .withEmail(email)
-                        .withPhone(phone);
+                        .withPhone(phone)
+                        .withExternalId(externalId);
 
         return builder.build();
     }
@@ -238,6 +241,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
                     accountDAO.setEmail(signUp.getEmail());
                     accountDAO.setPassword(signUp.getPassword());
+                    accountDAO.setExternalId(signUp.getExternalId());
+
                     Phone phone = signUp.getPhone();
                     if (phone != null) {
                         accountDAO.setPhoneRegion(phone.getRegionCode());

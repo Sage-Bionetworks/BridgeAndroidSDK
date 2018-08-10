@@ -12,6 +12,8 @@ android {
         versionCode 4
         versionName "android-sdk v1.2.0"
         consumerProguardFiles 'proguard-rules.pro'
+
+        multiDexEnabled true
     }
 
     buildTypes {
