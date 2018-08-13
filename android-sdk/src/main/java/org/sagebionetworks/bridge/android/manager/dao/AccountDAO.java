@@ -34,7 +34,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PHONE_REGION = "phoneRegion";
     private static final String KEY_PHONE_NUMBER = "phoneNumber";
-
+    private static final String KEY_EXTERNAL_ID = "externalId";
     private static final String KEY_PASSWORD = "password";
 
     private final ReadWriteLock sessionReadWriteLock = new ReentrantReadWriteLock(true);
@@ -112,6 +112,14 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
         }
     }
 
+    @Nullable
+    public String getExternalId() {
+        return getValue(KEY_EXTERNAL_ID, String.class);
+    }
+
+    public void setExternalId(@Nullable final String externalId) {
+        setValue(KEY_EXTERNAL_ID, externalId, String.class);
+    }
 
     @Nullable
     public String getEmail() {

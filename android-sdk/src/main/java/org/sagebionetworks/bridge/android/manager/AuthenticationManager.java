@@ -1,13 +1,17 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
-import android.util.Log;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -19,23 +23,35 @@ import org.sagebionetworks.bridge.rest.api.AuthenticationApi;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.exceptions.ConsentRequiredException;
 import org.sagebionetworks.bridge.rest.exceptions.EntityNotFoundException;
-import org.sagebionetworks.bridge.rest.model.*;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.ConsentStatus;
+import org.sagebionetworks.bridge.rest.model.EmailSignIn;
+import org.sagebionetworks.bridge.rest.model.EmailSignInRequest;
+import org.sagebionetworks.bridge.rest.model.Identifier;
+import org.sagebionetworks.bridge.rest.model.Phone;
+import org.sagebionetworks.bridge.rest.model.PhoneSignIn;
+import org.sagebionetworks.bridge.rest.model.PhoneSignInRequest;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignIn;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
+import org.sagebionetworks.bridge.rest.model.Withdrawal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
-import rx.Single;
-import rx.functions.Func1;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import rx.Completable;
+import rx.Observable;
+import rx.Single;
+import rx.functions.Func1;
 
 /**
  * Authentication and authorization for the study participant using the app.
@@ -133,13 +149,15 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         String phoneRegion = accountDAO.getPhoneRegion();
         String phoneNumber = accountDAO.getPhoneNumber();
+        String externalId = accountDAO.getExternalId();
+
         Phone phone = null;
         if (!Strings.isNullOrEmpty(phoneNumber)) {
             phone = new Phone().number(phoneNumber).regionCode(phoneRegion);
         }
 
-        // need either email or phone to identify user
-        if (Strings.isNullOrEmpty(email) && phone == null) {
+        // need either email, phone, or externalId to identify user
+        if (Strings.isNullOrEmpty(email) && phone == null && Strings.isNullOrEmpty(externalId)) {
             return null;
         }
 
@@ -158,7 +176,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                         .withPassword(password)
                         .withSession(session)
                         .withEmail(email)
-                        .withPhone(phone);
+                        .withPhone(phone)
+                        .withExternalId(externalId);
 
         return builder.build();
     }
@@ -194,22 +213,18 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     }
 
     /**
-     * On successful sign up, stores email and password. On unsuccessful sign up, email and
-     * password are cleared.
+     * On successful sign up, stores email and password. On unsuccessful sign up, email and password are cleared.
      * <p>
-     * If the participant already exists, a 200 response will be sent as well as a password reset
-     * email.
+     * If the participant already exists, a 200 response will be sent as well as a password reset email.
      *
-     * @param signUp participant's information.
-     *               To prevent accidental improper settings, study will be set to the studyId
-     *               provided in the Bridge, consent will be set to false, and account status
-     *               will be cleared.
+     * @param signUp
+     *         participant's information. To prevent accidental improper settings, study will be set to the studyId
+     *         provided in the Bridge, consent will be set to false, and account status will be cleared.
      * @return notifies of completion or error
      */
     @NonNull
     public Completable signUp(@NonNull final SignUp signUp) {
         checkNotNull(signUp);
-        checkNotNull(signUp.getEmail());
 
         logger.debug("signUp called with signUp: " + signUp);
 
@@ -226,6 +241,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
                     accountDAO.setEmail(signUp.getEmail());
                     accountDAO.setPassword(signUp.getPassword());
+                    accountDAO.setExternalId(signUp.getExternalId());
+
                     Phone phone = signUp.getPhone();
                     if (phone != null) {
                         accountDAO.setPhoneRegion(phone.getRegionCode());
@@ -243,20 +260,30 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             .externalId(signUp.getExternalId());
 
                     accountDAO.setStudyParticipant(participant);
-
                 })
                 .flatMap(message -> {
-                    // if this is a password-less sign-up, request sign-in link
+                    // if this is a password-less sign-up and we have an email, request email sign-in link
                     if (Strings.isNullOrEmpty(signUp.getPassword())) {
-                        return RxUtils.toBodySingle(
-                                authenticationApi.requestEmailSignIn(
-                                        new EmailSignInRequest()
-                                                .study(config.getStudyId())
-                                                .email(signUp.getEmail())))
-                                .doOnSuccess(m ->
-                                        logger.debug("Request for email sign-in link succeeded"))
-                                .doOnError(t ->
-                                        logger.warn("Request for email sign-in link failed: ", t));
+                        if(!Strings.isNullOrEmpty(signUp.getEmail())) {
+                            return RxUtils.toBodySingle(
+                                    authenticationApi.requestEmailSignIn(
+                                            new EmailSignInRequest()
+                                                    .study(config.getStudyId())
+                                                    .email(signUp.getEmail())))
+                                    .doOnSuccess(m ->
+                                            logger.debug("Request for email sign-in link succeeded"))
+                                    .doOnError(t ->
+                                            logger.warn("Request for email sign-in link failed: ", t));
+                        }
+                        if (signUp.getPhone() != null) {
+                            return RxUtils.toBodySingle(
+                                    authenticationApi.requestPhoneSignIn(
+                                            new PhoneSignInRequest()
+                                                    .phone(signUp.getPhone())
+                                                    .study(config.getStudyId())
+                                    )
+                            );
+                        }
                     }
                     return Single.just(message);
                 })
@@ -269,10 +296,9 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      * Signs up just using a phone number. No username/password will be stored at this time.
      * <p>
      *
-     * @param phone  participant's phone number.
-     *               To prevent accidental improper settings, study will be set to the studyId
-     *               provided in the Bridge, consent will be set to false, and account status
-     *               will be cleared.
+     * @param phone
+     *         participant's phone number. To prevent accidental improper settings, study will be set to the studyId
+     *         provided in the Bridge, consent will be set to false, and account status will be cleared.
      * @return notifies of completion or error
      */
     @NonNull
@@ -286,22 +312,13 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 .consent(false)
                 .status(null);
 
-        return RxUtils.toBodySingle(authenticationApi.signUp(signUp))
-                .doOnSuccess(message -> {
-                    Log.d("Phone Signup", "Signup Success");
-
-                })
-                .doOnError(throwable -> {
-                    Log.e("Phone Signup", "Error signing up");
-                    accountDAO.setStudyParticipant(null);
-                }).toCompletable();
+        return signUp(signUp);
     }
 
-
-        /**
-         * @param email participant's email address
-         * @return notifies of completion or error
-         */
+    /**
+     * @param email participant's email address
+     * @return notifies of completion or error
+     */
     @NonNull
     public Completable resendEmailVerification(@NonNull final String email) {
         checkNotNull(email);
@@ -441,16 +458,32 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 .compose(signInHelper(signIn));
     }
 
+    @NonNull
+    public Single<UserSessionInfo> signInWithExternalId(@NonNull String externalId, @NonNull String password) {
+        checkArgument(!Strings.isNullOrEmpty(externalId), "externalId cannot be null or empty");
+        checkArgument(!Strings.isNullOrEmpty(password), "password cannot be null or empty");
+
+        SignIn signIn = new SignIn().study(config.getStudyId())
+                .externalId(externalId).password(password);
+        return RxUtils.toBodySingle(
+                authenticationApi.signInV4(signIn))
+                .compose(signInHelper(signIn))
+                .doOnSuccess(session -> logger.debug("Successfully signed in via externalId"))
+                .doOnError(t -> {
+                    logger.debug("Failed to sign in via externalId", t);
+                });
+    }
+
     /**
-     * Used to transform a raw Bridge signIn single by retrying upload of required consent if it
-     * is present locally and setting state on success/failure
+     * Used to transform a raw Bridge signIn single by retrying upload of required consent if it is present locally
+     * and setting state on success/failure
      * <p>
-     * This will essentially couple sign in and local consent upload if one need uploaded
-     * We decided to do this because the app cannot get scheduled activities if the user
-     * is not consented.  This puts most apps into a useless state, so BOTH must succeed
-     * for the user to be considered successfully signed in.
+     * This will essentially couple sign in and local consent upload if one need uploaded We decided to do this
+     * because the app cannot get scheduled activities if the user is not consented.  This puts most apps into a
+     * useless state, so BOTH must succeed for the user to be considered successfully signed in.
      *
-     * @param signIn signIn credentials
+     * @param signIn
+     *         signIn credentials
      */
     Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn) {
         final String email = signIn.getEmail();
@@ -467,6 +500,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 .doOnSuccess(session -> {
                     accountDAO.setEmail(email);
                     accountDAO.setPassword(signIn.getPassword());
+                    accountDAO.setExternalId(signIn.getExternalId());
 
                     Phone phone = signIn.getPhone();
                     if (phone != null) {
@@ -609,6 +643,16 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         logger.debug("getAuthStateReference called");
 
         return authStateHolderAtomicReference;
+    }
+
+    /**
+     * @return whether this authentication manager has credentials required to perform authentication
+     */
+    @NonNull
+    public boolean hasAuthenticationCredentials() {
+        logger.debug("hasAuthenticationCredentials called");
+
+        return authStateHolderAtomicReference.get().userSessionInfoProvider != null;
     }
 
     /**
