@@ -260,20 +260,30 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             .externalId(signUp.getExternalId());
 
                     accountDAO.setStudyParticipant(participant);
-
                 })
                 .flatMap(message -> {
-                    // if this is a password-less sign-up, request sign-in link
+                    // if this is a password-less sign-up and we have an email, request email sign-in link
                     if (Strings.isNullOrEmpty(signUp.getPassword())) {
-                        return RxUtils.toBodySingle(
-                                authenticationApi.requestEmailSignIn(
-                                        new EmailSignInRequest()
-                                                .study(config.getStudyId())
-                                                .email(signUp.getEmail())))
-                                .doOnSuccess(m ->
-                                        logger.debug("Request for email sign-in link succeeded"))
-                                .doOnError(t ->
-                                        logger.warn("Request for email sign-in link failed: ", t));
+                        if(!Strings.isNullOrEmpty(signUp.getEmail())) {
+                            return RxUtils.toBodySingle(
+                                    authenticationApi.requestEmailSignIn(
+                                            new EmailSignInRequest()
+                                                    .study(config.getStudyId())
+                                                    .email(signUp.getEmail())))
+                                    .doOnSuccess(m ->
+                                            logger.debug("Request for email sign-in link succeeded"))
+                                    .doOnError(t ->
+                                            logger.warn("Request for email sign-in link failed: ", t));
+                        }
+                        if (signUp.getPhone() != null) {
+                            return RxUtils.toBodySingle(
+                                    authenticationApi.requestPhoneSignIn(
+                                            new PhoneSignInRequest()
+                                                    .phone(signUp.getPhone())
+                                                    .study(config.getStudyId())
+                                    )
+                            );
+                        }
                     }
                     return Single.just(message);
                 })
@@ -449,7 +459,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     }
 
     @NonNull
-    public Single<UserSessionInfo> signInViaExternalId(@NonNull String externalId, @NonNull String password) {
+    public Single<UserSessionInfo> signInWithExternalId(@NonNull String externalId, @NonNull String password) {
         checkArgument(!Strings.isNullOrEmpty(externalId), "externalId cannot be null or empty");
         checkArgument(!Strings.isNullOrEmpty(password), "password cannot be null or empty");
 
@@ -633,6 +643,16 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         logger.debug("getAuthStateReference called");
 
         return authStateHolderAtomicReference;
+    }
+
+    /**
+     * @return whether this authentication manager has credentials required to perform authentication
+     */
+    @NonNull
+    public boolean hasAuthenticationCredentials() {
+        logger.debug("hasAuthenticationCredentials called");
+
+        return authStateHolderAtomicReference.get().userSessionInfoProvider != null;
     }
 
     /**

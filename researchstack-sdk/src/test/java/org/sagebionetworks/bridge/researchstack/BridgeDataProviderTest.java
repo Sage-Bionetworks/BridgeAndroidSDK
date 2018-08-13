@@ -36,6 +36,7 @@ import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.AppConfigManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
@@ -52,6 +53,7 @@ import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.SurveyReference;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -120,6 +122,8 @@ public class BridgeDataProviderTest {
     private AppConfigManager appConfigManager;
     @Mock
     protected AuthenticationManager authenticationManager;
+    @Mock
+    private ParticipantRecordManager participantRecordManager;
 
     @Before
     public void setupTest() {
@@ -133,6 +137,7 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getActivityManager()).thenReturn(activityManager);
         when(bridgeManagerProvider.getAppConfigManager()).thenReturn(appConfigManager);
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
+        when(bridgeManagerProvider.getParticipantManager()).thenReturn(participantRecordManager);
 
         pinCodeConfig = mock(PinCodeConfig.class);
         fileAccess = mock(FileAccess.class);
@@ -246,12 +251,12 @@ public class BridgeDataProviderTest {
 
     @Test
     public void testIsSignedUp() {
-        when(authenticationManager.getEmail()).thenReturn("Email");
+        when(participantRecordManager.getCachedParticipantRecord()).thenReturn(new StudyParticipant());
 
         boolean isSignedUp = dataProvider.isSignedUp(context);
         assertTrue(isSignedUp);
 
-        verify(authenticationManager).getEmail();
+        verify(participantRecordManager).getCachedParticipantRecord();
     }
 
 
