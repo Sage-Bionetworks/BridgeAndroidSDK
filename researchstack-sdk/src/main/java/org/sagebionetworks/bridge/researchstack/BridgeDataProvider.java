@@ -1,16 +1,26 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
+
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
-import org.researchstack.backbone.*;
+import org.researchstack.backbone.AppPrefs;
+import org.researchstack.backbone.DataProvider;
+import org.researchstack.backbone.DataResponse;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.model.ConsentSignatureBody;
 import org.researchstack.backbone.model.SchedulesAndTasksModel;
 import org.researchstack.backbone.model.TaskModel;
@@ -23,25 +33,35 @@ import org.researchstack.backbone.utils.ObservableUtils;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.model.*;
+import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.AppConfig;
+import org.sagebionetworks.bridge.rest.model.ConsentSignature;
+import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.Phone;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
+import org.sagebionetworks.bridge.rest.model.SharingScope;
+import org.sagebionetworks.bridge.rest.model.SignUp;
+import org.sagebionetworks.bridge.rest.model.StudyParticipant;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Completable;
-import rx.Observable;
-import rx.Single;
-import rx.functions.Action0;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
+import rx.Completable;
+import rx.Observable;
+import rx.Single;
+import rx.functions.Action0;
 
 /**
  * DataProvider implementation backed by a Bridge study.
@@ -61,6 +81,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     protected final BridgeConfig bridgeConfig;
     @NonNull
     private final AuthenticationManager authenticationManager;
+    @NonNull
+    private final ParticipantRecordManager participantRecordManager;
     /**
      * The GUID of the last task that was loaded (used in completion)
      */
@@ -80,6 +102,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.participantRecordManager = bridgeManagerProvider.getParticipantManager();
     }
 
     public BridgeDataProvider(@NonNull BridgeManagerProvider bridgeManagerProvider) {
@@ -88,6 +111,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.participantRecordManager = bridgeManagerProvider.getParticipantManager();
 
         this.storageAccessWrapper = new StorageAccessWrapper();
 
@@ -350,7 +374,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public boolean isSignedUp() {
         logger.debug("Called isSignedUp");
-        return authenticationManager.getEmail() != null;
+        return participantRecordManager.getCachedParticipantRecord() != null;
     }
 
     @Override
@@ -430,8 +454,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public boolean isSignedIn() {
         logger.debug("Called isSignedIn");
-        return authenticationManager.getEmail() != null &&
-                authenticationManager.getUserSessionInfo() != null;
+        return authenticationManager.getUserSessionInfo() != null;
     }
 
     @Deprecated

@@ -12,6 +12,8 @@ android {
         versionCode 4
         versionName "android-sdk v1.2.0"
         consumerProguardFiles 'proguard-rules.pro'
+
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -34,7 +36,7 @@ android {
 }
 
 dependencies {
-    api 'org.sagebionetworks.bridge:rest-client:0.15.27', {
+    api 'org.sagebionetworks.bridge:rest-client:0.16.0', {
         exclude group: 'joda-time', module: 'joda-time'
     }
     api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
