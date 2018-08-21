@@ -1,5 +1,10 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
+
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -28,14 +33,17 @@ import org.researchstack.backbone.utils.ObservableUtils;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.Activity;
+import org.sagebionetworks.bridge.rest.model.AppConfig;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.Phone;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityList;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
@@ -54,10 +62,6 @@ import rx.Completable;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action0;
-import rx.functions.Action1;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.researchstack.ApiUtils.SUCCESS_DATA_RESPONSE;
 
 /**
  * DataProvider implementation backed by a Bridge study.
@@ -67,12 +71,6 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     // set in initialize
     protected final TaskHelper taskHelper;
-
-    /**
-     * The GUID of the last task that was loaded (used in completion)
-     */
-    protected String lastLoadedTaskGuid = null;
-
     @NonNull
     protected final StorageAccessWrapper storageAccessWrapper;
     @NonNull
@@ -81,14 +79,19 @@ public abstract class BridgeDataProvider extends DataProvider {
     protected final BridgeManagerProvider bridgeManagerProvider;
     @NonNull
     protected final BridgeConfig bridgeConfig;
-
     @NonNull
     private final AuthenticationManager authenticationManager;
+    @NonNull
+    private final ParticipantRecordManager participantRecordManager;
+    /**
+     * The GUID of the last task that was loaded (used in completion)
+     */
+    protected String lastLoadedTaskGuid = null;
 
     //used by tests to mock service
     BridgeDataProvider(BridgeManagerProvider bridgeManagerProvider, ResearchStackDAO researchStackDAO,
                        StorageAccessWrapper
-            storageAccessWrapper,
+                               storageAccessWrapper,
                        TaskHelper taskHelper) {
         this.researchStackDAO = researchStackDAO;
         this.storageAccessWrapper = storageAccessWrapper;
@@ -99,6 +102,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.participantRecordManager = bridgeManagerProvider.getParticipantManager();
     }
 
     public BridgeDataProvider(@NonNull BridgeManagerProvider bridgeManagerProvider) {
@@ -107,6 +111,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         // convenience accessors
         this.bridgeConfig = bridgeManagerProvider.getBridgeConfig();
         this.authenticationManager = bridgeManagerProvider.getAuthenticationManager();
+        this.participantRecordManager = bridgeManagerProvider.getParticipantManager();
 
         this.storageAccessWrapper = new StorageAccessWrapper();
 
@@ -134,6 +139,16 @@ public abstract class BridgeDataProvider extends DataProvider {
     public String getStudyId() {
         return bridgeConfig.getStudyId();
     }
+
+    //region AppConfig
+
+    /** Get app config from the cache, or fall back to server if there is no value in the cache. */
+    @NonNull
+    public Single<AppConfig> getAppConfig() {
+        return bridgeManagerProvider.getAppConfigManager().getAppConfig();
+    }
+
+    //endregion
 
     //region Consent
 
@@ -340,6 +355,17 @@ public abstract class BridgeDataProvider extends DataProvider {
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
+    @NonNull
+    public Observable<DataResponse> signUp(@NonNull Phone phone) {
+        checkNotNull(phone);
+
+        logger.debug("Called signUp using phone");
+
+        return authenticationManager
+                .requestPhoneSignIn(phone.getRegionCode(), phone.getNumber())
+                .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
     @Override
     public boolean isSignedUp(@Nullable Context context) {
         logger.debug("Called isSignedUp");
@@ -348,7 +374,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public boolean isSignedUp() {
         logger.debug("Called isSignedUp");
-        return authenticationManager.getEmail() != null;
+        return participantRecordManager.getCachedParticipantRecord() != null;
     }
 
     @Override
@@ -379,13 +405,25 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     @Override
+    public Observable<DataResponse> requestPhoneSignIn(String regionCode, String phoneNumber) {
+        logger.debug("Called requestSMS");
+        return authenticationManager.requestPhoneSignIn(regionCode, phoneNumber).andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @Override
     public Observable<DataResponse> signInWithEmailAndToken(String email, String token) {
         logger.debug("Called signInWithEmailAndToken");
         return authenticationManager.signInViaEmailLink(email, token)
                 .doOnSuccess(session -> bridgeManagerProvider.getAccountDao()
                         .setDataGroups(session.getDataGroups()))
                 .toCompletable()
-        .andThen(SUCCESS_DATA_RESPONSE);
+                .andThen(SUCCESS_DATA_RESPONSE);
+    }
+
+    @NonNull
+    public Single<UserSessionInfo> signInWithPhoneAndToken(@NonNull String regionCode, @NonNull String phoneNumber,
+                                               @NonNull String token) {
+        return authenticationManager.signInViaPhoneLink(regionCode, phoneNumber, token);
     }
 
     /**`
@@ -415,9 +453,8 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     public boolean isSignedIn() {
-     logger.debug("Called isSignedIn");
-        return authenticationManager.getEmail() != null &&
-            authenticationManager.getUserSessionInfo() != null;
+        logger.debug("Called isSignedIn");
+        return authenticationManager.getUserSessionInfo() != null;
     }
 
     @Deprecated
@@ -619,7 +656,7 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @NonNull
     public Observable<DataResponse> downloadData(LocalDate startDate,
-                                            LocalDate endDate) {
+                                                 LocalDate endDate) {
         logger.debug("Called downloadData");
 
         return bridgeManagerProvider.getParticipantManager()
@@ -676,6 +713,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         return taskHelper.loadTask(context, task);
     }
 
+    @SuppressLint("RxLeakedSubscription")    // upload should run as long as it needs to, no early unsubscribe
     @Override
     public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
         // TODO: Update/Create TaskNotificationService
@@ -708,6 +746,7 @@ public abstract class BridgeDataProvider extends DataProvider {
             if (taskResult.getEndDate() != null) {
                 lastLoadedActivity.setFinishedOn(new DateTime(taskResult.getEndDate()));
             }
+
             bridgeManagerProvider.getActivityManager().updateActivity(lastLoadedActivity).subscribe(message -> {
                 logger.info("Update activity success " + message);
             }, throwable -> logger.error(throwable.getLocalizedMessage()));
@@ -796,12 +835,13 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         return model;
     }
+
     //
     // NOTE: this is a crude translation and needs to be updated to properly
     //       handle schedules and filters
     @NonNull
     protected SchedulesAndTasksModel translateActivities(@NonNull List<ScheduledActivity>
-                                                               activityList) {
+                                                                 activityList) {
         logger.info("called translateActivities");
 
         // group activities by day

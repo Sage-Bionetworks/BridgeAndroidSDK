@@ -1,17 +1,19 @@
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.dokka-android'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion "26.0.2"
+    compileSdkVersion 27
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 26
+        targetSdkVersion 27
 
         // versionCode is used to identify the app User-Agent to Bridge server
         versionCode 4
         versionName "android-sdk v1.2.0"
         consumerProguardFiles 'proguard-rules.pro'
+
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -48,6 +50,7 @@ dependencies {
     api 'io.reactivex:rxandroid:1.2.1'
     api 'com.squareup.retrofit2:retrofit:2.3.0'
     api 'com.squareup.retrofit2:adapter-rxjava:2.3.0'
+    api 'nl.littlerobots.rxlint:rxlint:1.6.1'
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
@@ -73,8 +76,8 @@ dependencies {
     implementation 'com.jakewharton.rxbinding:rxbinding:0.4.0'
     implementation 'com.jakewharton.rxbinding:rxbinding-appcompat-v7:0.4.0'
 
-    implementation 'com.android.support:appcompat-v7:26.1.0'
-    implementation 'com.android.support:support-annotations:26.1.0'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:support-annotations:27.1.1'
 
     implementation 'org.slf4j:slf4j-api:1.7.21'
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
@@ -89,7 +92,7 @@ dependencies {
     testImplementation 'joda-time:joda-time:2.9.9'
 
     testImplementation 'junit:junit:4.12'
-    testImplementation 'org.robolectric:robolectric:3.5'
+    testImplementation 'org.robolectric:robolectric:3.8'
     testImplementation 'org.mockito:mockito-core:2.7.5'
 }
 apply from: "../gradle/artifact-deploy.gradle"

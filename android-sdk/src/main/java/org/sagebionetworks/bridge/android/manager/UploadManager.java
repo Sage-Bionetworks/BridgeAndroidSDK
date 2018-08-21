@@ -89,14 +89,6 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
         this.s3OkHttpClient = s3Okhttp3Client;
     }
 
-    public static class UploadFile {
-        public String filename;
-        public String contentType;
-        public long fileLength;
-        public String md5Hash;
-        public DateTime createdOn;
-    }
-
     /**
      * Persists the archive on disk and add it to the queue of pending uploads, runs in an IO
      * thread.
@@ -123,6 +115,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
 
     @Override
     public void onSignedOut(String email) {
+        // noinspection RxLeakedSubscription,RxSubscribeOnError
         clearUploads().subscribe();
     }
 
@@ -322,9 +315,9 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     // reuse current upload session
                     return Single.just(session);
                 });
-    
+
         LOG.info("Attempting S3 upload for file: {}, sessionId: {}", uploadFile.filename, session.getId());
-        
+
         FileUploadRequestBody requestBody = new FileUploadRequestBody(file, uploadFile.contentType,
                 l -> LOG.trace("File {}: Uploaded {} of {} bytes", uploadFile.filename, l, uploadFile.fileLength));
         return sessionSingle.flatMap(freshSession -> RxUtils.toBodySingle(
@@ -338,6 +331,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     LOG.info("S3 upload succeeded for file: {}, sessionId: {}", uploadFile.filename, session.getId());
 
                     // call upload complete on a computation thread
+                    // noinspection RxLeakedSubscription,RxSubscribeOnError
                     RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
                             .completeUploadSession(session.getId(), false))
                             .doOnSuccess(val -> {
@@ -348,7 +342,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                                 return null; // return doesn't matter, becomes completable
                             })
                             .subscribe();
-    
+
                 }).doOnError(t ->
                         LOG.warn("S3 upload failed for file: {}, sessionId: {}",
                                 uploadFile.filename, session.getId(), t)
@@ -390,7 +384,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
         }
 
         LOG.debug("Writing archive with filename: " + filename + ", with contents: " + archive);
-    
+
         try (OutputStream os = sink.openBufferedStream();
              DigestOutputStream md5OutStream = new DigestOutputStream(os, md5);
              OutputStream encryptedOutputStream = encryptor.encrypt(md5OutStream)) {
@@ -429,5 +423,13 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                 .client(s3OkHttpClient).build();
 
         return retrofit.create(S3Service.class);
+    }
+
+    public static class UploadFile {
+        public String filename;
+        public String contentType;
+        public long fileLength;
+        public String md5Hash;
+        public DateTime createdOn;
     }
 }

@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.dokka-android'
 
 repositories {
   // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
@@ -7,12 +8,11 @@ repositories {
 
 // todo make pom include sage s3 repo for rest-client
 android {
-  compileSdkVersion 26
-  buildToolsVersion '26.0.2'
+  compileSdkVersion 27
 
   defaultConfig {
     minSdkVersion 19
-    targetSdkVersion 26
+    targetSdkVersion 27
     versionCode 1
     versionName "1.0"
     multiDexEnabled true
@@ -39,7 +39,7 @@ dependencies {
   }
   api project(":android-sdk") // to export BridgeApplication
 
-  implementation 'com.android.support:appcompat-v7:26.1.0'
+  implementation 'com.android.support:appcompat-v7:27.1.1'
 
   annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 

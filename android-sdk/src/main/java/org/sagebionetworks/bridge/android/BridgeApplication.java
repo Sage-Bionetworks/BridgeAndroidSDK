@@ -1,12 +1,8 @@
 package org.sagebionetworks.bridge.android;
 
 import android.app.Application;
-
 import com.facebook.stetho.Stetho;
-
 import net.danlew.android.joda.JodaTimeAndroid;
-
-import org.sagebionetworks.bridge.android.di.ApplicationModule;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.DaggerBridgeManagerProvider;
 
@@ -31,7 +27,7 @@ public class BridgeApplication extends Application {
     
     protected BridgeManagerProvider initBridgeManagerProvider() {
         return DaggerBridgeManagerProvider.builder()
-                .applicationModule(new ApplicationModule(this))
+                .application(this)
                 .build();
     }
 

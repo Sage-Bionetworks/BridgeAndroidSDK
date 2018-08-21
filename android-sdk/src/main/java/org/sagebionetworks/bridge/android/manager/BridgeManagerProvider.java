@@ -17,12 +17,14 @@
 
 package org.sagebionetworks.bridge.android.manager;
 
+import android.app.Application;
 import android.content.Context;
 import android.support.annotation.NonNull;
-
+import dagger.BindsInstance;
+import dagger.Component;
 import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.di.ApplicationModule;
+import org.sagebionetworks.bridge.android.di.BridgeManagerProviderModule;
 import org.sagebionetworks.bridge.android.di.BridgeServiceModule;
 import org.sagebionetworks.bridge.android.di.S3Module;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -32,49 +34,58 @@ import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
 import javax.inject.Singleton;
 
-import dagger.Component;
-
 /**
  * Created by liujoshua on 2/22/2018.
  */
 
 @Singleton
-@Component(modules = {ApplicationModule.class, BridgeServiceModule.class, S3Module.class})
+@Component(modules = {BridgeManagerProviderModule.class, BridgeServiceModule.class, S3Module.class})
 public interface BridgeManagerProvider {
     static BridgeManagerProvider getInstance() {
         return BridgeApplication.getBridgeManagerProvider();
     }
-    
-    @NonNull
-    ActivityManager getActivityManager();
-    
-    @NonNull
-    AuthenticationManager getAuthenticationManager();
-    
+
     @NonNull
     Context getApplicationContext();
-    
+
+    @NonNull
+    ActivityManager getActivityManager();
+
+    @NonNull
+    AppConfigManager getAppConfigManager();
+
+    @NonNull
+    AuthenticationManager getAuthenticationManager();
+
     @NonNull
     BridgeConfig getBridgeConfig();
-    
+
     @NonNull
     ApiClientProvider getApiClientProvider();
-    
+
     @NonNull
     AccountDAO getAccountDao();
-    
+
     @NonNull
     ConsentDAO getConsentDao();
-    
+
     @NonNull
     SurveyManager getSurveyManager();
-    
+
     @NonNull
     UploadManager getUploadManager();
-    
+
     @NonNull
     AndroidStudyUploadEncryptor getStudyUploadEncryptor();
-    
+
     @NonNull
     ParticipantRecordManager getParticipantManager();
+
+    @Component.Builder
+    interface Builder {
+        @BindsInstance
+        Builder application(Application application);
+
+        BridgeManagerProvider build();
+    }
 }
