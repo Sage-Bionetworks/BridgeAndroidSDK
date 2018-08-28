@@ -35,8 +35,10 @@ class EntityTypeConverters {
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateTypeAdapter())
             .registerTypeAdapter(DateTime::class.java, DateTimeTypeAdapter())
-            .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter())
-            .registerTypeAdapter(Instant::class.java, InstantAdapter())
+            .registerTypeAdapter(LocalDateTime::class.java,
+                    LocalDateTimeAdapter())
+            .registerTypeAdapter(Instant::class.java,
+                    InstantAdapter())
             .create()
 
     private val schemaRefListType = object : TypeToken<List<RoomSchemaReference>>() {}.type
@@ -52,6 +54,18 @@ class EntityTypeConverters {
     fun fromLocalDateTime(value: LocalDateTime?): String? {
         val valueChecked = value ?: return null
         return valueChecked.toString()
+    }
+
+    @TypeConverter
+    fun fromUUID(value: UUID?): String? {
+        val valueChecked = value ?: return null
+        return valueChecked.toString();
+    }
+
+    @TypeConverter
+    fun fromUUIDString(value: String?): UUID? {
+        val valueChecked = value ?: return null
+        return UUID.fromString(valueChecked);
     }
 
     @TypeConverter
@@ -74,6 +88,18 @@ class EntityTypeConverters {
 
     @TypeConverter
     fun fromClientData(value: ClientData?): String? {
+        val valueChecked = value ?: return null
+        return bridgeGson.toJson(valueChecked)
+    }
+
+    @TypeConverter
+    fun toTaskResultEntity(value: String?): TaskResult? {
+        val valueChecked = value ?: return null
+        return bridgeGson.fromJson(valueChecked, TaskResult::class.java)
+    }
+
+    @TypeConverter
+    fun fromTaskResultEntity(value: TaskResult?): String? {
         val valueChecked = value ?: return null
         return bridgeGson.toJson(valueChecked)
     }
@@ -144,7 +170,8 @@ class EntityTypeConverters {
  * 'LocalDateTimeAdapter' is needed when going from
  * ScheduledActivity.scheduledOn: DateTime to ScheduledActivityEntity.scheduledOn: LocalDateTime
  */
-class LocalDateTimeAdapter: TypeAdapter<LocalDateTime>() {
+class LocalDateTimeAdapter : TypeAdapter<LocalDateTime>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): LocalDateTime {
         val src = reader.nextString()
@@ -165,7 +192,8 @@ class LocalDateTimeAdapter: TypeAdapter<LocalDateTime>() {
  * 'InstantAdapter' is needed when going from
  * ScheduledActivity.finishedOn: DateTime to ScheduledActivityEntity.finishedOn: Instant
  */
-class InstantAdapter: TypeAdapter<Instant>() {
+class InstantAdapter : TypeAdapter<Instant>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): Instant {
         val src = reader.nextString()
