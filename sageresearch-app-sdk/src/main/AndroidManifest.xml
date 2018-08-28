@@ -1,2 +1,1 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.sagebionetworks.research.sageresearch_app_sdk" />
+<manifest package="org.sagebionetworks.research.sageresearch_app_sdk" />
