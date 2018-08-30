@@ -34,6 +34,7 @@ import org.sagebionetworks.bridge.android.BridgeApiTestUtils;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AppConfigDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
+import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 
 public class AppConfigManagerTest {
@@ -42,7 +43,7 @@ public class AppConfigManagerTest {
 
     private AppConfigDAO mockDAO;
     private AppConfigManager manager;
-    private ForConsentedUsersApi mockApi;
+    private PublicApi mockApi;
 
     @Before
     public void setup() {
@@ -51,12 +52,8 @@ public class AppConfigManagerTest {
         BridgeConfig mockConfig = mock(BridgeConfig.class);
         when(mockConfig.getStudyId()).thenReturn(STUDY_ID);
 
-        mockApi = mock(ForConsentedUsersApi.class);
-        AuthenticationManager mockAuthenticationManager = mock(AuthenticationManager.class);
-        when(mockAuthenticationManager.getAuthStateReference()).thenReturn(new AtomicReference<>(
-                new AuthenticationManager.AuthStateHolder(mockApi, null)));
-
-        manager = new AppConfigManager(mockDAO, mockAuthenticationManager, mockConfig);
+        mockApi = mock(PublicApi.class);
+        manager = new AppConfigManager(mockDAO, mockApi, mockConfig);
     }
 
     @Test
