@@ -17,7 +17,6 @@
 
 package org.sagebionetworks.bridge.android.manager;
 
-import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -29,21 +28,21 @@ import rx.Single;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.dao.AppConfigDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
+import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 
 /** Handles calling Bridge server to get study app config and caching the result. */
 @AnyThread
 public class AppConfigManager {
     private @NonNull final AppConfigDAO appConfigDAO;
-    private @NonNull final AtomicReference<AuthenticationManager.AuthStateHolder>
-            authStateHolderAtomicReference;
+    private @NonNull final PublicApi publicApi;
     private @NonNull final BridgeConfig config;
 
     @Inject
     public AppConfigManager(@NonNull AppConfigDAO appConfigDAO,
-            @NonNull AuthenticationManager authenticationManager, @NonNull BridgeConfig config) {
+            @NonNull PublicApi publicApi, @NonNull BridgeConfig config) {
         this.appConfigDAO = appConfigDAO;
-        this.authStateHolderAtomicReference = authenticationManager.getAuthStateReference();
+        this.publicApi = publicApi;
         this.config = config;
     }
 
@@ -64,7 +63,7 @@ public class AppConfigManager {
 
     /** Gets the app config from the server and caches the result. */
     public @NonNull Single<AppConfig> getRemoteAppConfig() {
-        return RxUtils.toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+        return RxUtils.toBodySingle(publicApi
                 .getAppConfig(config.getStudyId()))
                 .doOnSuccess(appConfigDAO::cacheAppConfig);
     }
