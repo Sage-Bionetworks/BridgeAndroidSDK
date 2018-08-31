@@ -29,7 +29,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 @AnyThread
-@Singleton
 public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 

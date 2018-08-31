@@ -57,7 +57,6 @@ import rx.functions.Func1;
  * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
-@Singleton
 public class AuthenticationManager implements UserSessionInfoProvider.UserSessionInfoChangeListener {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);

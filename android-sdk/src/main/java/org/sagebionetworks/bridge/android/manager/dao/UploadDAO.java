@@ -19,7 +19,6 @@ import javax.inject.Singleton;
  * Created by jyliu on 3/10/2017.
  */
 @AnyThread
-@Singleton
 public class UploadDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(UploadDAO.class);
 

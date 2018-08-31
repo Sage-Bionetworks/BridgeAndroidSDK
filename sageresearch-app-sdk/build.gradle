@@ -1,34 +1,73 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 27
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion 27
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = ["room.schemaLocation":
+                                     "$projectDir/schemas".toString()]
+            }
+        }
 
+        testInstrumentationRunner "org.sagebionetworks.research.sageresearch.MyMultidexJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguardTest-rules.pro'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguardTest-rules.pro'
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     api project(':mobile-ui')
+    api project(':android-sdk')
+    
+    api 'com.google.guava:guava:24.1-android'
+    
+    // Dagger
+    implementation 'com.google.dagger:dagger-android:2.16'
+    implementation 'com.google.dagger:dagger-android-support:2.16'
+    kapt 'com.google.dagger:dagger-android-processor:2.16'
+    kapt "com.google.dagger:dagger-compiler:2.16"
+
+    // room db functionality
+    implementation 'android.arch.persistence.room:runtime:1.1.1'
+    implementation 'android.arch.persistence.room:rxjava2:1.1.1'
+    kapt 'android.arch.persistence.room:compiler:1.1.1'
+    kaptAndroidTest 'android.arch.persistence.room:compiler:1.1.1'
+    androidTestImplementation 'android.arch.persistence.room:testing:1.1.1'
+    implementation 'android.arch.persistence.room:rxjava2:1.1.1'
+    androidTestImplementation 'android.arch.core:core-testing:1.1.1'
 
     implementation 'com.android.support:appcompat-v7:27.1.1'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
+repositories {
+    mavenCentral()
 }
