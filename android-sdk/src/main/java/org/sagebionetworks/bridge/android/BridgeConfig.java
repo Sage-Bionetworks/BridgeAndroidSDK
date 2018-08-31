@@ -48,7 +48,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </ul>
  */
 @AnyThread
-@Singleton
 public class BridgeConfig {
     private static final Logger logger = LoggerFactory.getLogger(BridgeConfig.class);
 

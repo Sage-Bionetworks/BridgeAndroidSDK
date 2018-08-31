@@ -34,6 +34,7 @@ import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
+import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
@@ -754,7 +755,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         JsonArchiveFile metadataFile = null;
         if (lastLoadedActivity != null) {
-            metadataFile = taskHelper.createMetaDataFile(lastLoadedActivity, getLocalDataGroups());
+            metadataFile = ArchiveUtil.createMetaDataFile(lastLoadedActivity, ImmutableList.copyOf(getLocalDataGroups()));
             logger.debug("metadata.json has been successfully created " + metadataFile.toString());
         }
 

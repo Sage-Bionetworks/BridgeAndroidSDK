@@ -29,7 +29,6 @@ import org.sagebionetworks.bridge.rest.model.AppConfig;
 
 /** Caches study app config in shared preferences. */
 @AnyThread
-@Singleton
 public class AppConfigDAO extends SharedPreferencesJsonDAO {
     private static final String APP_CONFIG_KEY = "APP_CONFIG";
     private static final String PREFERENCES_FILE = "appconfig";

@@ -65,7 +65,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * duplicate archive was detected.
  */
 @AnyThread
-@Singleton
 public class UploadManager implements AuthenticationManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";

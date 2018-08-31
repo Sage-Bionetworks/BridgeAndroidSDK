@@ -20,7 +20,6 @@ import rx.Single;
  * Encapsulates Bridge API calls for getting surveys.
  */
 @AnyThread
-@Singleton
 public class SurveyManager {
     @NonNull
     private final AtomicReference<AuthenticationManager.AuthStateHolder>

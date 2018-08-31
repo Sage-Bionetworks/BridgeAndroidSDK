@@ -32,6 +32,7 @@ android {
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguardTest-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -44,10 +45,16 @@ dependencies {
 
     api project(':mobile-ui')
     api project(':android-sdk')
-
+    
     api 'com.google.guava:guava:24.1-android'
+    
+    // Dagger
+    implementation 'com.google.dagger:dagger-android:2.16'
+    implementation 'com.google.dagger:dagger-android-support:2.16'
+    kapt 'com.google.dagger:dagger-android-processor:2.16'
+    kapt "com.google.dagger:dagger-compiler:2.16"
 
-    // room db functionalityn
+    // room db functionality
     implementation 'android.arch.persistence.room:runtime:1.1.1'
     implementation 'android.arch.persistence.room:rxjava2:1.1.1'
     kapt 'android.arch.persistence.room:compiler:1.1.1'
@@ -60,7 +67,6 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-    androidTestImplementation('com.android.support:multidex-instrumentation:1.0.3')
 }
 repositories {
     mavenCentral()
