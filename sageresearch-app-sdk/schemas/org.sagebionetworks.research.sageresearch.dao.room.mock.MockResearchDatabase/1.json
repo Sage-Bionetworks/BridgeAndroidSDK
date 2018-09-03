@@ -1,0 +1,226 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "7a059006abffca4b1dd326e3ffda2bce",
+    "entities": [
+      {
+        "tableName": "ScheduledActivityEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`schedulePlanGuid` TEXT, `startedOn` INTEGER, `finishedOn` INTEGER, `scheduledOn` TEXT, `expiresOn` TEXT, `persistent` INTEGER, `clientData` TEXT, `status` TEXT, `type` TEXT, `guid` TEXT NOT NULL, `activity_label` TEXT, `activity_labelDetail` TEXT, `activity_activityType` TEXT, `activity_type` TEXT, `activity_guid` TEXT, `activity_compound_schemaList` TEXT, `activity_compound_surveyList` TEXT, `activity_compound_type` TEXT, `activity_compound_taskIdentifier` TEXT, `activity_task_type` TEXT, `activity_task_identifier` TEXT, `activity_task_schema_revision` INTEGER, `activity_task_schema_type` TEXT, `activity_task_schema_id` TEXT, `activity_survey_identifier` TEXT, `activity_survey_createdOn` INTEGER, `activity_survey_href` TEXT, `activity_survey_type` TEXT, `activity_survey_guid` TEXT, PRIMARY KEY(`guid`))",
+        "fields": [
+          {
+            "fieldPath": "schedulePlanGuid",
+            "columnName": "schedulePlanGuid",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "startedOn",
+            "columnName": "startedOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "finishedOn",
+            "columnName": "finishedOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "scheduledOn",
+            "columnName": "scheduledOn",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "expiresOn",
+            "columnName": "expiresOn",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "persistent",
+            "columnName": "persistent",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "clientData",
+            "columnName": "clientData",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "guid",
+            "columnName": "guid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity.label",
+            "columnName": "activity_label",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.labelDetail",
+            "columnName": "activity_labelDetail",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.activityType",
+            "columnName": "activity_activityType",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.type",
+            "columnName": "activity_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.guid",
+            "columnName": "activity_guid",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.schemaList",
+            "columnName": "activity_compound_schemaList",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.surveyList",
+            "columnName": "activity_compound_surveyList",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.type",
+            "columnName": "activity_compound_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.taskIdentifier",
+            "columnName": "activity_compound_taskIdentifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.type",
+            "columnName": "activity_task_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.identifier",
+            "columnName": "activity_task_identifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.revision",
+            "columnName": "activity_task_schema_revision",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.type",
+            "columnName": "activity_task_schema_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.id",
+            "columnName": "activity_task_schema_id",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.identifier",
+            "columnName": "activity_survey_identifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.createdOn",
+            "columnName": "activity_survey_createdOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.href",
+            "columnName": "activity_survey_href",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.type",
+            "columnName": "activity_survey_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.guid",
+            "columnName": "activity_survey_guid",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "guid"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [
+          {
+            "name": "index_ScheduledActivityEntity_finishedOn",
+            "unique": false,
+            "columnNames": [
+              "finishedOn"
+            ],
+            "createSql": "CREATE  INDEX `index_ScheduledActivityEntity_finishedOn` ON `${TABLE_NAME}` (`finishedOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_scheduledOn",
+            "unique": false,
+            "columnNames": [
+              "scheduledOn"
+            ],
+            "createSql": "CREATE  INDEX `index_ScheduledActivityEntity_scheduledOn` ON `${TABLE_NAME}` (`scheduledOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_expiresOn",
+            "unique": false,
+            "columnNames": [
+              "expiresOn"
+            ],
+            "createSql": "CREATE  INDEX `index_ScheduledActivityEntity_expiresOn` ON `${TABLE_NAME}` (`expiresOn`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"7a059006abffca4b1dd326e3ffda2bce\")"
+    ]
+  }
+}

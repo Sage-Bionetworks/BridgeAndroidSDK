@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import rx.Completable;
@@ -68,6 +69,13 @@ import rx.functions.Action0;
  */
 public abstract class BridgeDataProvider extends DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(BridgeDataProvider.class);
+
+    public static BridgeDataProvider getInstance() {
+        if (!(DataProvider.getInstance() instanceof BridgeDataProvider)) {
+            throw new IllegalStateException("This app only works with BpDataProvider");
+        }
+        return  (BridgeDataProvider)DataProvider.getInstance();
+    }
 
     // set in initialize
     protected final TaskHelper taskHelper;
@@ -851,5 +859,27 @@ public abstract class BridgeDataProvider extends DataProvider {
                         sa -> sa.getScheduledOn().toLocalDate()
 
                 ).asMap().values());
+    }
+
+    /**
+     * @return the local tz date the participant created their account
+     *         null is returned if the user has not signed in yet
+     */
+    public @Nullable DateTime getParticipantCreatedOn() {
+        StudyParticipant participant =
+                bridgeManagerProvider.getParticipantManager().getCachedParticipantRecord();
+
+        if (participant == null) {
+            return null;
+        }
+
+        DateTime existingCreatedOnServerTimezone = participant.getCreatedOn();
+        if (existingCreatedOnServerTimezone == null) {
+            return null;
+        }
+
+        // Convert the date to local timezone, the rest of the app uses "DateTime.now()"
+        Date localDate = new Date(existingCreatedOnServerTimezone.getMillis());
+        return new DateTime(localDate.getTime());
     }
 }
