@@ -31,7 +31,6 @@ import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySin
  * the study in order to manage their participant record.
  */
 @AnyThread
-@Singleton
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 

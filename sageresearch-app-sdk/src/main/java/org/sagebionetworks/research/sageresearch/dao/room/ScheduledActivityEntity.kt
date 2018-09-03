@@ -107,7 +107,7 @@ data class RoomActivity(@SerializedName("guid") var guid: String) {
     var type: String? = null
 }
 
-data class RoomSchemaReference(@SerializedName("id") var id: String? = null) {
+data class RoomSchemaReference(@SerializedName("id") var id: String) {
     @SerializedName("revision")
     var revision: Long? = null
 

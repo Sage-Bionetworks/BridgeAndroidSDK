@@ -62,7 +62,6 @@ public class BridgeServiceModule {
     }
 
     @Provides
-    @Singleton
     ApiClientProvider getApiClientProvider(Context applicationContext,
                                            BridgeConfig bridgeConfig,
                                            SocketFactory socketFactory) {
@@ -84,7 +83,6 @@ public class BridgeServiceModule {
     }
 
     @Provides
-    @Singleton
     AndroidStudyUploadEncryptor getAndroidStudyUploadEncryptor(BridgeConfig bridgeConfig) {
         try {
             return new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());

@@ -33,7 +33,6 @@ import org.sagebionetworks.bridge.rest.model.AppConfig;
 
 /** Handles calling Bridge server to get study app config and caching the result. */
 @AnyThread
-@Singleton
 public class AppConfigManager {
     private @NonNull final AppConfigDAO appConfigDAO;
     private @NonNull final PublicApi publicApi;
@@ -71,9 +70,6 @@ public class AppConfigManager {
     public @NonNull Single<AppConfig> getRemoteAppConfig() {
         return RxUtils.toBodySingle(publicApi
                 .getAppConfig(config.getStudyId()))
-                .map(appConfig -> {
-                    appConfigDAO.cacheAppConfig(appConfig);
-                    return appConfig;
-                });
+                .doOnSuccess(appConfigDAO::cacheAppConfig);
     }
 }
