@@ -41,7 +41,7 @@ interface RsdIdentifier {
 
 /**
  * A protocol that can be used to filter and parse the scheduled activities for a
- * variety of customized UI/UX designs based on the objects defined in the
+ * variety of customized UI/UX designs based on the objects defined
  */
 interface ActivityGroup: TaskGroup {
 

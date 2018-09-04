@@ -59,7 +59,7 @@ abstract class ResearchDatabase : RoomDatabase() {
 internal class RoomSql {
     /**
      * Because all Room queries need to be verified at compile time, we cannot build dynamic queries based on state.
-     * This where these constant string values come into play as pieces to form reliable Room queries.
+     * This is where these constant string values come into play, as building blocks to form reliable Room queries.
      * These originally came about to model re-usable query components like iOS' NSPredicates and CoreData.
      */
     companion object RoomSqlConstants {

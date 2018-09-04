@@ -87,8 +87,8 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     fun clientWritableCopy(): ScheduledActivity {
         val schedule = ScheduledActivity()
         schedule.guid = guid
-        schedule.startedOn = org.joda.time.DateTime(startedOn)
-        schedule.finishedOn = org.joda.time.DateTime(finishedOn)
+        schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it) }
+        schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it) }
         schedule.clientData = clientData?.data
         return schedule
     }
