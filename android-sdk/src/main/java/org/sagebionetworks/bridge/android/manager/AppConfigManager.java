@@ -44,11 +44,6 @@ public class AppConfigManager {
         this.appConfigDAO = appConfigDAO;
         this.publicApi = publicApi;
         this.config = config;
-
-        AppConfig cachedAppConfig = getCachedAppConfig();
-        if (cachedAppConfig == null) {
-            
-        }
     }
 
     /** Get app config from the cache, or fall back to server if there is no value in the cache. */

@@ -1,6 +1,7 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
 import android.content.Context
+import android.support.annotation.VisibleForTesting
 import org.joda.time.DateTime
 import org.joda.time.Days
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
@@ -85,6 +86,7 @@ open class ScheduleRepository(context: Context) {
      */
     val maxRequestDays: Int = 14
 
+    @VisibleForTesting
     open fun studyStartDate(): DateTime? {
         return BridgeDataProvider.getInstance().participantCreatedOn
     }
@@ -93,6 +95,7 @@ open class ScheduleRepository(context: Context) {
      * Open for testing purposes
      * @return the current date and time
      */
+    @VisibleForTesting
     open fun now(): DateTime {
         return DateTime.now()
     }
@@ -167,7 +170,7 @@ open class ScheduleRepository(context: Context) {
                         }
                     }
                 }, {
-
+                    // TODO: mdephillips 9/4/18 how to do logger in kotlin?
                 })
     }
 
@@ -177,10 +180,6 @@ open class ScheduleRepository(context: Context) {
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
         // @see ScheduleActivityEntity.clientWritableCopy()
-// Client writable fields are...
-//        NSDate *savedStartedOn = self.startedOn;
-//        NSDate *savedFinishedOn = self.finishedOn;
-//        id<SBBJSONValue> savedClientData = self.clientData;
     }
 }
 
