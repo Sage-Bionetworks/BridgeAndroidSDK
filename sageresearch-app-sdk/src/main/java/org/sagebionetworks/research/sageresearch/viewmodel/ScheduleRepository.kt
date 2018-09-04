@@ -14,6 +14,7 @@ import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
 
 import rx.Observable
 import rx.schedulers.Schedulers
+import rx.subscriptions.CompositeSubscription
 
 import java.util.TreeMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -70,8 +71,21 @@ open class ScheduleRepository(context: Context) {
     private val scheduleDao: ScheduledActivityEntityDao =
             ResearchDatabase.getInstance(context).scheduleDao()
 
+    /**
+     * @property isSyncing true if the study's schedules are currently being fetched from bridge,
+     *                     false if no syncing is currently occurring.
+     */
     private var isSyncing = AtomicBoolean(false)
+    /**
+     * @property isSynced true if the study's schedules have been successfully fetched from bridge,
+     *                    false if it still need done.
+     */
     private var isSynced = AtomicBoolean(false)
+
+    /**
+     * @property syncingSubscription holds onto RxJava subscriptions if cleanup is ever required
+     */
+    private val syncingSubscription = CompositeSubscription()
 
     // TODO: mdephillips 9/2/18 read this from bridge config
     /**
@@ -134,7 +148,7 @@ open class ScheduleRepository(context: Context) {
         // Run all the requests, and join the results for the user
         for (start in requestMap.keys) {
             requestMap[start]?.let { end: DateTime ->
-                BridgeDataProvider.getInstance().getActivities(start, end)
+                syncingSubscription.add(BridgeDataProvider.getInstance().getActivities(start, end)
                         .subscribeOn(Schedulers.io())
                         .observeOn(Schedulers.io())
                         .subscribe({ activityListV4 ->
@@ -155,7 +169,8 @@ open class ScheduleRepository(context: Context) {
                                 isSyncing.set(false)
                                 requestHasFailed.set(true)
                             }
-                        })
+                        }))
+
             }
         }
     }
