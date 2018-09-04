@@ -50,6 +50,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The ScheduleRepository is responsible for downloading the study's schedules and saving them to the Room database
+ * All @see ScheduleViewModel are required to call this class' function syncSchedules() to ensure that
+ * the schedules are currently synced with bridge.
  */
 open class ScheduleRepository(context: Context) {
 
@@ -95,6 +97,22 @@ open class ScheduleRepository(context: Context) {
         return DateTime.now()
     }
 
+    /**
+     * Force the schedules to be re-loaded from bridge.
+     * This is useful when an event occurs that we know will affect the schedules on bridge, i.e. data group changes.
+     */
+    internal fun forceSyncSchedules() {
+        if (isSyncing.get()) {
+            return // we are currently syncing, no need to re-sync
+        }
+        isSynced.set(false)
+        syncSchedules()
+    }
+
+    /**
+     * Makes sure the schedules we have cached are synced with the bridge server.
+     * This function only operates if we are not currently syncing or have successfully synced
+     */
     fun syncSchedules() {
         if (isSynced.get() || isSyncing.get()) {
             return // we are already retrieving the study's schedules
@@ -112,29 +130,30 @@ open class ScheduleRepository(context: Context) {
 
         // Run all the requests, and join the results for the user
         for (start in requestMap.keys) {
-            val end = start.plusDays(requestMap[start] ?: 0).minusMillis(1)
-            BridgeDataProvider.getInstance().getActivities(start, end)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(Schedulers.io())
-                    .subscribe({ activityListV4 ->
-                        // If another request previously failed we won't trigger any success callbacks
-                        if (!requestHasFailed.get()) {
-                            requestCounter.set(requestCounter.get() - 1)
-                            if (requestCounter.get() <= 0) {
-                                isSynced.set(true)
-                                isSyncing.set(false)
+            requestMap[start]?.let { end: DateTime ->
+                BridgeDataProvider.getInstance().getActivities(start, end)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(Schedulers.io())
+                        .subscribe({ activityListV4 ->
+                            // If another request previously failed we won't trigger any success callbacks
+                            if (!requestHasFailed.get()) {
+                                requestCounter.set(requestCounter.get() - 1)
+                                if (requestCounter.get() <= 0) {
+                                    isSynced.set(true)
+                                    isSyncing.set(false)
+                                }
                             }
-                        }
-                        // No matter if other requests failed, still cache a successful request
-                        cacheSchedules(activityListV4)
-                    }, { throwable ->
-                        // Consider the sync a failure if one or more requests fail
-                        if (!requestHasFailed.get()) {
-                            isSynced.set(false)
-                            isSyncing.set(false)
-                            requestHasFailed.set(true)
-                        }
-                    })
+                            // No matter if other requests failed, still cache a successful request
+                            cacheSchedules(activityListV4)
+                        }, { throwable ->
+                            // Consider the sync a failure if one or more requests fail
+                            if (!requestHasFailed.get()) {
+                                isSynced.set(false)
+                                isSyncing.set(false)
+                                requestHasFailed.set(true)
+                            }
+                        })
+            }
         }
     }
 
@@ -157,7 +176,7 @@ open class ScheduleRepository(context: Context) {
         return false
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
-
+        // @see ScheduleActivityEntity.clientWritableCopy()
 // Client writable fields are...
 //        NSDate *savedStartedOn = self.startedOn;
 //        NSDate *savedFinishedOn = self.finishedOn;
@@ -166,17 +185,34 @@ open class ScheduleRepository(context: Context) {
 }
 
 object ScheduleRepositoryHelper {
-    fun buildRequestMap(start: DateTime, end: DateTime, maxRequestDays: Int): TreeMap<DateTime, Int> {
-        val requestMap = TreeMap<DateTime, Int>()
-        var startDateCounter = DateTime(start)
-        var durationCounter = Days.daysBetween(start, end).days
+    /**
+     * Builds a map of requests to make to the server that is appropriately grouped to not exceed the maxRequestDays.
+     * The map will have requests in whole days only so that it is easier to avoid the concern of exceeding max.
+     * The map is built in reverse order, so that requests favor getting today's new data first.
+     * @param start of the request
+     * @param end of the request
+     * @param maxRequestDays the maximum number of days that can be requested
+     */
+    fun buildRequestMap(start: DateTime, end: DateTime, maxRequestDays: Int): Map<DateTime, DateTime> {
+        // A LinkedHashMap will ensure that the requests are made in the order that we add key/values
+        val requestMap = LinkedHashMap<DateTime, DateTime>()
 
+        val startOfDay = start.withTimeAtStartOfDay()
+        val endOfDay = end.withTimeAtStartOfDay().plusDays(1)
+        var endDateCounter = DateTime(endOfDay)
+        var durationCounter = Days.daysBetween(startOfDay, endOfDay).days
+
+        // Build the map in reverse order, so that requests favor getting today's new data first
         while (durationCounter > maxRequestDays) {
-            requestMap[startDateCounter] = maxRequestDays
+            val requestStartDate = endDateCounter.minusDays(maxRequestDays)
+
+            // We subtract 1 millisecond so that the schedules returned from bridge
+            // do not return schedules for the next day if scheduled at midnight inclusively
+            requestMap[requestStartDate] = endDateCounter.minusMillis(1)
+            endDateCounter = endDateCounter.minusDays(maxRequestDays)
             durationCounter -= maxRequestDays
-            startDateCounter = startDateCounter.plusDays(maxRequestDays)
         }
-        requestMap[startDateCounter] = durationCounter
+        requestMap[startOfDay] = endDateCounter.minusMillis(1)
 
         return requestMap
     }

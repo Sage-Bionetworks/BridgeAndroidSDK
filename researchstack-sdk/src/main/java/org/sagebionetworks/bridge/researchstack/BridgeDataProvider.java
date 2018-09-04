@@ -867,14 +867,14 @@ public abstract class BridgeDataProvider extends DataProvider {
      *         null is returned if the user has not signed in yet
      */
     public @Nullable DateTime getParticipantCreatedOn() {
-        StudyParticipant participant =
-                bridgeManagerProvider.getParticipantManager().getCachedParticipantRecord();
+        UserSessionInfo sessionInfo =
+                bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
 
-        if (participant == null) {
+        if (sessionInfo == null) {
             return null;
         }
 
-        DateTime existingCreatedOnServerTimezone = participant.getCreatedOn();
+        DateTime existingCreatedOnServerTimezone = sessionInfo.getCreatedOn();
         if (existingCreatedOnServerTimezone == null) {
             return null;
         }

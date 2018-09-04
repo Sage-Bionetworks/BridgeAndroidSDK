@@ -2,6 +2,7 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 
 import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
+import android.support.annotation.VisibleForTesting
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
@@ -40,7 +41,9 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
  * Abstract base class for ScheduleViewModel that simply uses the application to create the dao
  */
 abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
-    val scheduleDao: ScheduledActivityEntityDao = ResearchDatabase.getInstance(app).scheduleDao()
+    private val db = ResearchDatabase.getInstance(app)
+    @VisibleForTesting
+    open fun scheduleDao() = db.scheduleDao()
 
     init {
         // This will make sure the schedules are synced with the server

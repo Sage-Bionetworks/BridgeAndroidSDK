@@ -1,9 +1,6 @@
-package org.sagebionetworks.research.sageresearch.viewmodel
+package org.sagebionetworks.research.sageresearch.extensions
 
-import android.app.Application
-import android.arch.lifecycle.LiveData
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
-import org.threeten.bp.LocalDateTime
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -36,34 +33,15 @@ import org.threeten.bp.LocalDateTime
 //
 
 /**
- * ScheduleTaskGroupViewModel is a simple wrapper for doing a task group available on query
- * @constructor necessary for configuring the live data from the database
+ * Extension function for lists of ScheduledActivityEntity that filters a list on an activity identifier
+ * @param activityId list will be filtered on schedules that have this activity identifier
+ * @return a new instance of a list that has the filtered schedules
  */
-open class ScheduleTaskGroupViewModel(
-        /**
-         * @param app used to gain access to the schedule database
-         */
-        app: Application,
-        /**
-         * @param taskGroup used to filter schedules, if null, any task identifier is allowed
-         */
-        taskGroup: Set<String>?,
-        /**
-         * @param availableOn used to filter schedules available during this time, if null, any time is allowed
-         */
-        availableOn: LocalDateTime?): ScheduleViewModel(app) {
-
-    val taskGroup: Set<String>? = taskGroup
-    val availableOn: LocalDateTime? = availableOn
-
-    val scheduleLiveData: LiveData<List<ScheduledActivityEntity>> =
-            if (availableOn != null && taskGroup != null) {
-                scheduleDao.get(taskGroup, availableOn)
-            } else if (taskGroup != null) {
-                scheduleDao.get(taskGroup)
-            } else if (availableOn != null) {
-                scheduleDao.get(availableOn)
-            } else {
-                scheduleDao.getAll()
-            }
+fun List<ScheduledActivityEntity>.filterByActivityId(activityId: String): List<ScheduledActivityEntity> {
+    return ArrayList(this).filter {
+        it.activity != null &&
+                (activityId == it.activity?.task?.identifier ||
+                activityId == it.activity?.survey?.identifier ||
+                activityId == it.activity?.compoundActivity?.taskIdentifier)
+    }
 }

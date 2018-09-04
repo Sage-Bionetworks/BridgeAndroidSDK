@@ -5,6 +5,7 @@ import android.arch.persistence.room.Dao
 import android.arch.persistence.room.Insert
 import android.arch.persistence.room.OnConflictStrategy
 import android.arch.persistence.room.Query
+import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 
 //
@@ -52,23 +53,15 @@ interface ScheduledActivityEntityDao {
      * @return all the scheduled activities in the table
      */
     @Query(RoomSql.SCHEDULE_QUERY_ALL)
-    fun getAll(): LiveData<List<ScheduledActivityEntity>>
-
-    /**
-     * Get all the scheduled activities with the identifier specified
-     * @param identifier to use as a filter scheduled items
-     * @return the list of scheduled activities
-     */
-    @Query(RoomSql.SCHEDULE_QUERY_SELECT_TASK)
-    fun get(identifier: String): LiveData<List<ScheduledActivityEntity>>
+    fun all(): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that have one of the identifiers specified in the task group
-     * @param taskGroup a set of identifiers to use as a filter for scheduled items
+     * @param activityGroup a set of identifiers to use as a filter for scheduled items
      * @return the list of scheduled activities
      */
-    @Query(RoomSql.SCHEDULE_QUERY_SELECT_TASK_GROUP)
-    fun get(taskGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
+    @Query(RoomSql.SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP)
+    fun activityGroup(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that are scheduled during and not expired yet during this date
@@ -76,7 +69,7 @@ interface ScheduledActivityEntityDao {
      * @return the list of scheduled activities
      */
     @Query(RoomSql.SCHEDULE_QUERY_SELECT_AVAILABLE_DATE)
-    fun get(date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
+    fun availableOn(date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that are available (not finished yet) and available schedule-wise at this date
@@ -84,31 +77,36 @@ interface ScheduledActivityEntityDao {
      * @return the list of scheduled activities
      */
     @Query(RoomSql.SCHEDULE_QUERY_SELECT_NOT_FINISHED_AVAILABLE_DATE)
-    fun getAvailableOn(date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
-
-    /**
-     * Get all the scheduled activities that are available schedule-wise at this date and have the identifier
-     * @param identifier to filter the scheduled activities
-     * @param date to filter the scheduled activities
-     * @return the list of scheduled activities
-     */
-    @Query(RoomSql.SCHEDULE_QUERY_SELECT_TASK_AVAILABLE_DATE)
-    fun get(identifier: String, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
+    fun unfinishedAvailableOn(date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that are available schedule-wise at this date and are in this task group
-     * @param taskGroup to filter the scheduled activities
+     * @param activityGroup to filter the scheduled activities
      * @param date to filter the scheduled activities
      * @return the list of scheduled activities
      */
-    @Query(RoomSql.SCHEDULE_QUERY_SELECT_TASK_GROUP_AVAILABLE_DATE)
-    fun get(taskGroup: Set<String>, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
+    @Query(RoomSql.SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP_AVAILABLE_DATE)
+    fun activityGroupAvailableOn(activityGroup: Set<String>, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
 
     /**
-     * @param roomScheduledActivity to insert into the database
+     * Get all the scheduled activities that were finished between the two dates
+     * @param activityGroup to filter the scheduled activities
+     * @param start of the bounds where activity was finished
+     * @param end of the bounds where activity was finished
+     * @return the list of scheduled activities
      */
-    @Insert
-    fun insert(roomScheduledActivity: ScheduledActivityEntity)
+    @Query(RoomSql.SCHEDULE_QUERY_ACTIVITY_GROUP_FINISHED_BETWEEN)
+    fun activityGroupFinishedBetween(activityGroup: Set<String>, start: Instant, end: Instant): LiveData<List<ScheduledActivityEntity>>
+
+    /**
+     * Get all the scheduled activities that were finished between the two dates
+     * @param activityGroup that will be excluded from results
+     * @param start of the bounds where activity was finished
+     * @param end of the bounds where activity was finished
+     * @return the list of scheduled activities
+     */
+    @Query(RoomSql.SCHEDULE_QUERY_EXCLUDE_ACTIVITY_GROUP_FINISHED_BETWEEN)
+    fun excludeActivityGroupFinishedBetween(activityGroup: Set<String>, start: Instant, end: Instant): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * @param roomScheduledActivityList to insert into the database

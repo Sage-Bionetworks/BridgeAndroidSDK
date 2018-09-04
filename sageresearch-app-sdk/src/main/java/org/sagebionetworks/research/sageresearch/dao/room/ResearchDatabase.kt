@@ -83,16 +83,20 @@ internal class RoomSql {
         /**
          * CONDITION constants need to be joined by AND or OR in the select statement
          */
-        private const val SCHEDULE_CONDITION_TASK_ID = "(activity_task_identifier=:identifier OR " +
-                "activity_survey_identifier=:identifier OR " +
-                "activity_compound_taskIdentifier=:identifier)"
 
-        private const val SCHEDULE_CONDITION_TASK_GROUP_ID = "(activity_task_identifier IN (:taskGroup) OR " +
-                "activity_survey_identifier IN (:taskGroup) OR " +
-                "activity_compound_taskIdentifier IN (:taskGroup))"
+        private const val SCHEDULE_CONDITION_ACTIVITY_GROUP_ID =
+                "(activity_task_identifier IN (:activityGroup) OR " +
+                "activity_survey_identifier IN (:activityGroup) OR " +
+                "activity_compound_taskIdentifier IN (:activityGroup))"
 
-        private const val SCHEDULE_CONDITION_NOT_FINISHED = "finishedOn IS NULL"
-        private const val SCHEDULE_CONDITION_FINISHED = "finishedOn IS NOT NULL"
+        private const val SCHEDULE_CONDITION_EXCLUDE_ACTIVITY_GROUP_ID =
+                "((activity_task_identifier IS NULL OR activity_task_identifier NOT IN (:activityGroup)) AND " +
+                "(activity_survey_identifier IS NULL OR activity_survey_identifier NOT IN (:activityGroup)) AND " +
+                "(activity_compound_taskIdentifier IS NULL OR activity_compound_taskIdentifier NOT IN (:activityGroup)))"
+
+        private const val SCHEDULE_CONDITION_NOT_FINISHED = "(finishedOn IS NULL)"
+        private const val SCHEDULE_CONDITION_FINISHED = "(finishedOn IS NOT NULL)"
+        private const val SCHEDULE_CONDITION_FINISHED_BETWEEN = "(finishedOn BETWEEN :start AND :end)"
 
         private const val SCHEDULE_CONDITION_AVAILABLE_DATE =
                 "((:date BETWEEN scheduledOn AND expiresOn) OR " +
@@ -103,20 +107,25 @@ internal class RoomSql {
          */
         const val SCHEDULE_QUERY_ALL = "SELECT * FROM scheduledactivityentity"
 
-        const val SCHEDULE_QUERY_SELECT_TASK = SCHEDULE_SELECT + SCHEDULE_CONDITION_TASK_ID
+        const val SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID
 
-        const val SCHEDULE_QUERY_SELECT_TASK_GROUP = SCHEDULE_SELECT + SCHEDULE_CONDITION_TASK_GROUP_ID
-
-        const val SCHEDULE_QUERY_SELECT_AVAILABLE_DATE = SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE
+        const val SCHEDULE_QUERY_SELECT_AVAILABLE_DATE =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE
 
         const val SCHEDULE_QUERY_SELECT_NOT_FINISHED_AVAILABLE_DATE =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE + OP_AND + SCHEDULE_CONDITION_NOT_FINISHED
 
-        const val SCHEDULE_QUERY_SELECT_TASK_AVAILABLE_DATE =
-                SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE + OP_AND + SCHEDULE_CONDITION_TASK_ID
+        const val SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP_AVAILABLE_DATE =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE + OP_AND + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID
 
-        const val SCHEDULE_QUERY_SELECT_TASK_GROUP_AVAILABLE_DATE =
-                SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE + OP_AND + SCHEDULE_CONDITION_TASK_GROUP_ID
+        const val SCHEDULE_QUERY_ACTIVITY_GROUP_FINISHED_BETWEEN =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID +
+                OP_AND + SCHEDULE_CONDITION_FINISHED + OP_AND + SCHEDULE_CONDITION_FINISHED_BETWEEN
+
+        const val SCHEDULE_QUERY_EXCLUDE_ACTIVITY_GROUP_FINISHED_BETWEEN =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_EXCLUDE_ACTIVITY_GROUP_ID +
+                OP_AND + SCHEDULE_CONDITION_FINISHED + OP_AND + SCHEDULE_CONDITION_FINISHED_BETWEEN
     }
 }
 

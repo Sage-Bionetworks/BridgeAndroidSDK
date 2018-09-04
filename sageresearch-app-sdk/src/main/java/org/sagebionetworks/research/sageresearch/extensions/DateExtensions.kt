@@ -1,6 +1,7 @@
-package org.sagebionetworks.research.sageresearch.manager
+package org.sagebionetworks.research.sageresearch.extensions
 
-import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
+import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZonedDateTime
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -32,10 +33,30 @@ import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-/**
- * A protocol that can be used to filter and parse the scheduled activities for a
- * variety of customized UI/UX designs based on the objects defined in the
- */
-open class ActivityGroup(
-        override val identifier: String, override val title: String?, override val detail: String?,
-        override val imageVendor: ImageTheme?, override val tasks: Array<TaskInfo>) : TaskGroup
+fun LocalDateTime.startOfDay(): LocalDateTime {
+    return this
+            .withHour(0)
+            .withMinute(0)
+            .withSecond(0)
+            .withNano(0)
+}
+
+fun LocalDateTime.startOfNextDay(): LocalDateTime {
+    return this
+            .plusDays(1)
+            .startOfDay()
+}
+
+fun ZonedDateTime.startOfDay(): ZonedDateTime {
+    return this
+            .withHour(0)
+            .withMinute(0)
+            .withSecond(0)
+            .withNano(0)
+}
+
+fun ZonedDateTime.startOfNextDay(): ZonedDateTime {
+    return this
+            .plusDays(1)
+            .startOfDay()
+}

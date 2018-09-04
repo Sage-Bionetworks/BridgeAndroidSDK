@@ -18,31 +18,31 @@ class ScheduleRepositoryTests {
         val end = DateTime.parse("2018-08-27T00:00:00.000-04:00")
         val requestMap = ScheduleRepositoryHelper.buildRequestMap(start, end, maxRequestDays)
         assertEquals(1, requestMap.keys.size)
-        assertEquals(requestMap.keys.elementAt(0), start)
-        assertEquals(requestMap[requestMap.keys.elementAt(0)], 10)
+        assertEquals(DateTime.parse("2018-08-17T00:00:00.000-04:00"), requestMap.keys.elementAt(0))
+        assertEquals(DateTime.parse("2018-08-27T23:59:59.999-04:00"), requestMap[requestMap.keys.elementAt(0)])
     }
 
     @Test
     fun requestMap_MoreThan14DaysEven() {
-        val start = DateTime.parse("2018-08-17T00:00:00.000-04:00")
-        val end = DateTime.parse("2018-09-14T00:00:00.000-04:00")
+        val start = DateTime.parse("2018-08-18T12:00:00.000-04:00")
+        val end = DateTime.parse("2018-09-14T00:12:00.000-04:00")
         val requestMap = ScheduleRepositoryHelper.buildRequestMap(start, end, maxRequestDays)
         assertEquals(2, requestMap.keys.size)
-        assertEquals(start, requestMap.keys.elementAt(0))
-        assertEquals(14, requestMap[requestMap.keys.elementAt(0)])
-        assertEquals(start.plusDays(14), requestMap.keys.elementAt(1))
-        assertEquals(14, requestMap[requestMap.keys.elementAt(1)])
+        assertEquals(DateTime.parse("2018-09-01T00:00:00.000-04:00"), requestMap.keys.elementAt(0))
+        assertEquals(DateTime.parse("2018-09-14T23:59:59.999-04:00"), requestMap[requestMap.keys.elementAt(0)])
+        assertEquals(DateTime.parse("2018-08-18T00:00:00.000-04:00"), requestMap.keys.elementAt(1))
+        assertEquals(DateTime.parse("2018-08-31T23:59:59.999-04:00"), requestMap[requestMap.keys.elementAt(1)])
     }
 
     @Test
     fun requestMap_MoreThan14DaysRemainder() {
-        val start = DateTime.parse("2018-08-17T00:00:00.000-04:00")
-        val end = DateTime.parse("2018-09-09T00:00:00.000-04:00")
+        val start = DateTime.parse("2018-08-17T10:00:00.000-04:00")
+        val end = DateTime.parse("2018-09-09T10:00:00.000-04:00")
         val requestMap = ScheduleRepositoryHelper.buildRequestMap(start, end, maxRequestDays)
         assertEquals(2, requestMap.keys.size)
-        assertEquals(start, requestMap.keys.elementAt(0))
-        assertEquals(14, requestMap[requestMap.keys.elementAt(0)])
-        assertEquals(start.plusDays(14), requestMap.keys.elementAt(1))
-        assertEquals(9, requestMap[requestMap.keys.elementAt(1)])
+        assertEquals(DateTime.parse("2018-08-27T00:00:00.000-04:00"), requestMap.keys.elementAt(0))
+        assertEquals(DateTime.parse("2018-09-09T23:59:59.999-04:00"), requestMap[requestMap.keys.elementAt(0)])
+        assertEquals(DateTime.parse("2018-08-17T00:00:00.000-04:00"), requestMap.keys.elementAt(1))
+        assertEquals(DateTime.parse("2018-08-26T23:59:59.999-04:00"), requestMap[requestMap.keys.elementAt(1)])
     }
 }

@@ -1,7 +1,6 @@
 package org.sagebionetworks.research.sageresearch.manager
 
 import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
-import org.sagebionetworks.research.domain.task.TaskInfo
 
 //
 //  Copyright © 2016-2018 Sage Bionetworks. All rights reserved.
