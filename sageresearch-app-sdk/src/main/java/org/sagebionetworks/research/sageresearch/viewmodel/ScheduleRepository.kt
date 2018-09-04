@@ -176,7 +176,7 @@ open class ScheduleRepository(context: Context) {
     }
 
     private fun cacheSchedules(activityListV4: ScheduledActivityListV4) {
-        Observable.just(scheduleDao)
+        syncingSubscription.add(Observable.just(scheduleDao)
                 .subscribeOn(Schedulers.io())
                 .subscribe({ dao ->
                     entityConverter.fromScheduledActivityListV4(activityListV4)?.let { list ->
@@ -186,7 +186,7 @@ open class ScheduleRepository(context: Context) {
                     }
                 }, {
                     // TODO: mdephillips 9/4/18 how to do logger in kotlin?
-                })
+                }))
     }
 
     // TODO: mdephillips 9/2/18 correctly reconcile the schedules instead of doing an upsert
