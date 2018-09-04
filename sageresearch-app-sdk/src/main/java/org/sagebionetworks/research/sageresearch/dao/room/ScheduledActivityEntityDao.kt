@@ -118,6 +118,14 @@ interface ScheduledActivityEntityDao {
     fun excludeSurveyGroupUnfinishedAvailableOn(surveyGroup: Set<String>, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
 
     /**
+     * Get the most recently finished activity in the activity group
+     * @param activityGroup that will be included in results
+     * @return the most recently finished schedule that matches the query
+     */
+    @Query(RoomSql.SCHEDULE_MOST_RECENT_FINISHED_ACTIVITY)
+    fun mostRecentFinishedActivity(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
+
+    /**
      * @param roomScheduledActivityList to insert into the database
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

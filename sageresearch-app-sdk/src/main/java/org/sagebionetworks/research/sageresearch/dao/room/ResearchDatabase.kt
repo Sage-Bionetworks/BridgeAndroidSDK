@@ -81,6 +81,17 @@ internal class RoomSql {
         private const val SCHEDULE_SELECT = "SELECT * FROM scheduledactivityentity WHERE "
 
         /**
+         * ORDER BY constants do sorting on queries
+         */
+
+        private const val ORDER_BY_FINISHED = " ORDER BY finishedOn DESC"
+
+        /**
+         * LIMIT constants restrict the number of db rows
+         */
+        private const val LIMIT_1 = " LIMIT 1"
+
+        /**
          * CONDITION constants need to be joined by AND or OR in the select statement
          */
 
@@ -133,6 +144,10 @@ internal class RoomSql {
         const val SCHEDULE_QUERY_EXCLUDE_SURVEY_GROUP_UNFINISHED_AVAILABLE_DATE =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_EXCLUDE_SURVEY_GROUP_ID +
                         OP_AND + SCHEDULE_CONDITION_NOT_FINISHED + OP_AND + SCHEDULE_CONDITION_AVAILABLE_DATE
+
+        const val SCHEDULE_MOST_RECENT_FINISHED_ACTIVITY =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID + OP_AND +
+                        SCHEDULE_CONDITION_FINISHED + ORDER_BY_FINISHED + LIMIT_1
     }
 }
 
