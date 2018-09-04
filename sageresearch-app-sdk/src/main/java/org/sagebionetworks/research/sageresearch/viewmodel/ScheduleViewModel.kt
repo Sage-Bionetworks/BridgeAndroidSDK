@@ -42,7 +42,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
  */
 abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     private val db = ResearchDatabase.getInstance(app)
-    @VisibleForTesting
+    // Open for testing purposes
     open fun scheduleDao() = db.scheduleDao()
 
     init {
