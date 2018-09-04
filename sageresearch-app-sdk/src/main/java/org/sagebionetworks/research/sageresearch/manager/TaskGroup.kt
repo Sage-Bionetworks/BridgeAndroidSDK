@@ -64,7 +64,7 @@ interface TaskGroup {
      * TODO: mdephillips 8/23/18 the TaskInfo interface is missing a few fields from it's iOS equivalent 'RSDTaskGroup'
      * @property An array of the task references included in this group.
      */
-    val tasks: Array<TaskInfo>
+    val tasks: Set<TaskInfo>
 
     /**
      * TODO: mdephillips 8/23/18 we're not sure if we are using TaskPaths yet on Android or not, leaving out for now

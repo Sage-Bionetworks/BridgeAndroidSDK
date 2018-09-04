@@ -109,6 +109,15 @@ interface ScheduledActivityEntityDao {
     fun excludeActivityGroupFinishedBetween(activityGroup: Set<String>, start: Instant, end: Instant): LiveData<List<ScheduledActivityEntity>>
 
     /**
+     * Get all the scheduled activities that are surveys that do not have identifiers in the survey group
+     * @param surveyGroup that will be excluded from results, and results will only be surveys
+     * @param date to filter the scheduled activities
+     * @return the list of scheduled activities
+     */
+    @Query(RoomSql.SCHEDULE_QUERY_EXCLUDE_SURVEY_GROUP_UNFINISHED_AVAILABLE_DATE)
+    fun excludeSurveyGroupUnfinishedAvailableOn(surveyGroup: Set<String>, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
+
+    /**
      * @param roomScheduledActivityList to insert into the database
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

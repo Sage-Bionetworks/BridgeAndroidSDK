@@ -33,9 +33,101 @@ import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
 //
 
 /**
+ * Wrapper for RsdIdentifier enums
+ */
+interface RsdIdentifier {
+    val identifier: String
+}
+
+/**
  * A protocol that can be used to filter and parse the scheduled activities for a
  * variety of customized UI/UX designs based on the objects defined in the
  */
-open class ActivityGroup(
-        override val identifier: String, override val title: String?, override val detail: String?,
-        override val imageVendor: ImageTheme?, override val tasks: Array<TaskInfo>) : TaskGroup
+interface ActivityGroup: TaskGroup {
+
+    /**
+     * @property journeyTitle The text to display for the task group when displaying this in a list or
+     * collection where the format of the string is compact or extended, depending
+     * upon the requirements of the UI design.
+     */
+    val journeyTitle: String?
+
+    /**
+     * @property activityIdentifiers A list of the activity identifiers associated with this task group.
+     */
+    val activityIdentifiers : Set<RsdIdentifier>
+
+    /**
+     * The schedule plan guid that can be used to map scheduled activities to
+     * the appropriate group in the case where more than one group may contain
+     * the same tasks.
+     */
+    val schedulePlanGuid : String?
+
+    /**
+     * The activity guid map that can be used to map scheduled activities to
+     * the appropriate group in the case where more than one group may contain
+     * the same tasks **but** where the activities are not all grouped on the server
+     * using the same schedule. This guid can be found in the Bridge Study Manager UI
+     * by hovering your cursor over the copy icon and selecting "Copy GUID".
+     */
+    val activityGuidMap : Map<String, String>?
+
+    // TODO: mdephillips 9/4/18 not sure we need this
+    /// An identifier that can be used to associate an `SBBScheduledActivity` instance
+    /// with setting up a local reminder for when to perform a task.
+    //var notificationIdentifier : RSDIdentifier? { get }
+}
+
+/**
+ * `ActivityGroupObject` is a concrete implementation of interface ActivityGroup
+ *
+ * - example:
+ * ````
+ *    // Example activity group using a shared `schedulePlanGuid`.
+ *    let json = """
+ *            {
+ *                "identifier": "foo",
+ *                "title": "Title",
+ *                "journeyTitle": "Journey title",
+ *                "detail": "A detail about the object",
+ *                "imageSource": "fooImage",
+ *                "activityIdentifiers": ["taskA", "taskB", "taskC"],
+ *                "notificationIdentifier": "scheduleFoo",
+ *                "schedulePlanGuid": "abcdef12-3456-7890",
+ *            }
+ *            """.data(using: .utf8)! // our data in native (JSON) format
+ *
+ *    // Example activity group using the `activity.guid` identifiers to map schedules to tasks.
+ *    let json = """
+ *            {
+ *                "identifier": "foo",
+ *                "activityIdentifiers": ["taskA", "taskB", "taskC"],
+ *                "activityGuidMap": {
+ *                                     "taskA":"ababab12-3456-7890",
+ *                                     "taskB":"cdcdcd12-3456-7890",
+ *                                     "taskC":"efefef12-3456-7890"
+ *                                     }
+ *            }
+ *            """.data(using: .utf8)! // our data in native (JSON) format
+ *
+ *    // Example activity group where the first schedule matching the given activity identifer is used.
+ *    let json = """
+ *            {
+ *                "identifier": "foo",
+ *                "activityIdentifiers": ["taskA", "taskB", "taskC"]
+ *            }
+ *            """.data(using: .utf8)! // our data in native (JSON) format
+ * ````
+ */
+data class ActivityGroupObject(
+        override val identifier: String,
+        override val title: String? = null,
+        override val detail: String? = null,
+        override val imageVendor: ImageTheme? = null,
+        override val tasks: Set<TaskInfo> = setOf(),
+        override val journeyTitle: String? = null,
+        override val activityIdentifiers : Set<RsdIdentifier> = setOf(),
+        override val schedulePlanGuid : String? = null,
+        override val activityGuidMap : Map<String, String>? = null): ActivityGroup
+

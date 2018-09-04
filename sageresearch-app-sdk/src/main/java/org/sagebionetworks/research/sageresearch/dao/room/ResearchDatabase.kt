@@ -94,6 +94,9 @@ internal class RoomSql {
                 "(activity_survey_identifier IS NULL OR activity_survey_identifier NOT IN (:activityGroup)) AND " +
                 "(activity_compound_taskIdentifier IS NULL OR activity_compound_taskIdentifier NOT IN (:activityGroup)))"
 
+        private const val SCHEDULE_CONDITION_EXCLUDE_SURVEY_GROUP_ID =
+                "(activity_survey_identifier IS NOT NULL AND activity_survey_identifier NOT IN (:surveyGroup))"
+
         private const val SCHEDULE_CONDITION_NOT_FINISHED = "(finishedOn IS NULL)"
         private const val SCHEDULE_CONDITION_FINISHED = "(finishedOn IS NOT NULL)"
         private const val SCHEDULE_CONDITION_FINISHED_BETWEEN = "(finishedOn BETWEEN :start AND :end)"
@@ -126,6 +129,10 @@ internal class RoomSql {
         const val SCHEDULE_QUERY_EXCLUDE_ACTIVITY_GROUP_FINISHED_BETWEEN =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_EXCLUDE_ACTIVITY_GROUP_ID +
                 OP_AND + SCHEDULE_CONDITION_FINISHED + OP_AND + SCHEDULE_CONDITION_FINISHED_BETWEEN
+
+        const val SCHEDULE_QUERY_EXCLUDE_SURVEY_GROUP_UNFINISHED_AVAILABLE_DATE =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_EXCLUDE_SURVEY_GROUP_ID +
+                        OP_AND + SCHEDULE_CONDITION_NOT_FINISHED + OP_AND + SCHEDULE_CONDITION_AVAILABLE_DATE
     }
 }
 
