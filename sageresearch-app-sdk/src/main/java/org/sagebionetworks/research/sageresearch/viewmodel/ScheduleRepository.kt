@@ -136,6 +136,7 @@ open class ScheduleRepository(context: Context) {
         }
 
         isSyncing.set(true)
+        syncingSubscription.clear()
 
         val startDate = studyStartDate()?.withTimeAtStartOfDay() ?: return  // return if we aren't signed in yet
         val endDate = now().plusDays(cachedDaysAhead)
