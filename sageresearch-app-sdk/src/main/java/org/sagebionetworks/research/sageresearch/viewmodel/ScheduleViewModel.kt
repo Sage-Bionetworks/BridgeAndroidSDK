@@ -2,10 +2,14 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 
 import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
+import android.arch.lifecycle.LiveData
 import android.support.annotation.VisibleForTesting
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZoneId
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -44,6 +48,24 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     private val db = ResearchDatabase.getInstance(app)
     // Open for testing purposes
     open fun scheduleDao() = db.scheduleDao()
+
+    /**
+     * Helper method to create an activity group available between query.
+     * Because the scheduledOn and finishedOn vars are stored differently,
+     * there is some conversion functionality we can include here to avoid duplicate work.
+     * @param activityGroup the set of identifiers to filter on.
+     * @param availableOnRange first is the start of the range, second is the end.
+     * @return live data query to db
+     */
+    protected fun createActivityGroupAvailableBetween(
+            activityGroup: Set<String>,
+            availableOnRange: Pair<LocalDateTime, LocalDateTime>): LiveData<List<ScheduledActivityEntity>> {
+
+        return scheduleDao().activityGroupAvailableBetween(activityGroup,
+                availableOnRange.first, availableOnRange.second,
+                availableOnRange.first.atZone(ZoneId.systemDefault()).toInstant(),
+                availableOnRange.second.atZone(ZoneId.systemDefault()).toInstant())
+    }
 
     init {
         // This will make sure the schedules are synced with the server

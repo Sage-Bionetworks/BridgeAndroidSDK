@@ -41,6 +41,10 @@ fun LocalDateTime.startOfDay(): LocalDateTime {
             .withNano(0)
 }
 
+fun LocalDateTime.endOfDay(): LocalDateTime {
+    return this.startOfDay().plusDays(1).minusNanos(1)
+}
+
 fun LocalDateTime.startOfNextDay(): LocalDateTime {
     return this
             .plusDays(1)
@@ -53,6 +57,10 @@ fun ZonedDateTime.startOfDay(): ZonedDateTime {
             .withMinute(0)
             .withSecond(0)
             .withNano(0)
+}
+
+fun ZonedDateTime.endOfDay(): ZonedDateTime {
+    return this.startOfDay().plusDays(1).minusNanos(1)
 }
 
 fun ZonedDateTime.startOfNextDay(): ZonedDateTime {

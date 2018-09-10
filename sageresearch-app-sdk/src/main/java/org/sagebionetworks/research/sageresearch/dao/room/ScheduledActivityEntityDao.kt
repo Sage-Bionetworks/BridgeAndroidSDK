@@ -89,24 +89,38 @@ interface ScheduledActivityEntityDao {
     fun activityGroupAvailableOn(activityGroup: Set<String>, date: LocalDateTime): LiveData<List<ScheduledActivityEntity>>
 
     /**
+     * Get all the scheduled activities that are available schedule-wise between these dates and are in this group
+     * @param activityGroup to filter the scheduled activities
+     * @param start to filter the scheduled activities
+     * @param end to filter the scheduled activities
+     * @param finishedStart start of the finished on bounds (usually the same as start but an Instant)
+     * @param finishedEnd end of the finished on bounds (usually the same as end but an Instant)
+     * @return the list of scheduled activities
+     */
+    @Query(RoomSql.SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP_BETWEEN_DATE_UNFINISHED_OR_FINISHED_BETWEEN)
+    fun activityGroupAvailableBetween(activityGroup: Set<String>,
+            start: LocalDateTime, end: LocalDateTime,
+            finishedStart: Instant, finishedEnd: Instant): LiveData<List<ScheduledActivityEntity>>
+
+    /**
      * Get all the scheduled activities that were finished between the two dates
      * @param activityGroup to filter the scheduled activities
-     * @param start of the bounds where activity was finished
-     * @param end of the bounds where activity was finished
+     * @param finishedStart of the bounds where activity was finished
+     * @param finishedEnd of the bounds where activity was finished
      * @return the list of scheduled activities
      */
     @Query(RoomSql.SCHEDULE_QUERY_ACTIVITY_GROUP_FINISHED_BETWEEN)
-    fun activityGroupFinishedBetween(activityGroup: Set<String>, start: Instant, end: Instant): LiveData<List<ScheduledActivityEntity>>
+    fun activityGroupFinishedBetween(activityGroup: Set<String>, finishedStart: Instant, finishedEnd: Instant): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that were finished between the two dates
      * @param activityGroup that will be excluded from results
-     * @param start of the bounds where activity was finished
-     * @param end of the bounds where activity was finished
+     * @param finishedStart of the bounds where activity was finished
+     * @param finishedEnd of the bounds where activity was finished
      * @return the list of scheduled activities
      */
     @Query(RoomSql.SCHEDULE_QUERY_EXCLUDE_ACTIVITY_GROUP_FINISHED_BETWEEN)
-    fun excludeActivityGroupFinishedBetween(activityGroup: Set<String>, start: Instant, end: Instant): LiveData<List<ScheduledActivityEntity>>
+    fun excludeActivityGroupFinishedBetween(activityGroup: Set<String>, finishedStart: Instant, finishedEnd: Instant): LiveData<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that are surveys that do not have identifiers in the survey group

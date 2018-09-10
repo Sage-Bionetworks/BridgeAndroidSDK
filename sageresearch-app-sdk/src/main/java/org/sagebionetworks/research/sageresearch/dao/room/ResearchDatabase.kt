@@ -110,11 +110,24 @@ internal class RoomSql {
 
         private const val SCHEDULE_CONDITION_NOT_FINISHED = "(finishedOn IS NULL)"
         private const val SCHEDULE_CONDITION_FINISHED = "(finishedOn IS NOT NULL)"
-        private const val SCHEDULE_CONDITION_FINISHED_BETWEEN = "(finishedOn BETWEEN :start AND :end)"
+        private const val SCHEDULE_CONDITION_FINISHED_BETWEEN = "(finishedOn BETWEEN :finishedStart AND :finishedEnd)"
+        private const val SCHEDULE_CONDITION_FINISHED_BETWEEN_OR_NULL =
+                "($SCHEDULE_CONDITION_NOT_FINISHED$OP_OR$SCHEDULE_CONDITION_FINISHED_BETWEEN)"
+
+        private const val SCHEDULE_CONDITION_NO_EXPIRES_DATE = "(expiresOn IS NULL)"
+        private const val SCHEDULE_CONDITION_HAS_EXPIRES_DATE = "(expiresOn IS NOT NULL)"
+        private const val SCHEDULE_CONDITION_EXPIRES_BETWEEN = "(expiresOn BETWEEN :start AND :end)"
+        private const val SCHEDULE_CONDITION_EXPIRES_BETWEEN_OR_NULL =
+                "($SCHEDULE_CONDITION_NO_EXPIRES_DATE$OP_OR$SCHEDULE_CONDITION_EXPIRES_BETWEEN)"
 
         private const val SCHEDULE_CONDITION_AVAILABLE_DATE =
                 "((:date BETWEEN scheduledOn AND expiresOn) OR " +
                         "(expiresOn IS NULL AND :date >= scheduledOn))"
+
+        private const val SCHEDULE_CONDITION_BETWEEN_DATES =
+                "(" + SCHEDULE_CONDITION_FINISHED_BETWEEN_OR_NULL + OP_AND +
+                        SCHEDULE_CONDITION_EXPIRES_BETWEEN_OR_NULL + OP_AND +
+                        "(scheduledOn <= :end)" + ")"
 
         /**
          * QUERY constants are full Room queries
@@ -132,6 +145,9 @@ internal class RoomSql {
 
         const val SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP_AVAILABLE_DATE =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_AVAILABLE_DATE + OP_AND + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID
+
+        const val SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP_BETWEEN_DATE_UNFINISHED_OR_FINISHED_BETWEEN =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID + OP_AND + SCHEDULE_CONDITION_BETWEEN_DATES
 
         const val SCHEDULE_QUERY_ACTIVITY_GROUP_FINISHED_BETWEEN =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID +
