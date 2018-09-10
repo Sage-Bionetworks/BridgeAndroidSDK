@@ -73,7 +73,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public static BridgeDataProvider getInstance() {
         if (!(DataProvider.getInstance() instanceof BridgeDataProvider)) {
-            throw new IllegalStateException("This app only works with BpDataProvider");
+            throw new IllegalStateException("This app only works with BridgeDataProvider");
         }
         return  (BridgeDataProvider)DataProvider.getInstance();
     }

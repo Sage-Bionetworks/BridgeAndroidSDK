@@ -92,6 +92,13 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
         schedule.clientData = clientData?.data
         return schedule
     }
+
+    /**
+     * @return the corresponding activity identifier, may be either task, survey, or compound identifier
+     */
+    fun activityIdentifier(): String? {
+        return activity?.task?.identifier ?: activity?.survey?.identifier ?: activity?.compoundActivity?.taskIdentifier
+    }
 }
 
 data class ClientData(var data: Any? = null)

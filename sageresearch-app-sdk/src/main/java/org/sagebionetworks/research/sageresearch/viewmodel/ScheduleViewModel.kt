@@ -8,6 +8,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
 
@@ -46,8 +47,17 @@ import org.threeten.bp.ZoneId
  */
 abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     private val db = ResearchDatabase.getInstance(app)
-    // Open for testing purposes
-    open fun scheduleDao() = db.scheduleDao()
+    @VisibleForTesting
+    protected open fun scheduleDao() = db.scheduleDao()
+
+    @VisibleForTesting
+    protected open val timezone: ZoneId get() {
+        return ZoneId.systemDefault()
+    }
+
+    protected fun toInstant(dateTime: LocalDateTime): Instant {
+        return dateTime.atZone(timezone).toInstant()
+    }
 
     /**
      * Helper method to create an activity group available between query.
@@ -63,8 +73,8 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
 
         return scheduleDao().activityGroupAvailableBetween(activityGroup,
                 availableOnRange.first, availableOnRange.second,
-                availableOnRange.first.atZone(ZoneId.systemDefault()).toInstant(),
-                availableOnRange.second.atZone(ZoneId.systemDefault()).toInstant())
+                toInstant(availableOnRange.first),
+                toInstant(availableOnRange.second))
     }
 
     init {
