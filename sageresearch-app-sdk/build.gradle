@@ -45,7 +45,8 @@ dependencies {
 
     api project(':mobile-ui')
     api project(':android-sdk')
-    
+    api project(':researchstack-sdk')
+
     api 'com.google.guava:guava:24.1-android'
     
     // Dagger
@@ -53,6 +54,8 @@ dependencies {
     implementation 'com.google.dagger:dagger-android-support:2.16'
     kapt 'com.google.dagger:dagger-android-processor:2.16'
     kapt "com.google.dagger:dagger-compiler:2.16"
+
+    implementation 'android.arch.lifecycle:extensions:1.1.1'
 
     // room db functionality
     implementation 'android.arch.persistence.room:runtime:1.1.1'
