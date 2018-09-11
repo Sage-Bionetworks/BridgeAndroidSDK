@@ -866,7 +866,8 @@ public abstract class BridgeDataProvider extends DataProvider {
      * @return the local tz date the participant created their account
      *         null is returned if the user has not signed in yet
      */
-    public @Nullable DateTime getParticipantCreatedOn() {
+    @Nullable
+    public DateTime getParticipantCreatedOn() {
         UserSessionInfo sessionInfo =
                 bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
 

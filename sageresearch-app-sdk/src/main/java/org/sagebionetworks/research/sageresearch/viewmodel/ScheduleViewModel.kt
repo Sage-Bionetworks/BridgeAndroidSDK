@@ -46,6 +46,7 @@ import org.threeten.bp.ZoneId
  * Abstract base class for ScheduleViewModel that simply uses the application to create the dao
  */
 abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
+
     private val db = ResearchDatabase.getInstance(app)
     @VisibleForTesting
     protected open fun scheduleDao() = db.scheduleDao()

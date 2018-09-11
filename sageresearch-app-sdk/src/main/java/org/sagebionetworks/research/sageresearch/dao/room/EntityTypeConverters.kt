@@ -68,7 +68,7 @@ import java.util.UUID
  */
 class EntityTypeConverters {
 
-    private val bridgeGson = GsonBuilder()
+    val bridgeGson = GsonBuilder()
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateTypeAdapter())
             .registerTypeAdapter(DateTime::class.java, DateTimeTypeAdapter())

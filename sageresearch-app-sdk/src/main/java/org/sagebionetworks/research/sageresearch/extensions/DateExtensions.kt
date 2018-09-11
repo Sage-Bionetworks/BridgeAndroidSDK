@@ -58,12 +58,12 @@ fun LocalDateTime.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime): 
             (this.isAfter(start) && this.isBefore(end))
 }
 
+fun LocalDateTime.toInstant(timezone: ZoneId): Instant {
+    return this.atZone(timezone).toInstant()
+}
+
 fun ZonedDateTime.startOfDay(): ZonedDateTime {
-    return this
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
+    return this.toLocalDate().atStartOfDay(this.zone)
 }
 
 fun ZonedDateTime.endOfDay(): ZonedDateTime {
@@ -82,7 +82,7 @@ fun Instant.inSameDayAs(date: LocalDateTime, timezone: ZoneId): Boolean {
 
 fun Instant.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime, timezone: ZoneId): Boolean {
     val startZoned = start.atZone(timezone).toInstant()
-    val endZoned = start.atZone(timezone).toInstant()
+    val endZoned = end.atZone(timezone).toInstant()
     return this == startZoned || this == endZoned ||
             (this.isAfter(startZoned) && this.isBefore(endZoned))
 }
