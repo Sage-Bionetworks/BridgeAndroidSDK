@@ -73,7 +73,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     public static BridgeDataProvider getInstance() {
         if (!(DataProvider.getInstance() instanceof BridgeDataProvider)) {
-            throw new IllegalStateException("This app only works with BpDataProvider");
+            throw new IllegalStateException("This app only works with BridgeDataProvider");
         }
         return  (BridgeDataProvider)DataProvider.getInstance();
     }
@@ -866,7 +866,8 @@ public abstract class BridgeDataProvider extends DataProvider {
      * @return the local tz date the participant created their account
      *         null is returned if the user has not signed in yet
      */
-    public @Nullable DateTime getParticipantCreatedOn() {
+    @Nullable
+    public DateTime getParticipantCreatedOn() {
         UserSessionInfo sessionInfo =
                 bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
 

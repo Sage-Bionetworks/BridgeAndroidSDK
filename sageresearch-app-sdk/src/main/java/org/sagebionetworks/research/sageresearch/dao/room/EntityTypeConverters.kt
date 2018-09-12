@@ -2,6 +2,11 @@ package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.arch.persistence.room.TypeConverter
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
+import com.google.gson.JsonPrimitive
 import com.google.gson.TypeAdapter
 
 import com.google.gson.reflect.TypeToken
@@ -23,6 +28,7 @@ import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.format.DateTimeFormatter
 import java.io.IOException
+import java.lang.reflect.Type
 import java.util.UUID
 
 //
@@ -62,7 +68,7 @@ import java.util.UUID
  */
 class EntityTypeConverters {
 
-    private val bridgeGson = GsonBuilder()
+    val bridgeGson = GsonBuilder()
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateTypeAdapter())
             .registerTypeAdapter(DateTime::class.java, DateTimeTypeAdapter())

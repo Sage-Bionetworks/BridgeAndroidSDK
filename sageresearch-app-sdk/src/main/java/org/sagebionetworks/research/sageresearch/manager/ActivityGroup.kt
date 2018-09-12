@@ -33,13 +33,6 @@ import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
 //
 
 /**
- * Wrapper for RsdIdentifier enums
- */
-interface RsdIdentifier {
-    val identifier: String
-}
-
-/**
  * A protocol that can be used to filter and parse the scheduled activities for a
  * variety of customized UI/UX designs based on the objects defined
  */
@@ -55,7 +48,7 @@ interface ActivityGroup: TaskGroup {
     /**
      * @property activityIdentifiers A list of the activity identifiers associated with this task group.
      */
-    val activityIdentifiers : Set<RsdIdentifier>
+    val activityIdentifiers : Set<String>
 
     /**
      * The schedule plan guid that can be used to map scheduled activities to
@@ -127,7 +120,7 @@ data class ActivityGroupObject(
         override val imageVendor: ImageTheme? = null,
         override val tasks: Set<TaskInfo> = setOf(),
         override val journeyTitle: String? = null,
-        override val activityIdentifiers : Set<RsdIdentifier> = setOf(),
+        override val activityIdentifiers : Set<String> = setOf(),
         override val schedulePlanGuid : String? = null,
         override val activityGuidMap : Map<String, String>? = null): ActivityGroup
 

@@ -1,6 +1,8 @@
 package org.sagebionetworks.research.sageresearch.extensions
 
+import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZoneId
 import org.threeten.bp.ZonedDateTime
 
 //
@@ -34,11 +36,11 @@ import org.threeten.bp.ZonedDateTime
 //
 
 fun LocalDateTime.startOfDay(): LocalDateTime {
-    return this
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
+    return this.toLocalDate().atStartOfDay()
+}
+
+fun LocalDateTime.endOfDay(): LocalDateTime {
+    return this.startOfDay().plusDays(1).minusNanos(1)
 }
 
 fun LocalDateTime.startOfNextDay(): LocalDateTime {
@@ -47,16 +49,40 @@ fun LocalDateTime.startOfNextDay(): LocalDateTime {
             .startOfDay()
 }
 
+fun LocalDateTime.inSameDayAs(date: LocalDateTime): Boolean {
+    return this.isBetweenInclusive(date.startOfDay(), date.endOfDay())
+}
+
+fun LocalDateTime.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime): Boolean {
+    return this == start || this == end ||
+            (this.isAfter(start) && this.isBefore(end))
+}
+
+fun LocalDateTime.toInstant(timezone: ZoneId): Instant {
+    return this.atZone(timezone).toInstant()
+}
+
 fun ZonedDateTime.startOfDay(): ZonedDateTime {
-    return this
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
+    return this.toLocalDate().atStartOfDay(this.zone)
+}
+
+fun ZonedDateTime.endOfDay(): ZonedDateTime {
+    return this.startOfDay().plusDays(1).minusNanos(1)
 }
 
 fun ZonedDateTime.startOfNextDay(): ZonedDateTime {
     return this
             .plusDays(1)
             .startOfDay()
+}
+
+fun Instant.inSameDayAs(date: LocalDateTime, timezone: ZoneId): Boolean {
+    return this.isBetweenInclusive(date.startOfDay(), date.endOfDay(), timezone)
+}
+
+fun Instant.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime, timezone: ZoneId): Boolean {
+    val startZoned = start.atZone(timezone).toInstant()
+    val endZoned = end.atZone(timezone).toInstant()
+    return this == startZoned || this == endZoned ||
+            (this.isAfter(startZoned) && this.isBefore(endZoned))
 }
