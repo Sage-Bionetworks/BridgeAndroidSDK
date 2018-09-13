@@ -45,29 +45,22 @@ interface TaskGroup {
     val identifier: String
 
     /**
-     * @property The primary text to display for the task group in a localized string.
+     * @property title the primary text to display for the task group in a localized string.
      */
     val title: String?
 
     /**
-     * @property Additional detail text to display for the task group in a localized string.
+     * @property detail additional text to display for the task group in a localized string.
      */
     val detail: String?
 
     /**
-     * TODO: mdephillips 8/23/18 is this the correct equivalent of iOS' RSDImageVendor?
-     * @property An icon image that can be used for displaying the choice.
+     * @property imageName icon image that can be used for displaying the choice.
      */
-    val imageVendor: ImageTheme?
+    val imageName: String?
 
     /**
-     * TODO: mdephillips 8/23/18 the TaskInfo interface is missing a few fields from it's iOS equivalent 'RSDTaskGroup'
-     * @property An array of the task references included in this group.
+     * @property tasks array of the task references included in this group.
      */
     val tasks: Set<TaskInfo>
-
-    /**
-     * TODO: mdephillips 8/23/18 we're not sure if we are using TaskPaths yet on Android or not, leaving out for now
-     */
-    //fun instantiateTaskPath(taskInfo: TaskInfo): TaskPath?
 }
