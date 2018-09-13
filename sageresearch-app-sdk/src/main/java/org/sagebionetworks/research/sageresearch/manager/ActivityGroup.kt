@@ -117,7 +117,7 @@ data class ActivityGroupObject(
         override val identifier: String,
         override val title: String? = null,
         override val detail: String? = null,
-        override val imageVendor: ImageTheme? = null,
+        override val imageName: String? = null,
         override val tasks: Set<TaskInfo> = setOf(),
         override val journeyTitle: String? = null,
         override val activityIdentifiers : Set<String> = setOf(),

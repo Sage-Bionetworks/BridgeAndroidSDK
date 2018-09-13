@@ -39,32 +39,81 @@ import org.sagebionetworks.research.domain.step.ui.theme.ImageTheme
  * by the participant.
  */
 interface TaskInfo {
-    /// A short string that uniquely identifies the task.
+    /**
+     * @property identifier short string that uniquely identifies the task.
+     */
     val identifier: String
 
-    /// The primary text to display for the task in a localized string.
+    /**
+     * @property title text to display for the task in a localized string.
+     */
     val title: String?
 
-    /// The subtitle text to display for the task in a localized string.
+    /**
+     * @property subtitle text to display for the task in a localized string.
+     */
     val subtitle: String?
 
-    /// Additional detail text to display for the task. Generally, this would be displayed
-    /// while the task is being fetched.
+    /**
+     * @property Additional detail text to display for the task.
+     * Generally, this would be displayed while the task is being fetched.
+     */
     val detail: String?
 
-    /// The estimated number of minutes that the task will take. If `0`, then this is ignored.
-    val estimatedMinutes: Int
+    /**
+     * @property estimatedMinutes that the task will take. If `0`, then this is ignored.
+     */
+    val estimatedMinutes: Int?
 
-    /// Optional schema info to pass with the task info for this task.
+    /**
+     * @property schemaInfo Optional schema info to pass with the task info for this task.
+     */
     val schemaInfo: SchemaReference?
 
-    /// An icon image that can be used for displaying the choice.
-    val imageVendor: ImageTheme?
-
-    // TODO: mdephillips 9/2/18 do we need this?
-    /// The resource transformer on `RSDTaskInfo` can be used in cases where the transformer is
-    /// loaded from a resource by the task info (when decoded). If the task info is used as the
-    /// information container for a **step** that loads the task using a service to fetch the
-    /// task, then this pointer can be `nil`.
-    // var resourceTransformer : RSDTaskTransformer? { get }
+    /**
+     * @property imageName the name of the image resource to load that can be used for displaying the choice.
+     */
+    val imageName: String?
 }
+
+
+/**
+ * Initialize from JSON will look like this
+ *
+ * - example:
+ *
+ *     ```
+ *        let json = """
+ *                {
+ *                    "identifier": "foobar",
+ *                    "title": "Foobarific",
+ *                    "detail": "This is a task group containing foo and bar",
+ *                    "icon": "foobarIcon",
+ *                    "tasks" : [{
+ *                               "identifier": "foo",
+ *                               "schemaRevision" : 2,
+ *                               "title": "Hello Foo!",
+ *                               "detail": "This is a test of foo.",
+ *                               "copyright": "This is a copyright string for foo.",
+ *                               "estimatedMinutes": 5,
+ *                               "icon": "fooIcon",
+ *                               {
+ *                               "identifier": "bar",
+ *                               "schemaRevision" : 4,
+ *                               "title": "Hello Bar!",
+ *                               "detail": "This is a test of bar.",
+ *                               "estimatedMinutes": 7,
+ *                               "icon": "barIcon"
+ *                               }]
+ *                }
+ *            """.data(using: .utf8)! // our data in native (JSON) format
+ *     ```
+ */
+data class TaskInfoObject(
+        override val identifier: String,
+        override val title: String,
+        override val subtitle: String? = null,
+        override val detail: String? = null,
+        override val imageName: String? = null,
+        override val estimatedMinutes: Int? = null,
+        override val schemaInfo: SchemaReference? = null): TaskInfo
