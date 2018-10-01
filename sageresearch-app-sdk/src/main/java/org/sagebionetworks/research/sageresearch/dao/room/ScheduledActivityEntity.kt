@@ -80,6 +80,13 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     var type: String? = null
 
     /**
+     * @property needsSyncedToBridge is true if the schedule was updated when the user was offline
+     *                               schedules should be queried on this field and updated on bridge when possible
+     */
+    @ColumnInfo(index = true)
+    var needsSyncedToBridge: Boolean? = null
+
+    /**
      * A client writable copy is considered a new object with only the properties set on the object
      * that are writable on bridge.  All other fields sent to bridge will be ignored anyways.
      * @return a ScheduledActivity that can be sent to bridge
@@ -87,8 +94,8 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     fun clientWritableCopy(): ScheduledActivity {
         val schedule = ScheduledActivity()
         schedule.guid = guid
-        schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it) }
-        schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it) }
+        schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
+        schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
         schedule.clientData = clientData?.data
         return schedule
     }

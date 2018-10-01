@@ -56,6 +56,13 @@ interface ScheduledActivityEntityDao {
     fun all(): LiveData<List<ScheduledActivityEntity>>
 
     /**
+     * @param guid to query on
+     * @return the scheduled activity from the table with the specified guid
+     */
+    @Query(RoomSql.SCHEDULE_QUERY_SELECT_GUID)
+    fun activity(guid: String): List<ScheduledActivityEntity>
+
+    /**
      * Get all the scheduled activities that have one of the identifiers specified in the task group
      * @param activityGroup a set of identifiers to use as a filter for scheduled items
      * @return the list of scheduled activities
@@ -138,6 +145,12 @@ interface ScheduledActivityEntityDao {
      */
     @Query(RoomSql.SCHEDULE_MOST_RECENT_FINISHED_ACTIVITY)
     fun mostRecentFinishedActivity(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
+
+    /**
+     * @return all the activities where activity.needsSyncedToBridge is true
+     */
+    @Query(RoomSql.SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED)
+    fun activitiesThatNeedSyncedToBridge(): List<ScheduledActivityEntity>
 
     /**
      * @param roomScheduledActivityList to insert into the database

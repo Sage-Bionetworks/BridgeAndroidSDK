@@ -1,22 +1,34 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
+import android.content.SharedPreferences
 import android.support.annotation.VisibleForTesting
 import org.joda.time.DateTime
 import org.joda.time.Days
+import org.researchstack.backbone.result.TaskResult
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
+import org.sagebionetworks.bridge.rest.model.Message
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
+import org.threeten.bp.Instant
 
 import rx.Observable
+import rx.android.schedulers.AndroidSchedulers
+import rx.functions.Action1
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
+import java.util.Date
+import java.util.UUID
 
-import java.util.TreeMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -83,9 +95,36 @@ open class ScheduleRepository(context: Context) {
     private var isSynced = AtomicBoolean(false)
 
     /**
-     * @property syncingSubscription holds onto RxJava subscriptions if cleanup is ever required
+     * @property scheduleRepoSubscriptions holds onto RxJava subscriptions if cleanup is ever required
      */
-    private val syncingSubscription = CompositeSubscription()
+    private val scheduleRepoSubscriptions = CompositeSubscription()
+
+    /**
+     * Used to store helpful data about the state of the ScheduleRepository
+     */
+    private val prefs: SharedPreferences =
+            context.getSharedPreferences("ScheduleRepository", MODE_PRIVATE)
+
+    private val lastQueryDateKey = "lastQueryEndDate"
+    /**
+     * Save the local date time of the end date of the last request to bridge. Thread safe.
+     */
+    @VisibleForTesting
+    protected open var lastQueryEndDate: DateTime?
+        get() {
+            return prefs.getString(lastQueryDateKey, null)?.let {
+                DateTime.parse(it)
+            }
+        }
+        // Suppress any warnings because we need this operation to take place immediately
+        @SuppressLint("ApplySharedPref")
+        set(value) {
+            value?.let {
+                prefs.edit().putString(lastQueryDateKey, it.toString()).commit()
+            } ?: run {
+                prefs.edit().remove(lastQueryDateKey).commit()
+            }
+        }
 
     // TODO: mdephillips 9/2/18 read this from bridge config
     /**
@@ -100,8 +139,14 @@ open class ScheduleRepository(context: Context) {
      */
     val maxRequestDays: Int = 14
 
+    /**
+     * @property scheduleTaskRunUuidMap maps taskRunUuid to schedule guid so that we cannot find
+     *                                  the correct schedule to update after a task completes
+     */
+    private val scheduleTaskRunUuidMap = HashMap<UUID, String>()
+
     @VisibleForTesting
-    open fun studyStartDate(): DateTime? {
+    protected open fun studyStartDate(): DateTime? {
         return BridgeDataProvider.getInstance().participantCreatedOn
     }
 
@@ -110,20 +155,24 @@ open class ScheduleRepository(context: Context) {
      * @return the current date and time
      */
     @VisibleForTesting
-    open fun now(): DateTime {
+    protected open fun now(): DateTime {
         return DateTime.now()
     }
 
     /**
-     * Force the schedules to be re-loaded from bridge.
-     * This is useful when an event occurs that we know will affect the schedules on bridge, i.e. data group changes.
+     * @property syncStartDate the start date time for the request to bridge to sync schedules
      */
-    internal fun forceSyncSchedules() {
-        if (isSyncing.get()) {
-            return // we are currently syncing, no need to re-sync
+    open val syncStartDate: DateTime? get() {
+        return lastQueryEndDate?.withTimeAtStartOfDay() ?: run {
+            studyStartDate()?.withTimeAtStartOfDay()
         }
-        isSynced.set(false)
-        syncSchedules()
+    }
+
+    /**
+     * @property syncEndDate the end date time for the request to bridge to sync schedules
+     */
+    open val syncEndDate: DateTime get() {
+        return now().plusDays(cachedDaysAhead)
     }
 
     /**
@@ -136,10 +185,10 @@ open class ScheduleRepository(context: Context) {
         }
 
         isSyncing.set(true)
-        syncingSubscription.clear()
+        scheduleRepoSubscriptions.clear()
 
-        val startDate = studyStartDate()?.withTimeAtStartOfDay() ?: return  // return if we aren't signed in yet
-        val endDate = now().plusDays(cachedDaysAhead)
+        val startDate = syncStartDate ?: return  // return if we aren't signed in yet
+        val endDate = syncEndDate
         val requestMap = ScheduleRepositoryHelper.buildRequestMap(startDate, endDate, maxRequestDays)
 
         // Use these atomic variables to track of the state of the requests
@@ -149,7 +198,7 @@ open class ScheduleRepository(context: Context) {
         // Run all the requests, and join the results for the user
         for (start in requestMap.keys) {
             requestMap[start]?.let { end: DateTime ->
-                syncingSubscription.add(BridgeDataProvider.getInstance().getActivities(start, end)
+                scheduleRepoSubscriptions.add(BridgeDataProvider.getInstance().getActivities(start, end)
                         .subscribeOn(Schedulers.io())
                         .observeOn(Schedulers.io())
                         .subscribe({ activityListV4 ->
@@ -157,6 +206,7 @@ open class ScheduleRepository(context: Context) {
                             if (!requestHasFailed.get()) {
                                 requestCounter.set(requestCounter.get() - 1)
                                 if (requestCounter.get() <= 0) {
+                                    lastQueryEndDate = endDate
                                     isSynced.set(true)
                                     isSyncing.set(false)
                                 }
@@ -176,15 +226,201 @@ open class ScheduleRepository(context: Context) {
         }
     }
 
-    private fun cacheSchedules(activityListV4: ScheduledActivityListV4) {
-        syncingSubscription.add(Observable.just(scheduleDao)
+    /**
+     * When a schedule fails to update to Bridge for whatever reason, it will be marked in the db as so.
+     * This function queries the db for those schedules and re-attempts to update them on Bridge.
+     */
+    fun syncFailedSchedules() {
+        scheduleRepoSubscriptions.add(Observable.just(scheduleDao)
                 .subscribeOn(Schedulers.io())
                 .subscribe({ dao ->
-                    entityConverter.fromScheduledActivityListV4(activityListV4)?.let { list ->
-                        if (!reconcileWithDictionary()) {
-                            dao.upsert(list)
-                        }
+                    val schedules = dao.activitiesThatNeedSyncedToBridge()
+                    schedules.forEach {
+                        updateScheduleToBridge(it)
                     }
+                }, {
+                    // TODO: mdephillips 9/4/18 how to do logger in kotlin?
+                }))
+    }
+
+    /**
+     * Creates and associates the taskRunUuid and the schedule guid so that it can accessed later when complete
+     * @param schedule of the task
+     * @return the new associated uuid with this schedule
+     */
+    fun createScheduleTaskRunUuid(schedule: ScheduledActivityEntity): UUID {
+        val uuid = UUID.randomUUID()
+        scheduleTaskRunUuidMap[uuid] = schedule.guid
+        return uuid
+    }
+
+    /**
+     * @param schedule that we are going to update on bridge
+     *                 schedule can be null if the user does a task without internet
+     * @param taskResult the result of the user doing the schedule task
+     */
+    fun updateSchedule(taskResult: TaskResult, taskRunUuid: UUID) {
+
+        // Null schedule usually means that the developer forgot to call createScheduleTaskRunUuid before launching
+        // the task associated with the schedule.
+        // Or the user is offline and did a task without having synced the study's schedules.
+        // Which, that is okay, the s3 upload will still take place, but we won't be able to update the schedule on bridge.
+        // Side effects for this will be, no study reports or finishedOn status for the task will show in the UI.
+        // TODO: mdephillips 9/14/2018 message the user there will be no history?
+        val guid = scheduleTaskRunUuidMap[taskRunUuid] ?: return
+
+        // If we previously registered a guid with a taskRunUuid, we should be able to find the schedule in the
+        // the database at this point based on the schedule guid
+        findSchedule(guid, Action1 { schedule ->
+            // TODO: mdephillips 9/14/2018 in past apps, here we would set client data from TaskResult
+            // TODO: mdephillips 9/14/2018 instead use TaskResult to generate study report for schedule
+            schedule.startedOn = Instant.ofEpochMilli(taskResult.startDate?.time ?: Date().time)
+            schedule.finishedOn = Instant.ofEpochMilli(taskResult.endDate?.time ?: Date().time)
+            cacheSchedule(schedule)
+            updateScheduleToBridge(schedule)
+        }, Action1 {
+            // TODO: mdephillips 9/14/2018 message the user there will be no history?
+        })
+    }
+
+    /**
+     * Private function should only be accessed through this class as a re-usable way to update
+     * a schedule on bridge.
+     */
+    private fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
+        val bridgeSchedule = schedule.clientWritableCopy()
+        updateActivityOnBridge(bridgeSchedule, Action1 {
+            schedule.needsSyncedToBridge = false
+            cacheSchedule(schedule)
+        }, Action1 {
+            scheduleUpdateFailed(schedule, it)
+        })
+    }
+
+    /**
+     * Encapsulate db call functionality into it own function for providing custom mock behavior in tests,
+     * and also to remove redundant threading code throughout the class.
+     */
+    @VisibleForTesting
+    protected open fun findSchedule(
+            scheduleGuid: String,
+            onNext: Action1<ScheduledActivityEntity>,
+            onError: Action1<Throwable>) {
+
+        scheduleRepoSubscriptions.add(Observable.just(scheduleDao)
+                .subscribeOn(Schedulers.io())
+                .subscribe({ dao ->
+                    dao.activity(scheduleGuid).firstOrNull()?.let {
+                        scheduleOnMain(it, onNext, onError)
+                    } ?: run {
+                        val error = Throwable("No schedule found in DB with guid $scheduleGuid")
+                        scheduleOnMain(error, onError)
+                    }
+                }, {
+                    scheduleOnMain(it, onError)
+                }))
+    }
+
+    /**
+     * Helper function to schedule calls on the main thread
+     */
+    @VisibleForTesting
+    protected open fun scheduleOnMain(
+            schedule: ScheduledActivityEntity,
+            onNext: Action1<ScheduledActivityEntity>,
+            onError: Action1<Throwable>) {
+
+        scheduleRepoSubscriptions.add(Observable.just(schedule)
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    onNext.call(it)
+                }, {
+                    onError.call(it)
+                }))
+    }
+
+    /**
+     * Helper function to schedule calls on the main thread
+     */
+    @VisibleForTesting
+    protected open fun scheduleOnMain(
+            throwable: Throwable,
+            onError: Action1<Throwable>) {
+
+        scheduleRepoSubscriptions.add(Observable.just(throwable)
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    onError.call(it)
+                }, {
+                    onError.call(it)
+                }))
+    }
+
+    /**
+     * @param schedule that failed to update on bridge.
+     * @param throwable the reason the schedule failed to update on bridge.
+     */
+    private fun scheduleUpdateFailed(schedule: ScheduledActivityEntity, throwable: Throwable?) {
+        throwable?.let {
+            // There are some responses from the server that mean this call
+            // will never succeed, like a 400 client data too large error.
+            // If so, do not add the activity again to update.
+            schedule.needsSyncedToBridge = !it.isUnrecoverableError()
+        }
+        ?: run {
+            schedule.needsSyncedToBridge = true
+        }
+
+        cacheSchedule(schedule)
+    }
+
+    /**
+     * Encapsulate network call functionality into it own function for providing custom mock behavior in tests,
+     * and also to remove redundant threading code throughout the class.
+     */
+    @VisibleForTesting
+    protected open fun updateActivityOnBridge(
+            bridgeSchedule: ScheduledActivity,
+            onNext: Action1<Message>,
+            onError: Action1<Throwable>) {
+
+        scheduleRepoSubscriptions.add(BridgeDataProvider.getInstance().updateActivity(bridgeSchedule)
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.io()).subscribe({ message ->
+                    onNext.call(message)
+                }, { throwable ->
+                    onError.call(throwable)
+                }))
+    }
+
+    /**
+     * @param schedule to cache in the db, simply a helper function to convert to list
+     */
+    private fun cacheSchedule(schedule: ScheduledActivityEntity) {
+        cacheSchedules(listOf(schedule))
+    }
+
+    /**
+     * @param activityListV4 to convert to the entity format and cache
+     */
+    private fun cacheSchedules(activityListV4: ScheduledActivityListV4) {
+        entityConverter.fromScheduledActivityListV4(activityListV4)?.let { list ->
+            if (!reconcileWithDictionary()) {
+                cacheSchedules(list)
+            }
+        }
+    }
+
+    /**
+     * Encapsulate the db write operation in its own function for providing custom mock behavior in tests,
+     * and also to remove redundant threading code throughout the class.
+     */
+    @VisibleForTesting
+    protected open fun cacheSchedules(schedules: List<ScheduledActivityEntity>) {
+        scheduleRepoSubscriptions.add(Observable.just(scheduleDao)
+                .subscribeOn(Schedulers.io())
+                .subscribe({ dao ->
+                    dao.upsert(schedules)
                 }, {
                     // TODO: mdephillips 9/4/18 how to do logger in kotlin?
                 }))

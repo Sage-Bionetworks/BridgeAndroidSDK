@@ -4,6 +4,7 @@ import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
 import android.support.annotation.VisibleForTesting
+import org.researchstack.backbone.result.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 
@@ -11,6 +12,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
+import java.util.UUID
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -51,6 +53,8 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     @VisibleForTesting
     protected open fun scheduleDao() = db.scheduleDao()
 
+    private val scheduleRepo = ScheduleRepository.getInstance(app)
+
     @VisibleForTesting
     protected open val timezone: ZoneId get() {
         return ZoneId.systemDefault()
@@ -81,5 +85,17 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // This will make sure the schedules are synced with the server
         ScheduleRepository.getInstance(app).syncSchedules()
+    }
+
+    /**
+     * Runs a schedule using the task launcher, and informs the schedule repository about the
+     * association between the taskRunUuid and the schedule guid so that it can be completed
+     * @param schedule of the task to run
+     * @return the uuid associated with this schedule
+     */
+    fun createScheduleTaskRunUuid(schedule: ScheduledActivityEntity?): UUID {
+        schedule?.let {
+            return scheduleRepo.createScheduleTaskRunUuid(schedule)
+        } ?: return UUID.randomUUID()
     }
 }
