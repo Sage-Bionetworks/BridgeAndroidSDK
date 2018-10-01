@@ -8,11 +8,10 @@ import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultA
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.SageResearchResultArchiveFactory;
 
-import java.util.Collections;
-import java.util.List;
-
+import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
+import dagger.multibindings.IntoSet;
 
 @Module
 public abstract class SageResearchAppSDKModule {
@@ -25,8 +24,7 @@ public abstract class SageResearchAppSDKModule {
     /**
      * @return list of processors to receive final task results
      */
-    @Provides
-    static List<TaskResultProcessor> provideTaskResultProcessors(TaskResultUploader taskResultUploader) {
-        return Collections.<TaskResultProcessor>singletonList(taskResultUploader);
-    }
+    @Binds
+    @IntoSet
+    abstract TaskResultProcessor provideTaskResultProcessors(TaskResultUploader taskResultUploader);
 }
