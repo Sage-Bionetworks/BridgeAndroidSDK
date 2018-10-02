@@ -1,6 +1,7 @@
 package org.sagebionetworks.research.sageresearch.extensions
 
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
+import org.threeten.bp.LocalDateTime
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -44,4 +45,16 @@ fun List<ScheduledActivityEntity>.filterByActivityId(activityId: String): List<S
                 activityId == it.activity?.survey?.identifier ||
                 activityId == it.activity?.compoundActivity?.taskIdentifier)
     }
+}
+
+/**
+ * @param activityId list will be filtered on schedules that have this activity identifier
+ * @return the most recent activity that was scheduled before now
+ */
+fun List<ScheduledActivityEntity>.mostRecentSchedule(activityId: String): ScheduledActivityEntity? {
+    return this.filterByActivityId(activityId).filter {
+        it.scheduledOn?.isBefore(LocalDateTime.now()) ?: run { false }
+    }.sortedWith(Comparator { o1, o2 ->
+        o1.scheduledOn?.compareTo(o2.scheduledOn) ?: 1
+    }).firstOrNull()
 }

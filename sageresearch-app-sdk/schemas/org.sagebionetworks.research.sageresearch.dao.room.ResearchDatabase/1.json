@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "7a059006abffca4b1dd326e3ffda2bce",
+    "identityHash": "f5aab3ca96bf9188990b461c0bb0e2db",
     "entities": [
       {
         "tableName": "ScheduledActivityEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`schedulePlanGuid` TEXT, `startedOn` INTEGER, `finishedOn` INTEGER, `scheduledOn` TEXT, `expiresOn` TEXT, `persistent` INTEGER, `clientData` TEXT, `status` TEXT, `type` TEXT, `guid` TEXT NOT NULL, `activity_label` TEXT, `activity_labelDetail` TEXT, `activity_activityType` TEXT, `activity_type` TEXT, `activity_guid` TEXT, `activity_compound_schemaList` TEXT, `activity_compound_surveyList` TEXT, `activity_compound_type` TEXT, `activity_compound_taskIdentifier` TEXT, `activity_task_type` TEXT, `activity_task_identifier` TEXT, `activity_task_schema_revision` INTEGER, `activity_task_schema_type` TEXT, `activity_task_schema_id` TEXT, `activity_survey_identifier` TEXT, `activity_survey_createdOn` INTEGER, `activity_survey_href` TEXT, `activity_survey_type` TEXT, `activity_survey_guid` TEXT, PRIMARY KEY(`guid`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`schedulePlanGuid` TEXT, `startedOn` INTEGER, `finishedOn` INTEGER, `scheduledOn` TEXT, `expiresOn` TEXT, `persistent` INTEGER, `clientData` TEXT, `status` TEXT, `type` TEXT, `needsSyncedToBridge` INTEGER, `guid` TEXT NOT NULL, `activity_label` TEXT, `activity_labelDetail` TEXT, `activity_activityType` TEXT, `activity_type` TEXT, `activity_guid` TEXT, `activity_compound_schemaList` TEXT, `activity_compound_surveyList` TEXT, `activity_compound_type` TEXT, `activity_compound_taskIdentifier` TEXT, `activity_task_type` TEXT, `activity_task_identifier` TEXT, `activity_task_schema_revision` INTEGER, `activity_task_schema_type` TEXT, `activity_task_schema_id` TEXT, `activity_survey_identifier` TEXT, `activity_survey_createdOn` INTEGER, `activity_survey_href` TEXT, `activity_survey_type` TEXT, `activity_survey_guid` TEXT, PRIMARY KEY(`guid`))",
         "fields": [
           {
             "fieldPath": "schedulePlanGuid",
@@ -60,6 +60,12 @@
             "fieldPath": "type",
             "columnName": "type",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "needsSyncedToBridge",
+            "columnName": "needsSyncedToBridge",
+            "affinity": "INTEGER",
             "notNull": false
           },
           {
@@ -213,6 +219,14 @@
               "expiresOn"
             ],
             "createSql": "CREATE  INDEX `index_ScheduledActivityEntity_expiresOn` ON `${TABLE_NAME}` (`expiresOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_needsSyncedToBridge",
+            "unique": false,
+            "columnNames": [
+              "needsSyncedToBridge"
+            ],
+            "createSql": "CREATE  INDEX `index_ScheduledActivityEntity_needsSyncedToBridge` ON `${TABLE_NAME}` (`needsSyncedToBridge`)"
           }
         ],
         "foreignKeys": []
@@ -220,7 +234,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"7a059006abffca4b1dd326e3ffda2bce\")"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"f5aab3ca96bf9188990b461c0bb0e2db\")"
     ]
   }
 }
