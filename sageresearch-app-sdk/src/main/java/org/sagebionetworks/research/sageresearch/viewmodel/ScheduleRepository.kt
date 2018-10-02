@@ -7,18 +7,20 @@ import android.content.SharedPreferences
 import android.support.annotation.VisibleForTesting
 import org.joda.time.DateTime
 import org.joda.time.Days
-import org.researchstack.backbone.result.TaskResult
+import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.Message
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
+import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
+import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
 
 import rx.Observable
@@ -68,6 +70,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * the schedules are currently synced with bridge.
  */
 open class ScheduleRepository(context: Context) {
+    private val logger = LoggerFactory.getLogger(ScheduleRepository::class.java)
 
     /**
      * Creates a singleton that takes Context as a parameter to access
@@ -143,7 +146,7 @@ open class ScheduleRepository(context: Context) {
      * @property scheduleTaskRunUuidMap maps taskRunUuid to schedule guid so that we cannot find
      *                                  the correct schedule to update after a task completes
      */
-    private val scheduleTaskRunUuidMap = HashMap<UUID, String>()
+    protected val scheduleTaskRunUuidMap = HashMap<UUID, String>()
 
     @VisibleForTesting
     protected open fun studyStartDate(): DateTime? {
@@ -239,7 +242,7 @@ open class ScheduleRepository(context: Context) {
                         updateScheduleToBridge(it)
                     }
                 }, {
-                    // TODO: mdephillips 9/4/18 how to do logger in kotlin?
+                    logger.warn(it.localizedMessage)
                 }))
     }
 
@@ -259,27 +262,19 @@ open class ScheduleRepository(context: Context) {
      *                 schedule can be null if the user does a task without internet
      * @param taskResult the result of the user doing the schedule task
      */
-    fun updateSchedule(taskResult: TaskResult, taskRunUuid: UUID) {
-
-        // Null schedule usually means that the developer forgot to call createScheduleTaskRunUuid before launching
-        // the task associated with the schedule.
-        // Or the user is offline and did a task without having synced the study's schedules.
-        // Which, that is okay, the s3 upload will still take place, but we won't be able to update the schedule on bridge.
-        // Side effects for this will be, no study reports or finishedOn status for the task will show in the UI.
-        // TODO: mdephillips 9/14/2018 message the user there will be no history?
-        val guid = scheduleTaskRunUuidMap[taskRunUuid] ?: return
-
+    fun updateSchedule(taskResult: TaskResult) {
         // If we previously registered a guid with a taskRunUuid, we should be able to find the schedule in the
         // the database at this point based on the schedule guid
-        findSchedule(guid, Action1 { schedule ->
+        findSchedule(taskResult.taskUUID, Action1 { schedule ->
             // TODO: mdephillips 9/14/2018 in past apps, here we would set client data from TaskResult
             // TODO: mdephillips 9/14/2018 instead use TaskResult to generate study report for schedule
-            schedule.startedOn = Instant.ofEpochMilli(taskResult.startDate?.time ?: Date().time)
-            schedule.finishedOn = Instant.ofEpochMilli(taskResult.endDate?.time ?: Date().time)
+            schedule.startedOn = taskResult.startTime
+            schedule.finishedOn = taskResult.endTime
             cacheSchedule(schedule)
             updateScheduleToBridge(schedule)
         }, Action1 {
             // TODO: mdephillips 9/14/2018 message the user there will be no history?
+            logger.warn(it.localizedMessage)
         })
     }
 
@@ -302,18 +297,30 @@ open class ScheduleRepository(context: Context) {
      * and also to remove redundant threading code throughout the class.
      */
     @VisibleForTesting
-    protected open fun findSchedule(
-            scheduleGuid: String,
+    open fun findSchedule(
+            taskRunUuid: UUID,
             onNext: Action1<ScheduledActivityEntity>,
             onError: Action1<Throwable>) {
+
+        // Null schedule usually means that the developer forgot to call createScheduleTaskRunUuid before launching
+        // the task associated with the schedule.
+        // Or the user is offline and did a task without having synced the study's schedules.
+        // Which, that is okay, the s3 upload will still take place, but we won't be able to update the schedule on bridge.
+        // Side effects for this will be, no study reports or finishedOn status for the task will show in the UI.
+        // TODO: mdephillips 9/14/2018 message the user there will be no history?
+        val guid = scheduleTaskRunUuidMap[taskRunUuid] ?: run {
+            onError.call(Throwable("No schedule guid found for taskRunUuid $taskRunUuid, " +
+                    "are you sure you function createScheduleTaskRunUuid() before running the task?"))
+            return
+        }
 
         scheduleRepoSubscriptions.add(Observable.just(scheduleDao)
                 .subscribeOn(Schedulers.io())
                 .subscribe({ dao ->
-                    dao.activity(scheduleGuid).firstOrNull()?.let {
+                    dao.activity(guid).firstOrNull()?.let {
                         scheduleOnMain(it, onNext, onError)
                     } ?: run {
-                        val error = Throwable("No schedule found in DB with guid $scheduleGuid")
+                        val error = Throwable("No schedule found in DB with guid $guid")
                         scheduleOnMain(error, onError)
                     }
                 }, {
@@ -422,7 +429,7 @@ open class ScheduleRepository(context: Context) {
                 .subscribe({ dao ->
                     dao.upsert(schedules)
                 }, {
-                    // TODO: mdephillips 9/4/18 how to do logger in kotlin?
+                    logger.warn(it.localizedMessage)
                 }))
     }
 
