@@ -1,6 +1,8 @@
 package org.sagebionetworks.research.sageresearch.extensions
 
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
+import org.threeten.bp.Duration
+import org.threeten.bp.LocalDateTime
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -44,4 +46,30 @@ fun List<ScheduledActivityEntity>.filterByActivityId(activityId: String): List<S
                 activityId == it.activity?.survey?.identifier ||
                 activityId == it.activity?.compoundActivity?.taskIdentifier)
     }
+}
+
+/**
+ * @return list of schedules that are available today
+ */
+fun List<ScheduledActivityEntity>.availableToday(): List<ScheduledActivityEntity>? {
+    val todayStart = LocalDateTime.now().startOfDay()
+    val todayEnd = LocalDateTime.now().endOfDay()
+    return this.filter {
+        val scheduleOn = it.scheduledOn
+        val expiresOn = it.expiresOn
+        scheduleOn != null &&
+                ((expiresOn != null && scheduleOn.isBefore(todayEnd) && expiresOn.isAfter(todayStart)) ||
+                        (expiresOn == null && scheduleOn.isBefore(todayEnd)))
+    }
+}
+
+/**
+ * @return the schedule that is closest to now
+ */
+fun List<ScheduledActivityEntity>.scheduleClosestToNow(): ScheduledActivityEntity? {
+    val now = LocalDateTime.now()
+    return this.sortedWith(kotlin.Comparator { s1, s2 ->
+        Duration.between(now, s1.scheduledOn).nano
+                .compareTo(Duration.between(now, s2.scheduledOn).nano)
+    }).firstOrNull()
 }

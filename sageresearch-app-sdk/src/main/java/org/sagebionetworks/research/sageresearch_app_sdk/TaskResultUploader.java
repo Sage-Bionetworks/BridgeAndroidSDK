@@ -32,9 +32,14 @@
 
 package org.sagebionetworks.research.sageresearch_app_sdk;
 
+import android.content.Context;
+
 import com.google.common.collect.ImmutableList;
 import io.reactivex.Completable;
+import io.reactivex.Observable;
 import io.reactivex.subjects.CompletableSubject;
+import rx.functions.Action1;
+
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
@@ -48,6 +53,8 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,21 +68,31 @@ public class TaskResultUploader implements TaskResultProcessor {
     private AbstractResultArchiveFactory abstractResultArchiveFactory;
     private AccountDAO accountDAO;
     private UploadManager uploadManager;
+    private ScheduleRepository scheduleRepo;
 
     @Inject
     public TaskResultUploader(final BridgeConfig bridgeConfig,
                               final AbstractResultArchiveFactory abstractResultArchiveFactory,
                               final UploadManager uploadManager,
-                              final AccountDAO accountDAO) {
+                              final AccountDAO accountDAO,
+                              Context context) {
         this.bridgeConfig = bridgeConfig;
         this.abstractResultArchiveFactory = abstractResultArchiveFactory;
         this.uploadManager = uploadManager;
         this.accountDAO = accountDAO;
+        this.scheduleRepo = ScheduleRepository.Companion.getInstance(context);
     }
 
     @Override
     public Completable processTaskResult(final TaskResult taskResult) {
         LOGGER.info("Processing task result: {}", taskResult);
+
+        // TODO: mdephillips 10/2/18 convert to a completable and integrate into this flow to create metadata
+        scheduleRepo.findSchedule(taskResult.getTaskUUID(), scheduledActivityEntity -> {
+
+        }, throwable -> {
+            // still upload to s3, but we will not be able to build the metadata file
+        });
 
         // TODO: wrap operations in completable
         SchemaKey sk = bridgeConfig.getTaskToSchemaMap().get(taskResult.getIdentifier());

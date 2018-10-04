@@ -3,10 +3,14 @@ package org.sagebionetworks.research.sageresearch_app_sdk.inject;
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.SageResearchResultArchiveFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 import dagger.Binds;
 import dagger.Module;
@@ -21,10 +25,18 @@ public abstract class SageResearchAppSDKModule {
         return new SageResearchResultArchiveFactory(resultArchiveFactories);
     }
 
+    @IntoSet
+    @Binds
+    abstract TaskResultProcessor provideScheduledActivityTaskResultProcessor(
+            ScheduledActivityTaskResultProcessor taskResultProcessor);
+
     /**
      * @return list of processors to receive final task results
      */
-    @Binds
-    @IntoSet
-    abstract TaskResultProcessor provideTaskResultProcessors(TaskResultUploader taskResultUploader);
+    @Provides
+    static List<TaskResultProcessor> provideTaskResultProcessors(
+            TaskResultUploader taskResultUploader,
+            ScheduledActivityTaskResultProcessor scheduledActivityTaskResultProcessor) {
+        return Arrays.asList(taskResultUploader, scheduledActivityTaskResultProcessor);
+    }
 }

@@ -722,6 +722,13 @@ public abstract class BridgeDataProvider extends DataProvider {
         return taskHelper.loadTask(context, task);
     }
 
+    public void uploadTaskResult(@NonNull TaskResult taskResult) {
+        // TODO: Update/Create TaskNotificationService
+        logger.debug("Called uploadTaskResult ");
+        // Context currently isn't need, we just need to fit the base interface implementation
+        uploadTaskResult(null, taskResult);
+    }
+
     @SuppressLint("RxLeakedSubscription")    // upload should run as long as it needs to, no early unsubscribe
     @Override
     public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {

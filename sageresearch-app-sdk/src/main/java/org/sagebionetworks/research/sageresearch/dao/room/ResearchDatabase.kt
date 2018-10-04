@@ -95,6 +95,8 @@ internal class RoomSql {
          * CONDITION constants need to be joined by AND or OR in the select statement
          */
 
+        private const val SCHEDULE_CONDITION_GUID = "guid = :guid"
+
         private const val SCHEDULE_CONDITION_ACTIVITY_GROUP_ID =
                 "(activity_task_identifier IN (:activityGroup) OR " +
                 "activity_survey_identifier IN (:activityGroup) OR " +
@@ -113,6 +115,10 @@ internal class RoomSql {
         private const val SCHEDULE_CONDITION_FINISHED_BETWEEN = "(finishedOn BETWEEN :finishedStart AND :finishedEnd)"
         private const val SCHEDULE_CONDITION_FINISHED_BETWEEN_OR_NULL =
                 "($SCHEDULE_CONDITION_NOT_FINISHED$OP_OR$SCHEDULE_CONDITION_FINISHED_BETWEEN)"
+
+        // Room doesn't have boolean type and maps true = 1 and false = 0
+        private const val SCHEDULE_CONDITION_NEEDS_SYNCED_TO_BRIDGE =
+                "(needsSyncedToBridge IS NOT NULL AND needsSyncedToBridge = 1)"
 
         private const val SCHEDULE_CONDITION_NO_EXPIRES_DATE = "(expiresOn IS NULL)"
         private const val SCHEDULE_CONDITION_HAS_EXPIRES_DATE = "(expiresOn IS NOT NULL)"
@@ -133,6 +139,9 @@ internal class RoomSql {
          * QUERY constants are full Room queries
          */
         const val SCHEDULE_QUERY_ALL = "SELECT * FROM scheduledactivityentity"
+
+        const val SCHEDULE_QUERY_SELECT_GUID =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_GUID
 
         const val SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID
@@ -164,6 +173,9 @@ internal class RoomSql {
         const val SCHEDULE_MOST_RECENT_FINISHED_ACTIVITY =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID + OP_AND +
                         SCHEDULE_CONDITION_FINISHED + ORDER_BY_FINISHED + LIMIT_1
+
+        const val SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_NEEDS_SYNCED_TO_BRIDGE
     }
 }
 
