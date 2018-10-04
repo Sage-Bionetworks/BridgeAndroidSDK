@@ -1,15 +1,22 @@
 package org.sagebionetworks.research.sageresearch_app_sdk.inject;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import android.arch.lifecycle.ViewModel;
+import android.arch.lifecycle.ViewModelProvider;
 import android.arch.persistence.room.Room;
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleViewModel;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
@@ -21,6 +28,7 @@ import java.lang.annotation.Retention;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.inject.Named;
 import javax.inject.Qualifier;
 
 import dagger.Binds;

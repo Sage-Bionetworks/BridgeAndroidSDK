@@ -8,7 +8,8 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import org.joda.time.DateTime
 import org.joda.time.Days
-import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
+import org.sagebionetworks.bridge.android.manager.ActivityManager
+import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
@@ -58,8 +59,11 @@ import javax.inject.Inject
  * All @see ScheduleViewModel are required to call this class' function syncSchedules() to ensure that
  * the schedules are currently synced with bridge.
  */
-open class ScheduleRepository @Inject constructor(private val scheduleDao: ScheduledActivityEntityDao,
-        private val syncStateDao: ScheduledRepositorySyncStateDao) {
+open class ScheduleRepository @Inject constructor(
+        private val scheduleDao: ScheduledActivityEntityDao,
+        private val syncStateDao: ScheduledRepositorySyncStateDao,
+        private val activityManager: ActivityManager,
+        private val participantRecordManager: ParticipantRecordManager) {
 
     private val logger = LoggerFactory.getLogger(ScheduleRepository::class.java)
 
@@ -97,7 +101,7 @@ open class ScheduleRepository @Inject constructor(private val scheduleDao: Sched
 
     @VisibleForTesting
     protected open fun studyStartDate(): DateTime? {
-        return BridgeDataProvider.getInstance().participantCreatedOn
+        return participantRecordManager.participantCreatedOn
     }
 
     /**
@@ -152,8 +156,8 @@ open class ScheduleRepository @Inject constructor(private val scheduleDao: Sched
 
         return Observable.fromIterable(requestMap.keys)
                 .filter { requestMap[it] != null }
-                .flatMap {
-                    RxJavaInterop.toV2Observable(BridgeDataProvider.getInstance().getActivities(it, requestMap[it]))
+                .flatMapSingle {
+                    RxJavaInterop.toV2Single(activityManager.getActivities(it, requestMap[it]!!))
                 }
                 .flatMapCompletable {
                     // If another request previously failed we won't trigger any success callbacks
@@ -307,7 +311,8 @@ open class ScheduleRepository @Inject constructor(private val scheduleDao: Sched
     @VisibleForTesting
     @CheckReturnValue
     protected open fun updateActivityOnBridge(bridgeSchedule: ScheduledActivity): Completable {
-        return RxJavaInterop.toV2Completable(BridgeDataProvider.getInstance()
+        return RxJavaInterop.toV2Completable(
+                activityManager
                 .updateActivity(bridgeSchedule)
                 .toCompletable())
     }
