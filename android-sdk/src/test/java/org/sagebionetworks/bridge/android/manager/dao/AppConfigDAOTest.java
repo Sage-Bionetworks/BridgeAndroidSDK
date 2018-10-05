@@ -25,12 +25,9 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
-
-import org.sagebionetworks.bridge.android.BuildConfig;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 
-@Config(constants = BuildConfig.class)
-@SuppressWarnings("ConstantConditions")
+@Config
 @RunWith(RobolectricTestRunner.class)
 public class AppConfigDAOTest {
     private static final String DUMMY_GUID = "dummy-guid";
