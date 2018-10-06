@@ -29,6 +29,8 @@ buildscript {
     jcenter()
     google()
     maven { url 'https://plugins.gradle.org/m2/' }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+
   }
   dependencies {
     classpath 'com.android.tools.build:gradle:3.3.0-alpha01'
@@ -38,7 +40,7 @@ buildscript {
     // SageResearch
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     classpath "org.jetbrains.dokka:dokka-android-gradle-plugin:$dokka_version"
-    classpath 'com.jakewharton:butterknife-gradle-plugin:8.4.0'
+    classpath 'com.jakewharton:butterknife-gradle-plugin:9.0.0-SNAPSHOT'
 
     // code quality
     classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.13'
