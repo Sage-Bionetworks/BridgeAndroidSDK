@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Intent;
 import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.sagebionetworks.bridge.android.AuthManagementActivity;

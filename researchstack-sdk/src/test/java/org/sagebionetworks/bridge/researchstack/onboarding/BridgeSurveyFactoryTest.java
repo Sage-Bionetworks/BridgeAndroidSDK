@@ -17,8 +17,14 @@
 
 package org.sagebionetworks.bridge.researchstack.onboarding;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+
 import android.content.Context;
+
 import com.google.common.collect.ImmutableList;
+
 import org.junit.Test;
 import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
@@ -30,14 +36,6 @@ import org.sagebionetworks.bridge.researchstack.step.DataGroupQuestionStep;
 import org.sagebionetworks.bridge.researchstack.survey.DataGroupQuestionSurveyItem;
 
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class BridgeSurveyFactoryTest {
     @Test

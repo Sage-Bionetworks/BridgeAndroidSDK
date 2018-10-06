@@ -17,6 +17,8 @@
 
 package org.sagebionetworks.bridge.researchstack.factory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
@@ -39,8 +41,6 @@ import org.sagebionetworks.bridge.rest.RestUtils;
 import java.io.File;
 import java.lang.reflect.Type;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Creates ArchiveFiles from ResearchStack Results.

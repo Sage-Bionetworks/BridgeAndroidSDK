@@ -18,8 +18,10 @@
 package org.sagebionetworks.bridge.researchstack.step.layout;
 
 import android.content.Context;
-import androidx.annotation.VisibleForTesting;
 import android.util.AttributeSet;
+
+import androidx.annotation.VisibleForTesting;
+
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.ui.step.layout.SurveyStepLayout;
@@ -28,9 +30,10 @@ import org.sagebionetworks.bridge.researchstack.ApiUtils;
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider;
 import org.sagebionetworks.bridge.researchstack.step.DataGroupQuestionStep;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
-import rx.Observable;
 
 import java.util.List;
+
+import rx.Observable;
 
 /**
  * Encapsulates the logic for the DataGroupQuestionStep, specifically storing the data group locally

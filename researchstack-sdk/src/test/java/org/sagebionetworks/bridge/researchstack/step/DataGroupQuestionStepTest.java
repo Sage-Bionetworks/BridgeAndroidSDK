@@ -1,10 +1,9 @@
 package org.sagebionetworks.bridge.researchstack.step;
 
-import org.junit.Test;
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
+import static org.junit.Assert.assertNotNull;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
+import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 
 /**
  * Created by liujoshua on 1/28/2018.

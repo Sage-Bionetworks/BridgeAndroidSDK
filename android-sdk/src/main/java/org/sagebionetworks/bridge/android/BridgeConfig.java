@@ -1,18 +1,25 @@
 package org.sagebionetworks.bridge.android;
 
+import static android.content.res.AssetManager.ACCESS_BUFFER;
+import static android.os.Build.VERSION;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.text.TextUtils;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.text.TextUtils;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
@@ -32,10 +39,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import javax.inject.Inject;
-
-import static android.content.res.AssetManager.ACCESS_BUFFER;
-import static android.os.Build.VERSION;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Used to configure settings for Bridge.

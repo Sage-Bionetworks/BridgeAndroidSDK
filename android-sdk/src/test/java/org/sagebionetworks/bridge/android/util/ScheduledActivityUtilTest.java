@@ -17,6 +17,17 @@
 
 package org.sagebionetworks.bridge.android.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.TO_SCHEDULE_PLAN_GUID;
+import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.TO_TASK_IDENTIFIER;
+import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.groupBySchedulePlan;
+
 import com.google.common.collect.Multimap;
 
 import org.junit.Test;
@@ -29,17 +40,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.TO_SCHEDULE_PLAN_GUID;
-import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.TO_TASK_IDENTIFIER;
-import static org.sagebionetworks.bridge.android.util.ScheduledActivityUtil.groupBySchedulePlan;
 
 /**
  * Created by liujoshua on 2/19/2018.

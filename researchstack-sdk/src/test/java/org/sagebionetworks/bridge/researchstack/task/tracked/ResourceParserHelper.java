@@ -1,11 +1,11 @@
 package org.sagebionetworks.bridge.researchstack.task.tracked;
 
+import static junit.framework.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
-import static junit.framework.Assert.assertTrue;
 
 /**
  * Created by TheMDP on 1/6/17.

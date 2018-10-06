@@ -1,5 +1,18 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static junit.framework.Assert.assertTrue;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.sagebionetworks.bridge.rest.model.UploadStatus.DUPLICATE;
+import static org.sagebionetworks.bridge.rest.model.UploadStatus.REQUESTED;
+import static org.sagebionetworks.bridge.rest.model.UploadStatus.SUCCEEDED;
+
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,18 +36,6 @@ import rx.Completable;
 import rx.Single;
 import rx.schedulers.TestScheduler;
 import rx.subjects.TestSubject;
-
-import static junit.framework.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.sagebionetworks.bridge.rest.model.UploadStatus.DUPLICATE;
-import static org.sagebionetworks.bridge.rest.model.UploadStatus.REQUESTED;
-import static org.sagebionetworks.bridge.rest.model.UploadStatus.SUCCEEDED;
 
 /**
  * Created by jyliu on 3/22/2017.

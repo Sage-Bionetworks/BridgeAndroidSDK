@@ -20,7 +20,6 @@ package org.sagebionetworks.bridge.android.di;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.net.SocketFactory;
 
 import dagger.Module;

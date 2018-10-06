@@ -1,7 +1,10 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import android.content.Context;
 import android.content.Intent;
+
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -13,8 +16,6 @@ import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.adapter.rxjava.HttpException;
 import rx.Observable;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by liujoshua on 10/24/16.

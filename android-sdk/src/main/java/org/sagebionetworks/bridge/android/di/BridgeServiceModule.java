@@ -34,7 +34,6 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
 
-import javax.inject.Singleton;
 import javax.net.SocketFactory;
 
 import dagger.Module;

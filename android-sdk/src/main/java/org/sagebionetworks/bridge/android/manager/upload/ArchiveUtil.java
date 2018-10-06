@@ -2,8 +2,9 @@ package org.sagebionetworks.bridge.android.manager.upload;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import androidx.annotation.NonNull;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
 
 import com.google.common.collect.ImmutableList;
 

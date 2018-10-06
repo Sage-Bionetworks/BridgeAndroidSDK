@@ -3,8 +3,8 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 import android.content.Context
 import io.reactivex.Completable
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
-import javax.inject.Inject
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
+import javax.inject.Inject
 
 /*
  * BSD 3-Clause License

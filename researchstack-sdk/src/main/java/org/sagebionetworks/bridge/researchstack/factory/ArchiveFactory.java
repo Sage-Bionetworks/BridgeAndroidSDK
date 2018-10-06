@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack.factory;
 
 import androidx.annotation.NonNull;
+
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.data.Archive;
 

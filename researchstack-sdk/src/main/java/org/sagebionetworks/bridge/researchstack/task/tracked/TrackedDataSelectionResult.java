@@ -6,7 +6,6 @@ import org.researchstack.backbone.answerformat.AnswerFormat;
 import org.researchstack.backbone.result.Result;
 import org.researchstack.backbone.ui.ViewTaskActivity;
 import org.researchstack.backbone.ui.step.layout.StepLayout;
-import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;
 
 import java.util.List;
 

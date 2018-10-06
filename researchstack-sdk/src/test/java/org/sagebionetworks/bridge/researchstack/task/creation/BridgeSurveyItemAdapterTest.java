@@ -17,15 +17,16 @@
 
 package org.sagebionetworks.bridge.researchstack.task.creation;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+
 import org.junit.Test;
 import org.researchstack.backbone.model.survey.BaseSurveyItem;
 import org.researchstack.backbone.model.survey.SurveyItem;
 
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
 
 public class BridgeSurveyItemAdapterTest {
     @Test

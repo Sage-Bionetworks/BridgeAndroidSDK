@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
+
 import androidx.annotation.AnyThread;
 
 import com.google.common.collect.Sets;

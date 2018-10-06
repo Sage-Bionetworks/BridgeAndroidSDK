@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack.task.tracked;
 
 import android.content.Context;
+
 import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;

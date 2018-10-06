@@ -18,6 +18,7 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 

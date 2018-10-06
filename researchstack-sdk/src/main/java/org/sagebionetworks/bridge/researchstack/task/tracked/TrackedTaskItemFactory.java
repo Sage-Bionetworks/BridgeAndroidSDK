@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.researchstack.task.tracked;
 
+import static org.sagebionetworks.bridge.researchstack.task.creation.BridgeSurveyItemAdapter.TRACKED_SELECTION_TYPE_GSON;
+
 import android.content.Context;
 
 import com.google.gson.Gson;
@@ -15,8 +17,6 @@ import org.researchstack.backbone.task.Task;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.sagebionetworks.bridge.researchstack.task.creation.BridgeSurveyItemAdapter.TRACKED_SELECTION_TYPE_GSON;
 
 /**
  * Created by TheMDP on 3/24/17.

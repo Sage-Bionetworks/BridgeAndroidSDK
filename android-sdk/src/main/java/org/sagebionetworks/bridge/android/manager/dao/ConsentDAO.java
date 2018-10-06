@@ -1,6 +1,9 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import android.content.Context;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,8 +17,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 
 import javax.inject.Inject;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by jyliu on 2/8/2017.

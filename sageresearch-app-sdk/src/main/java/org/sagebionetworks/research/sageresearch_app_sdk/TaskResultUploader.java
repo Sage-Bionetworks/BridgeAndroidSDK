@@ -35,10 +35,6 @@ package org.sagebionetworks.research.sageresearch_app_sdk;
 import android.content.Context;
 
 import com.google.common.collect.ImmutableList;
-import io.reactivex.Completable;
-import io.reactivex.Observable;
-import io.reactivex.subjects.CompletableSubject;
-import rx.functions.Action1;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
@@ -53,14 +49,17 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.util.Locale;
+
+import javax.inject.Inject;
+
+import io.reactivex.Completable;
+import io.reactivex.subjects.CompletableSubject;
 
 public class TaskResultUploader implements TaskResultProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultUploader.class);

@@ -3,13 +3,14 @@ package org.sagebionetworks.bridge.researchstack.survey;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
+
 import org.junit.Test;
 import org.researchstack.backbone.answerformat.UnknownAnswerFormat;
 import org.researchstack.backbone.result.StepResult;
 import org.researchstack.backbone.step.QuestionStep;
+
+import java.util.List;
 
 public class SurveyAnswerTest {
     @Test

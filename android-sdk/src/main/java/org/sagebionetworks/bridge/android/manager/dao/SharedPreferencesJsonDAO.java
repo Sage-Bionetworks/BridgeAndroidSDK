@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+
 import androidx.annotation.AnyThread;
 
 import com.google.common.base.Function;

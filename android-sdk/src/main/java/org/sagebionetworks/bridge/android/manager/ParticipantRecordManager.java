@@ -1,5 +1,9 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,9 +22,6 @@ import javax.inject.Inject;
 
 import rx.Completable;
 import rx.Single;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 /**
  * Any authenticated user may use this class's methods. The user does not need to have consented to

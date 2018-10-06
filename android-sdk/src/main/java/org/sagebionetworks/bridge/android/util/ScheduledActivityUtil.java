@@ -17,6 +17,8 @@
 
 package org.sagebionetworks.bridge.android.util;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -30,8 +32,6 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 
 /**

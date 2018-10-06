@@ -1,19 +1,20 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.sagebionetworks.bridge.android.BridgeApiTestUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Survey;
-import retrofit2.Call;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertSame;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import retrofit2.Call;
 
 public class SurveyManagerTest {
     private static final String SURVEY_GUID = "my-survey-guid";

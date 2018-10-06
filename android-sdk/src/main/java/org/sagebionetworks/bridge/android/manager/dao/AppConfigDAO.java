@@ -17,14 +17,15 @@
 
 package org.sagebionetworks.bridge.android.manager.dao;
 
-import javax.inject.Inject;
-
 import android.content.Context;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.sagebionetworks.bridge.rest.model.AppConfig;
+
+import javax.inject.Inject;
 
 /** Caches study app config in shared preferences. */
 @AnyThread

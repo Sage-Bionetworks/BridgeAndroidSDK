@@ -1,5 +1,7 @@
 package org.sagebionetworks.bridge.android.util.retrofit;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 
@@ -7,8 +9,6 @@ import retrofit2.Call;
 import rx.Observable;
 import rx.Single;
 import rx.schedulers.Schedulers;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by jyliu on 1/19/2017.

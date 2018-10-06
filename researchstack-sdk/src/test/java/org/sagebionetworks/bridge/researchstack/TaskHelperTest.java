@@ -1,73 +1,5 @@
 package org.sagebionetworks.bridge.researchstack;
 
-import android.content.Context;
-import android.content.Intent;
-
-import com.google.common.collect.Maps;
-
-import org.joda.time.DateTime;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.ResourcePathManager;
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.answerformat.BooleanAnswerFormat;
-import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
-import org.researchstack.backbone.model.Choice;
-import org.researchstack.backbone.model.SchedulesAndTasksModel;
-import org.researchstack.backbone.model.TaskModel;
-import org.researchstack.backbone.model.survey.factory.SurveyFactory;
-import org.researchstack.backbone.result.AudioResult;
-import org.researchstack.backbone.result.FileResult;
-import org.researchstack.backbone.result.Result;
-import org.researchstack.backbone.result.StepResult;
-import org.researchstack.backbone.result.TappingIntervalResult;
-import org.researchstack.backbone.result.TaskResult;
-import org.researchstack.backbone.result.TimedWalkResult;
-import org.researchstack.backbone.step.QuestionStep;
-import org.researchstack.backbone.step.active.AudioStep;
-import org.researchstack.backbone.step.active.CountdownStep;
-import org.researchstack.backbone.step.active.TappingIntervalStep;
-import org.researchstack.backbone.step.active.TimedWalkStep;
-import org.researchstack.backbone.storage.NotificationHelper;
-import org.researchstack.backbone.storage.database.TaskNotification;
-import org.researchstack.backbone.task.SmartSurveyTask;
-import org.researchstack.backbone.task.Task;
-import org.researchstack.backbone.task.factory.TappingTaskFactory;
-import org.researchstack.backbone.AppPrefs;
-import org.researchstack.backbone.notification.TaskAlertReceiver;
-import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
-import org.sagebionetworks.bridge.android.manager.SurveyManager;
-import org.sagebionetworks.bridge.android.manager.UploadManager;
-import org.sagebionetworks.bridge.data.Archive;
-import org.sagebionetworks.bridge.data.ArchiveFile;
-import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
-import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
-import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
-import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
-import org.sagebionetworks.bridge.rest.model.Survey;
-import org.spongycastle.cms.CMSException;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import rx.Completable;
-import rx.Single;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -99,6 +31,74 @@ import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWa
 import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTrial1StepIdentifier;
 import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTrial2StepIdentifier;
 import static org.researchstack.backbone.task.factory.WalkingTaskFactory.TimedWalkTurnAroundStepIdentifier;
+
+import android.content.Context;
+import android.content.Intent;
+
+import com.google.common.collect.Maps;
+
+import org.joda.time.DateTime;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.researchstack.backbone.AppPrefs;
+import org.researchstack.backbone.ResourceManager;
+import org.researchstack.backbone.ResourcePathManager;
+import org.researchstack.backbone.answerformat.AnswerFormat;
+import org.researchstack.backbone.answerformat.BooleanAnswerFormat;
+import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
+import org.researchstack.backbone.model.Choice;
+import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.researchstack.backbone.model.TaskModel;
+import org.researchstack.backbone.model.survey.factory.SurveyFactory;
+import org.researchstack.backbone.notification.TaskAlertReceiver;
+import org.researchstack.backbone.result.AudioResult;
+import org.researchstack.backbone.result.FileResult;
+import org.researchstack.backbone.result.Result;
+import org.researchstack.backbone.result.StepResult;
+import org.researchstack.backbone.result.TappingIntervalResult;
+import org.researchstack.backbone.result.TaskResult;
+import org.researchstack.backbone.result.TimedWalkResult;
+import org.researchstack.backbone.step.QuestionStep;
+import org.researchstack.backbone.step.active.AudioStep;
+import org.researchstack.backbone.step.active.CountdownStep;
+import org.researchstack.backbone.step.active.TappingIntervalStep;
+import org.researchstack.backbone.step.active.TimedWalkStep;
+import org.researchstack.backbone.storage.NotificationHelper;
+import org.researchstack.backbone.storage.database.TaskNotification;
+import org.researchstack.backbone.task.SmartSurveyTask;
+import org.researchstack.backbone.task.Task;
+import org.researchstack.backbone.task.factory.TappingTaskFactory;
+import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
+import org.sagebionetworks.bridge.android.manager.SurveyManager;
+import org.sagebionetworks.bridge.android.manager.UploadManager;
+import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.data.ArchiveFile;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFactory;
+import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
+import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
+import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
+import org.sagebionetworks.bridge.rest.model.Survey;
+import org.spongycastle.cms.CMSException;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import rx.Completable;
+import rx.Single;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by TheMDP on 3/3/17.

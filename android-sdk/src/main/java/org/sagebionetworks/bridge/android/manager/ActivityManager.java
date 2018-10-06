@@ -1,6 +1,11 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
+
 import android.content.Context;
+
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,9 +28,6 @@ import javax.inject.Inject;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 @AnyThread
 public class ActivityManager {

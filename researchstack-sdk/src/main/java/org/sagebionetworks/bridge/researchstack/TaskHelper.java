@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.researchstack;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;

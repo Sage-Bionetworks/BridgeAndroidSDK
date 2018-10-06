@@ -1,6 +1,7 @@
 package org.sagebionetworks.bridge.researchstack.task.creation;
 
 import androidx.annotation.VisibleForTesting;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 

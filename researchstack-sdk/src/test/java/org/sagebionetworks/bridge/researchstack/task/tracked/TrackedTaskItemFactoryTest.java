@@ -1,5 +1,9 @@
 package org.sagebionetworks.bridge.researchstack.task.tracked;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertTrue;
+
 import android.os.Handler;
 import android.os.Looper;
 
@@ -17,7 +21,6 @@ import org.researchstack.backbone.StorageAccess;
 import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 import org.researchstack.backbone.model.survey.SurveyItem;
 import org.researchstack.backbone.model.taskitem.TaskItem;
-
 import org.researchstack.backbone.step.FormStep;
 import org.researchstack.backbone.step.InstructionStep;
 import org.researchstack.backbone.step.NavigationExpectedAnswerQuestionStep;
@@ -27,8 +30,6 @@ import org.researchstack.backbone.utils.LogExt;
 import org.sagebionetworks.bridge.researchstack.R;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeSurveyItemAdapter;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeTaskItemAdapter;
-
-import static junit.framework.Assert.*;
 
 /**
  * Created by TheMDP on 3/25/17.
