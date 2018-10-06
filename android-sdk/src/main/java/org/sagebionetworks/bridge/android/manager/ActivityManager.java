@@ -2,6 +2,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Context;
 import android.support.annotation.AnyThread;
+import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -14,6 +15,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -82,25 +84,21 @@ public class ActivityManager {
                 });
     }
 
-    public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
-
+    @CheckResult
+    public Single<Message> updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
         checkNotNull(scheduledActivities);
 
         activityListDAO.updateActivityList(scheduledActivities);
         
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .updateScheduledActivities(scheduledActivities)).toCompletable();
+                .updateScheduledActivities(scheduledActivities));
     }
 
+    @CheckResult
     public Observable<Message> updateActivity(@NonNull ScheduledActivity scheduledActivity) {
-
         checkNotNull(scheduledActivity);
 
-        activityListDAO.updateActivityList(Collections.singletonList(scheduledActivity));
-
-        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .updateScheduledActivities(Collections.singletonList(scheduledActivity)))
-                .toObservable();
+        return updateActivities(Collections.singletonList(scheduledActivity)).toObservable();
     }
 
     public @Nullable ScheduledActivity getLocalActivity(String guid) {

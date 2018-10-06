@@ -1,16 +1,18 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
 import android.support.annotation.VisibleForTesting
 import hu.akarnokd.rxjava.interop.RxJavaInterop
+import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
-import io.reactivex.Maybe
 import io.reactivex.Observable
 import io.reactivex.Single
 import org.joda.time.DateTime
 import org.joda.time.Days
 import org.sagebionetworks.bridge.android.manager.ActivityManager
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
-import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
@@ -18,6 +20,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.slf4j.LoggerFactory
+import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -170,7 +173,7 @@ open class ScheduleRepository @Inject constructor(
                         }
                     }
                     // No matter if other requests failed, still cache a successful request
-                    cacheSchedules(it)
+                    reconcileAndCacheSchedules(it)
                 }
                 .doOnError {
                     // Consider the sync a failure if one or more requests fail
@@ -189,8 +192,7 @@ open class ScheduleRepository @Inject constructor(
      */
     @CheckReturnValue
     fun syncFailedSchedules(): Completable {
-        return Observable.fromIterable(scheduleDao.activitiesThatNeedSyncedToBridge())
-                .flatMapCompletable { updateScheduleToBridge(it) }
+        return updateSchedulesToBridge(scheduleDao.activitiesThatNeedSyncedToBridge())
                 .doOnError { logger.warn(it.localizedMessage) }
     }
 
@@ -215,35 +217,82 @@ open class ScheduleRepository @Inject constructor(
         // If we previously registered a guid with a taskRunUuid, we should be able to find the schedule in the
         // the database at this point based on the schedule guid
 
-
-         return findSchedule(taskResult.taskUUID)
-                 .map(fun(schedule: ScheduledActivityEntity): ScheduledActivityEntity {
-                     schedule.startedOn = taskResult.startTime
-                     schedule.finishedOn = taskResult.endTime
-                     return schedule
-                 })
-                 .flatMapCompletable { schedule ->
-                     cacheSchedule(schedule)
-                             .andThen(updateScheduleToBridge(schedule))
-                 }
-                 .doOnError {it.localizedMessage}
+        return findSchedule(taskResult.taskUUID)
+                .map(fun(schedule: ScheduledActivityEntity): ScheduledActivityEntity {
+                    schedule.startedOn = taskResult.startTime
+                    schedule.finishedOn = taskResult.endTime
+                    return schedule
+                })
+                .flatMapCompletable { schedule ->
+                    cacheSchedule(schedule)
+                            .andThen(updateSchedulesToBridge(Collections.singletonList(schedule)))
+                }
+                .doOnError { it.localizedMessage }
     }
 
     /**
      * Private function should only be accessed through this class as a re-usable way to update
-     * a schedule on bridge.
+     * schedules on bridge.
      */
     @CheckReturnValue
-    private fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {
+    fun updateSchedulesToBridge(schedules: List<ScheduledActivityEntity>): Completable {
+        val bridgeSchedules = schedules.map { it.clientWritableCopy() }
+
+        schedules.forEach {
+            it.needsSyncedToBridge = true
+        }
+
+        return cacheSchedules(schedules)
+                .andThen(toV2Single(activityManager
+                        .updateActivities(bridgeSchedules))
+                        .flatMapCompletable {
+                            schedules.forEach {
+                                it.needsSyncedToBridge = false
+                            }
+                            cacheSchedules(schedules)
+                        }.onErrorResumeNext { throwable ->
+                            if (throwable.isUnrecoverableError()) {
+                                // we have multiple schedules which failed, try to update them individually to identify which
+                                // one(s) are unrecoverable
+                                Completable.mergeDelayError(schedules.map {
+                                    updateScheduleToBridge(it)
+                                })
+                            } else {
+                                Completable.complete()
+                            }
+                        }
+                )
+    }
+
+    @VisibleForTesting
+    @CheckReturnValue
+    fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {
         val bridgeSchedule = schedule.clientWritableCopy()
 
-        return updateActivityOnBridge(bridgeSchedule)
-                .doOnComplete {
-                    schedule.needsSyncedToBridge = false
-                }
-                .onErrorResumeNext {
-                    scheduleUpdateFailed(schedule, it)
-                }
+        schedule.needsSyncedToBridge = true
+
+        return cacheSchedule(schedule)
+                .andThen(
+                        RxJavaInterop.toV2Single(
+                                activityManager
+                                        .updateActivities(listOf(bridgeSchedule))
+                        ).flatMapCompletable {
+                            schedule.needsSyncedToBridge = false
+                            cacheSchedule(schedule)
+                        }.onErrorResumeNext { throwable ->
+                            if (throwable.isUnrecoverableError()) {
+                                // There are some responses from the server that mean this call
+                                // will never succeed, like a 400 client data too large error.
+                                // If so, do not add the activity again to update.
+                                logger.warn("Unrecoverable error, disabling future sync for schedule with guid: {}",
+                                        schedule.guid, throwable)
+                                schedule.needsSyncedToBridge = false
+                                cacheSchedule(schedule)
+                            } else {
+                                Completable.complete()
+                            }
+                        }
+                )
     }
 
     /**
@@ -264,57 +313,31 @@ open class ScheduleRepository @Inject constructor(
             Single.error(Throwable("No schedule guid found for taskRunUuid $taskRunUuid, " +
                     "are you sure you function createScheduleTaskRunUuid() before running the task?"))
         } else {
-            toSingle(scheduleDao.activity(guid).firstOrNull(), Throwable("No schedule found in DB with guid $guid"))
-        }
-    }
-
-    @CheckReturnValue
-    internal fun <T> toSingle(nullableValue: T?, throwableForNull: Throwable): Single<T> {
-        nullableValue?.let {
-            return Single.just(nullableValue)
-        } ?: run {
-            return Single.error(throwableForNull)
-        }
-    }
-
-    @CheckReturnValue
-    internal fun <T> toMaybe(nullableValue: T): Maybe<T> {
-        nullableValue?.let {
-            return Maybe.just(nullableValue)
-        } ?: run {
-            return Maybe.empty()
+            Single.fromCallable {
+                scheduleDao.activity(guid).first() // NoSuchElementException
+            }.onErrorResumeNext {
+                Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
+            }
         }
     }
 
     /**
-     * @param schedule that failed to update on bridge.
+     * @param schedules that failed to update on bridge.
      * @param throwable the reason the schedule failed to update on bridge.
      */
     @CheckReturnValue
-    private fun scheduleUpdateFailed(schedule: ScheduledActivityEntity, throwable: Throwable?) : Completable {
-        throwable?.let {
+    private fun scheduleUpdateFailed(schedule: ScheduledActivityEntity, throwable: Throwable?): Completable {
+        throwable?.let { t ->
             // There are some responses from the server that mean this call
             // will never succeed, like a 400 client data too large error.
             // If so, do not add the activity again to update.
-            schedule.needsSyncedToBridge = !it.isUnrecoverableError()
+            schedule.needsSyncedToBridge = !t.isUnrecoverableError()
+            logger.warn("Unrecoverable error when syncing to Bridge, disabling future sync attempts", t)
         }
-        ?: run {
-            schedule.needsSyncedToBridge = true
-        }
-        return cacheSchedule(schedule)
-    }
-
-    /**
-     * Encapsulate network call functionality into it own function for providing custom mock behavior in tests,
-     * and also to remove redundant threading code throughout the class.
-     */
-    @VisibleForTesting
-    @CheckReturnValue
-    protected open fun updateActivityOnBridge(bridgeSchedule: ScheduledActivity): Completable {
-        return RxJavaInterop.toV2Completable(
-                activityManager
-                .updateActivity(bridgeSchedule)
-                .toCompletable())
+                ?: run {
+                    schedule.needsSyncedToBridge = true
+                }
+        return cacheSchedules(listOf(schedule))
     }
 
     /**
@@ -329,7 +352,7 @@ open class ScheduleRepository @Inject constructor(
      * @param activityListV4 to convert to the entity format and cache
      */
     @CheckReturnValue
-    private fun cacheSchedules(activityListV4: ScheduledActivityListV4): Completable {
+    private fun reconcileAndCacheSchedules(activityListV4: ScheduledActivityListV4): Completable {
         entityConverter.fromScheduledActivityListV4(activityListV4)?.let { list ->
             if (!reconcileWithDictionary()) {
                 return cacheSchedules(list)
@@ -347,9 +370,9 @@ open class ScheduleRepository @Inject constructor(
         return Completable.fromAction {
             scheduleDao.upsert(schedules)
         }
-        .doOnError {
-            logger.warn(it.localizedMessage)
-        }
+                .doOnError {
+                    logger.warn(it.localizedMessage)
+                }
     }
 
     // TODO: mdephillips 9/2/18 correctly reconcile the schedules instead of doing an upsert
@@ -393,4 +416,34 @@ object ScheduleRepositoryHelper {
 
         return requestMap
     }
+}
+
+open class ScheduledRepositorySyncStateDao @Inject constructor(context: Context) {
+
+    private val lastQueryDateKey = "lastQueryEndDate"
+
+    /**
+     * Used to store helpful data about the state of the ScheduleRepository
+     */
+    @VisibleForTesting
+    var prefs: SharedPreferences =
+            context.getSharedPreferences("ScheduleRepository", Context.MODE_PRIVATE)
+        private set
+
+
+    open var lastQueryEndDate: DateTime?
+        get() {
+            return prefs.getString(lastQueryDateKey, null)?.let {
+                DateTime.parse(it)
+            }
+        }
+        // Suppress any warnings because we need this operation to take place immediately
+        @SuppressLint("ApplySharedPref")
+        set(value) {
+            value?.let {
+                prefs.edit().putString(lastQueryDateKey, it.toString()).commit()
+            } ?: run {
+                prefs.edit().remove(lastQueryDateKey).commit()
+            }
+        }
 }
