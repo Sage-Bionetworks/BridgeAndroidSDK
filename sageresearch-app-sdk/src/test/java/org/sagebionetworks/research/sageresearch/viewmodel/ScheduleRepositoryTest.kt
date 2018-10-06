@@ -97,22 +97,30 @@ class ScheduleRepositoryTest {
 
     @Test
     fun syncFailedSchedules() {
+        // setup
         val failedSchedules = mock<List<ScheduledActivityEntity>>()
 
+        // DB returns failed schedules
         `when`(scheduledActivityEntityDao.activitiesThatNeedSyncedToBridge()).thenReturn(failedSchedules)
 
+        // a successful sync to Bridge
         doReturn(Completable.complete())
                 .`when`<ScheduleRepository>(scheduleRepository).updateSchedulesToBridge(failedSchedules)
 
+        // perform action under test
         scheduleRepository.syncFailedSchedules().test().assertComplete()
 
-        val inOrder = inOrder(scheduleRepository, scheduledActivityEntityDao)
-        inOrder.verify(scheduledActivityEntityDao).activitiesThatNeedSyncedToBridge()
-        inOrder.verify<ScheduleRepository>(scheduleRepository).updateSchedulesToBridge(failedSchedules)
+        inOrder(scheduleRepository, scheduledActivityEntityDao) {
+            // first we retrieve failed schedules
+            verify(scheduledActivityEntityDao).activitiesThatNeedSyncedToBridge()
+            // udate schedules should have been called on the schedules we just retrieved
+            verify<ScheduleRepository>(scheduleRepository).updateSchedulesToBridge(failedSchedules)
+        }
     }
 
     @Test
     fun updateSchedulesToBridge() {
+        // setup
         val scheduledActivity1 = mock<ScheduledActivity>()
         val scheduledActivityEntity1 = mock<ScheduledActivityEntity>()
         `when`(scheduledActivityEntity1.clientWritableCopy()).thenReturn(scheduledActivity1)
@@ -121,10 +129,12 @@ class ScheduleRepositoryTest {
         val scheduledActivityEntity2 = mock<ScheduledActivityEntity>()
         `when`(scheduledActivityEntity2.clientWritableCopy()).thenReturn(scheduledActivity2)
 
+        // successful update to Bridge
         `when`(
                 activityManager.updateActivities(eq(Arrays.asList(scheduledActivity1, scheduledActivity2))))
                 .thenReturn(toV1Single(Single.just(Message()).delay(1, SECONDS)))
 
+        // perform action under test
         val testObserver = scheduleRepository.updateSchedulesToBridge(
                 Arrays.asList(scheduledActivityEntity1, scheduledActivityEntity2)).test()
 
@@ -132,6 +142,7 @@ class ScheduleRepositoryTest {
 
         val inOrder = inOrder(scheduledActivityEntity1, scheduledActivityEntity2, scheduledActivityEntityDao)
 
+        // after calling updateSchedulesToBridge, we should make the entities as stale and then persist them to DB
         verify(scheduledActivityEntity2)
                 .needsSyncedToBridge = true
         verify(scheduledActivityEntity1)
@@ -141,10 +152,13 @@ class ScheduleRepositoryTest {
                 .upsert(eq(Arrays.asList(scheduledActivityEntity1, scheduledActivityEntity2)))
         inOrder.verifyNoMoreInteractions()
 
+        // not done yet, since we're still waiting for Bridge to respond
         testObserver.assertNotComplete()
 
+        // proceed with response from Bridge
         testSchedulerRule.testScheduler.advanceTimeBy(1, SECONDS)
 
+        // since we successfully synced, mark these entities as up-to-date and persist to DB
         verify(scheduledActivityEntity2)
                 .needsSyncedToBridge = false
         verify(scheduledActivityEntity1)
@@ -158,7 +172,7 @@ class ScheduleRepositoryTest {
     }
 
     @Test
-    fun updateSchedulesToBridge_unrecoverable() {
+    fun updateSchedulesToBridge_unrecoverableBatch() {
         val scheduledActivity1 = mock<ScheduledActivity>()
         val scheduledActivityEntity1 = mock<ScheduledActivityEntity>()
         `when`(scheduledActivityEntity1.clientWritableCopy()).thenReturn(scheduledActivity1)
@@ -167,6 +181,7 @@ class ScheduleRepositoryTest {
         val scheduledActivityEntity2 = mock<ScheduledActivityEntity>()
         `when`(scheduledActivityEntity2.clientWritableCopy()).thenReturn(scheduledActivity2)
 
+        // irrecoverable response from Bridge
         val response = Single.error<Message>(Throwable("Client data too large")).delay(1, SECONDS)
         `when`(
                 activityManager.updateActivities(eq(Arrays.asList(scheduledActivity1, scheduledActivity2))))
@@ -181,23 +196,33 @@ class ScheduleRepositoryTest {
 
         val inOrder = inOrder(scheduledActivityEntity1, scheduledActivityEntity2, scheduledActivityEntityDao)
 
+        // mark all entities as stale as stale and save to DB
         verify(scheduledActivityEntity2)
                 .needsSyncedToBridge = true
         verify(scheduledActivityEntity1)
                 .needsSyncedToBridge = true
-
         inOrder.verify<ScheduledActivityEntityDao>(scheduledActivityEntityDao)
                 .upsert(eq(Arrays.asList(scheduledActivityEntity1, scheduledActivityEntity2)))
         inOrder.verifyNoMoreInteractions()
 
         testObserver.assertNotComplete()
 
+        // reset stubs and interactions on entities
+        reset(scheduledActivityEntity1, scheduledActivityEntity2)
+        // we should not be touching the entity's state in response to a batch update failure
+        verifyNoMoreInteractions(scheduledActivity1, scheduledActivity2)
+
+        // reset stubs and interactions on scheduleRepo
         reset<ScheduleRepository>(scheduleRepository)
+        // expect updateScheduleToBridge to be called
         doReturn(Completable.complete())
                 .`when`<ScheduleRepository>(scheduleRepository).updateScheduleToBridge(any())
 
+        // now that failure has come back for the batch
         testSchedulerRule.testScheduler.advanceTimeBy(1, SECONDS)
 
+        // we should get call updateScheduleToBridge once for each entity
+        // in real practice, at least one of them should result in an unrecoverable failure
         verify<ScheduleRepository>(scheduleRepository).updateScheduleToBridge(scheduledActivityEntity1)
         verify<ScheduleRepository>(scheduleRepository).updateScheduleToBridge(scheduledActivityEntity2)
         verifyNoMoreInteractions(scheduleRepository)
@@ -247,6 +272,7 @@ class ScheduleRepositoryTest {
 
         `when`(scheduledActivityEntity.clientWritableCopy()).thenReturn(scheduledActivity)
 
+        // irrecoverable response from Bridge
         `when`(activityManager.updateActivities(eq(listOf(scheduledActivity))))
                 .thenReturn(toV1Single(
                         Single.error<Message>(Throwable("Client data too large")).delay(1, SECONDS)))
@@ -269,6 +295,7 @@ class ScheduleRepositoryTest {
         // return from the response
         testSchedulerRule.testScheduler.advanceTimeBy(1, SECONDS)
 
+        // mark entity as up-to-date (since future syncs to Bridge are deemed impossible) and persist to DB
         inOrder.verify(scheduledActivityEntity)
                 .needsSyncedToBridge = false
         inOrder.verify<ScheduledActivityEntityDao>(scheduledActivityEntityDao)
@@ -311,7 +338,7 @@ class ScheduleRepositoryTest {
 
     @Test
     fun scheduleUpdateFailed_noInternet() {
-
+        // setup for test
         val taskStart = mock<Instant>()
         val taskEnd = mock<Instant>()
         val taskRunUUID = UUID.randomUUID()
@@ -336,22 +363,33 @@ class ScheduleRepositoryTest {
                                 "\"webservices.sagebase.org\", no address associated with hostname"))
                         .delay(1, SECONDS)))
 
+        // perform action being tested
         val testObserver = scheduleRepository.updateSchedule(taskResult).test()
 
+        // verify these actions occur after calling updateSchedule but before the response from Bridge
         inOrder(scheduledRepositorySyncStateDao, scheduledActivityEntity, scheduledActivityEntityDao) {
+            // first to from taskRunUUID -> scheduleGuid
             verify(scheduledRepositorySyncStateDao).getScheduleGuid(taskRunUUID)
+            // then go from scheduleGuid to entity
             verify(scheduledActivityEntityDao).activity(scheduleGuid)
+            // we update the schedule using the task's start and end
             verify(scheduledActivityEntity).startedOn = taskStart
             verify(scheduledActivityEntity).finishedOn = taskEnd
+            // before doing network call, mark entity as stale and persist our changes to the DB
             verify(scheduledActivityEntity).needsSyncedToBridge = true
             verify(scheduledActivityEntityDao).upsert(eq(Arrays.asList(scheduledActivityEntity)))
         }
+
+        // we should not be done because the Bridge response is still pending
         testObserver.assertNotComplete()
 
+        // resetting counts/stubs on these
         reset(scheduledActivityEntityDao, scheduledActivityEntity)
 
+        // ok, now let's let the response come back
         testSchedulerRule.testScheduler.advanceTimeBy(1, SECONDS)
 
+        // we don't need to change the state on the entity or the DB to retry the sync
         verifyNoMoreInteractions(scheduledActivityEntity, scheduledActivityEntityDao)
 
         testObserver.assertComplete()
