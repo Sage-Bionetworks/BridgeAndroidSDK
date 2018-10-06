@@ -15,6 +15,8 @@ allprojects {
 
     // for temp repo https://bintray.com/sage-bionetworks/bridge-maven-release/rest-client-android
     maven { url 'https://dl.bintray.com/sage-bionetworks/bridge-maven-release' }
+
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
   }
 }
 
@@ -42,8 +44,7 @@ buildscript {
     classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.13'
     classpath 'com.chaitanyapramod.gradle:findbugs-android:1.0'
 
-    // NOTE: Do not place your application dependencies here; they belong
-    // in the individual module build.gradle files
+    classpath 'com.jakewharton:butterknife-gradle-plugin:9.0.0-SNAPSHOT'
   }
 }
 
