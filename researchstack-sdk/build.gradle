@@ -8,11 +8,11 @@ repositories {
 
 // todo make pom include sage s3 repo for rest-client
 android {
-  compileSdkVersion 27
+  compileSdkVersion 28
 
   defaultConfig {
     minSdkVersion 19
-    targetSdkVersion 27
+    targetSdkVersion 28
     versionCode 1
     versionName "1.0"
     multiDexEnabled true
@@ -39,7 +39,7 @@ dependencies {
   }
   api project(":android-sdk") // to export BridgeApplication
 
-  implementation 'com.android.support:appcompat-v7:27.1.1'
+  implementation "com.android.support:appcompat-v7:${support_library_version}"
 
   annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 

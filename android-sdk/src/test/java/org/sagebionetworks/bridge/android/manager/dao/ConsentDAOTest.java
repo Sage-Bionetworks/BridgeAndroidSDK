@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Created by jyliu on 2/10/2017.
  */
-@Config(constants = BuildConfig.class)
+@Config
 @RunWith(RobolectricTestRunner.class)
 public class ConsentDAOTest {
     private ConsentDAO consentDAO;
