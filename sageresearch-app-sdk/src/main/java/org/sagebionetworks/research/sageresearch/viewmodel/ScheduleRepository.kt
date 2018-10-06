@@ -3,6 +3,7 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.support.annotation.RestrictTo
 import android.support.annotation.VisibleForTesting
 import hu.akarnokd.rxjava.interop.RxJavaInterop
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
@@ -203,7 +204,7 @@ open class ScheduleRepository @Inject constructor(
      */
     fun createScheduleTaskRunUuid(schedule: ScheduledActivityEntity): UUID {
         val uuid = UUID.randomUUID()
-        scheduleTaskRunUuidMap[uuid] = schedule.guid
+        syncStateDao.setScheduleGuid(uuid, schedule.guid)
         return uuid
     }
 
@@ -214,6 +215,7 @@ open class ScheduleRepository @Inject constructor(
      */
     @CheckReturnValue
     fun updateSchedule(taskResult: TaskResult): Completable {
+        logger.debug("Updating schedule for task: {}", taskResult.taskUUID)
         // If we previously registered a guid with a taskRunUuid, we should be able to find the schedule in the
         // the database at this point based on the schedule guid
 
@@ -224,8 +226,7 @@ open class ScheduleRepository @Inject constructor(
                     return schedule
                 })
                 .flatMapCompletable { schedule ->
-                    cacheSchedule(schedule)
-                            .andThen(updateSchedulesToBridge(Collections.singletonList(schedule)))
+                    updateSchedulesToBridge(Collections.singletonList(schedule))
                 }
                 .doOnError { it.localizedMessage }
     }
@@ -235,7 +236,7 @@ open class ScheduleRepository @Inject constructor(
      * schedules on bridge.
      */
     @CheckReturnValue
-    fun updateSchedulesToBridge(schedules: List<ScheduledActivityEntity>): Completable {
+    open fun updateSchedulesToBridge(schedules: List<ScheduledActivityEntity>): Completable {
         val bridgeSchedules = schedules.map { it.clientWritableCopy() }
 
         schedules.forEach {
@@ -266,6 +267,7 @@ open class ScheduleRepository @Inject constructor(
 
     @VisibleForTesting
     @CheckReturnValue
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {
         val bridgeSchedule = schedule.clientWritableCopy()
 
@@ -301,6 +303,7 @@ open class ScheduleRepository @Inject constructor(
      */
     @CheckReturnValue
     internal fun findSchedule(taskRunUuid: UUID): Single<ScheduledActivityEntity> {
+        logger.debug("findScheduled called for taskRunUuid: {}", taskRunUuid)
 
         // Null schedule usually means that the developer forgot to call createScheduleTaskRunUuid before launching
         // the task associated with the schedule.
@@ -308,7 +311,7 @@ open class ScheduleRepository @Inject constructor(
         // Which, that is okay, the s3 upload will still take place, but we won't be able to update the schedule on bridge.
         // Side effects for this will be, no study reports or finishedOn status for the task will show in the UI.
         // TODO: mdephillips 9/14/2018 message the user there will be no history?
-        val guid = scheduleTaskRunUuidMap[taskRunUuid]
+        val guid = syncStateDao.getScheduleGuid(taskRunUuid)
         return if (guid == null) {
             Single.error(Throwable("No schedule guid found for taskRunUuid $taskRunUuid, " +
                     "are you sure you function createScheduleTaskRunUuid() before running the task?"))
@@ -345,6 +348,7 @@ open class ScheduleRepository @Inject constructor(
      */
     @CheckReturnValue
     private fun cacheSchedule(schedule: ScheduledActivityEntity): Completable {
+        logger.debug("cacheSchedule called for schedule with guid: {}", schedule.guid)
         return cacheSchedules(listOf(schedule))
     }
 
@@ -367,6 +371,8 @@ open class ScheduleRepository @Inject constructor(
      */
     @CheckReturnValue
     internal fun cacheSchedules(schedules: List<ScheduledActivityEntity>): Completable {
+        logger.debug("cacheSchedules called for schedule guids: {}", schedules.map { it.guid })
+
         return Completable.fromAction {
             scheduleDao.upsert(schedules)
         }
@@ -419,8 +425,15 @@ object ScheduleRepositoryHelper {
 }
 
 open class ScheduledRepositorySyncStateDao @Inject constructor(context: Context) {
+    val logger = LoggerFactory.getLogger(ScheduledRepositorySyncStateDao::class.java)
 
     private val lastQueryDateKey = "lastQueryEndDate"
+
+    /**
+     * @property scheduleTaskRunUuidMap maps taskRunUuid to schedule guid so that we cannot find
+     *                                  the correct schedule to update after a task completes
+     */
+    private val scheduleTaskRunUuidMap = HashMap<UUID, String>()
 
     /**
      * Used to store helpful data about the state of the ScheduleRepository
@@ -430,6 +443,16 @@ open class ScheduledRepositorySyncStateDao @Inject constructor(context: Context)
             context.getSharedPreferences("ScheduleRepository", Context.MODE_PRIVATE)
         private set
 
+    fun getScheduleGuid(taskRunUuid: UUID): String? {
+        logger.debug("getScheduleGuid called for taskRunUUID: {}", taskRunUuid)
+        return scheduleTaskRunUuidMap[taskRunUuid]
+    }
+
+    fun setScheduleGuid(taskRunUuid: UUID, scheduleGuid: String) {
+        logger.debug("setScheduleGuid called for taskRunUUID: {}, scheduleGuid: {}", taskRunUuid, scheduleGuid)
+
+        scheduleTaskRunUuidMap[taskRunUuid] = scheduleGuid
+    }
 
     open var lastQueryEndDate: DateTime?
         get() {
