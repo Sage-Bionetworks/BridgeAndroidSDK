@@ -3,7 +3,7 @@ package org.sagebionetworks.bridge.researchstack;
 import android.content.Context;
 import android.content.Intent;
 import androidx.annotation.NonNull;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
