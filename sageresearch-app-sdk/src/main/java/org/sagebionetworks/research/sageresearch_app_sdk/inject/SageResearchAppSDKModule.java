@@ -1,22 +1,15 @@
 package org.sagebionetworks.research.sageresearch_app_sdk.inject;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import android.arch.lifecycle.ViewModel;
-import android.arch.lifecycle.ViewModelProvider;
 import android.arch.persistence.room.Room;
 import android.content.Context;
-import android.support.annotation.NonNull;
 
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
-import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
-import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleViewModel;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
@@ -28,7 +21,6 @@ import java.lang.annotation.Retention;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.inject.Named;
 import javax.inject.Qualifier;
 
 import dagger.Binds;
@@ -38,6 +30,7 @@ import dagger.multibindings.IntoSet;
 
 @Module
 public abstract class SageResearchAppSDKModule {
+    private static final String RESEARCH_DB_FILENAME = "org.sagebionetworks.research.ResearchDatabase";
     @Provides
     static AbstractResultArchiveFactory provideAbstractResultArchiveFactory(
             ImmutableList<ResultArchiveFactory> resultArchiveFactories) {
@@ -66,9 +59,8 @@ public abstract class SageResearchAppSDKModule {
     }
 
     @Provides
-    static ResearchDatabase provideResearchDatabase(Context context,
-            @ResearchDatabaseFilename String databaseFilename) {
-        return Room.databaseBuilder(context, ResearchDatabase.class, databaseFilename)
+    static ResearchDatabase provideResearchDatabase(Context context) {
+        return Room.databaseBuilder(context, ResearchDatabase.class, RESEARCH_DB_FILENAME)
                 .build();
     }
 

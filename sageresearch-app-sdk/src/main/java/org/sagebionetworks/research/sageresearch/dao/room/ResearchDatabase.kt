@@ -41,18 +41,6 @@ import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
         version = 1)
 @TypeConverters(EntityTypeConverters::class)
 abstract class ResearchDatabase : RoomDatabase() {
-
-    /**
-     * Creates a singleton that takes Context as a parameter to access
-     * Use ResearchDatabase.getInstance(context)
-     * TODO: mdephillips 9/2/18 use dagger?
-     */
-    companion object : SingletonWithParam<ResearchDatabase, Context>({
-        Room.databaseBuilder(it.applicationContext,
-                ResearchDatabase::class.java, "ResearchDatabase.db")
-                .build()
-    })
-
     abstract fun scheduleDao(): ScheduledActivityEntityDao
 }
 
