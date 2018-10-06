@@ -1,6 +1,6 @@
 package org.sagebionetworks.bridge.researchstack;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import com.google.common.base.Strings;
 import org.joda.time.DateTime;
 

@@ -4,10 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import org.joda.time.DateTime
 import org.joda.time.Days
-import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.Message
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
@@ -21,14 +20,12 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
 import org.slf4j.LoggerFactory
-import org.threeten.bp.Instant
 
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
-import java.util.Date
 import java.util.UUID
 
 import java.util.concurrent.atomic.AtomicBoolean

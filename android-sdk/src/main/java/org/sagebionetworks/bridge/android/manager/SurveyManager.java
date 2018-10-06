@@ -1,18 +1,16 @@
 package org.sagebionetworks.bridge.android.manager;
 
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Survey;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import rx.Single;
 

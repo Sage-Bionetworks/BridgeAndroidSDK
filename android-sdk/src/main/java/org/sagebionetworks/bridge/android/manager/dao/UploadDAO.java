@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import android.content.Context;
-import android.support.annotation.AnyThread;
+import androidx.annotation.AnyThread;
 
 import com.google.common.collect.Sets;
 
@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  * Created by jyliu on 3/10/2017.

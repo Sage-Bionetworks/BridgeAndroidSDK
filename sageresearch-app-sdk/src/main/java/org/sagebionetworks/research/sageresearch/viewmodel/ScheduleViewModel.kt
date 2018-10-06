@@ -1,14 +1,12 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.LiveData
-import android.support.annotation.VisibleForTesting
-import org.researchstack.backbone.result.TaskResult
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.annotation.VisibleForTesting
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId

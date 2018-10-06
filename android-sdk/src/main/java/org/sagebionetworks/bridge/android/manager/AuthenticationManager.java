@@ -3,10 +3,10 @@ package org.sagebionetworks.bridge.android.manager;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -46,7 +46,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import rx.Completable;
 import rx.Observable;

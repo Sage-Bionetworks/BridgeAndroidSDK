@@ -1,9 +1,9 @@
 package org.sagebionetworks.bridge.android.manager;
 
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSink;
@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;

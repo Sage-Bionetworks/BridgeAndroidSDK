@@ -1,9 +1,9 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Context;
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import rx.Completable;
 import rx.Observable;

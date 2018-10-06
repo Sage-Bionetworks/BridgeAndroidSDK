@@ -1,14 +1,10 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import org.sagebionetworks.bridge.android.AuthManagementActivity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class EmailSignInRedirectUriActivity extends AppCompatActivity {
     @Override

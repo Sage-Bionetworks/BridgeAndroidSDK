@@ -19,7 +19,7 @@ package org.sagebionetworks.bridge.android.manager;
 
 import android.app.Application;
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
@@ -30,8 +30,6 @@ import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
-
-import javax.inject.Singleton;
 
 import dagger.BindsInstance;
 import dagger.Component;

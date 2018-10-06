@@ -18,12 +18,11 @@
 package org.sagebionetworks.bridge.android.manager.dao;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import android.content.Context;
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 

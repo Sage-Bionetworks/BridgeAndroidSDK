@@ -1,12 +1,7 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.arch.persistence.room.TypeConverter
+import androidx.room.TypeConverter
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonParseException
-import com.google.gson.JsonPrimitive
 import com.google.gson.TypeAdapter
 
 import com.google.gson.reflect.TypeToken
@@ -14,7 +9,6 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
-import org.joda.time.format.ISODateTimeFormat
 
 import org.sagebionetworks.bridge.rest.gson.ByteArrayToBase64TypeAdapter
 import org.sagebionetworks.bridge.rest.gson.DateTimeTypeAdapter
@@ -22,14 +16,11 @@ import org.sagebionetworks.bridge.rest.gson.LocalDateTypeAdapter
 import org.sagebionetworks.bridge.rest.model.ActivityType
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
-import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.threeten.bp.Instant
 
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.format.DateTimeFormatter
 import java.io.IOException
-import java.lang.reflect.Type
-import java.util.UUID
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
