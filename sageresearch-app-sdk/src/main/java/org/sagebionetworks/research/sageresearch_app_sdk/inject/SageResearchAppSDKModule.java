@@ -7,10 +7,14 @@ import android.content.Context;
 
 import com.google.common.collect.ImmutableList;
 
+import org.sagebionetworks.bridge.android.manager.ActivityManager;
+import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledRepositorySyncStateDao;
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
@@ -31,6 +35,7 @@ import dagger.multibindings.IntoSet;
 @Module
 public abstract class SageResearchAppSDKModule {
     private static final String RESEARCH_DB_FILENAME = "org.sagebionetworks.research.ResearchDatabase";
+
     @Provides
     static AbstractResultArchiveFactory provideAbstractResultArchiveFactory(
             ImmutableList<ResultArchiveFactory> resultArchiveFactories) {
@@ -67,5 +72,13 @@ public abstract class SageResearchAppSDKModule {
     @Provides
     static ScheduledActivityEntityDao provideScheduledActivityDao(ResearchDatabase researchDatabase) {
         return researchDatabase.scheduleDao();
+    }
+
+    @Provides
+    static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
+            ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, ActivityManager activityManager,
+            ParticipantRecordManager participantRecordManager) {
+        return new ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao, activityManager,
+                participantRecordManager);
     }
 }

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.CheckReturnValue
 import javax.inject.Inject
+import javax.inject.Singleton
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -63,7 +64,7 @@ import javax.inject.Inject
  * All @see ScheduleViewModel are required to call this class' function syncSchedules() to ensure that
  * the schedules are currently synced with bridge.
  */
-open class ScheduleRepository @Inject constructor(
+open class ScheduleRepository constructor(
         private val scheduleDao: ScheduledActivityEntityDao,
         private val syncStateDao: ScheduledRepositorySyncStateDao,
         private val activityManager: ActivityManager,
