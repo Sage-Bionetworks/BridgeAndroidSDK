@@ -25,6 +25,8 @@ import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.di.BridgeManagerProviderModule;
 import org.sagebionetworks.bridge.android.di.BridgeServiceModule;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.android.di.S3Module;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
@@ -37,10 +39,13 @@ import dagger.BindsInstance;
 import dagger.Component;
 
 /**
- * Created by liujoshua on 2/22/2018.
+ * Component associated with Bridge study and participant.
+ * TODO: Migrate to @BridgeStudyParticipantScope @liujoshua 2018/10/09
  */
-
 @Component(modules = {BridgeManagerProviderModule.class, BridgeServiceModule.class, S3Module.class})
+@Singleton
+@BridgeStudyScope
+@BridgeStudyParticipantScope
 public interface BridgeManagerProvider {
     @Component.Builder
     interface Builder {

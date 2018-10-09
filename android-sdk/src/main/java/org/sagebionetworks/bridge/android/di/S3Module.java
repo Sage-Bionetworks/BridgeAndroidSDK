@@ -34,6 +34,7 @@ import okhttp3.OkHttpClient;
 public class S3Module {
     @Provides
     @Named("s3OkHttp3Client")
+    @Singleton
     OkHttpClient getS3OkHttp3Client(SocketFactory socketFactory) {
         return new OkHttpClient.Builder()
                 .socketFactory(socketFactory)

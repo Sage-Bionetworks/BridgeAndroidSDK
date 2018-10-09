@@ -13,6 +13,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.ClientInfo;
@@ -48,6 +50,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </ul>
  */
 @AnyThread
+@BridgeStudyScope
 public class BridgeConfig {
     private static final Logger logger = LoggerFactory.getLogger(BridgeConfig.class);
 

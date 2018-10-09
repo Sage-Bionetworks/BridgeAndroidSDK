@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.DateRange;
@@ -34,6 +35,7 @@ import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySin
  * the study in order to manage their participant record.
  */
 @AnyThread
+@BridgeStudyParticipantScope
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 

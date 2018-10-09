@@ -39,6 +39,7 @@ import android.support.annotation.NonNull;
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
@@ -59,10 +60,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Locale;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import io.reactivex.Completable;
 import io.reactivex.subjects.CompletableSubject;
 
+@BridgeStudyParticipantScope
 public class TaskResultUploader implements TaskResultProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultUploader.class);
 

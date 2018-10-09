@@ -50,6 +50,7 @@ public class BridgeServiceModule {
     }
 
     @Provides
+    @Singleton
     SocketFactory getSocketFactory() {
         return new DelegatingSocketFactory(SocketFactory.getDefault()) {
             @Override
@@ -62,6 +63,7 @@ public class BridgeServiceModule {
     }
 
     @Provides
+    @BridgeStudyScope
     ApiClientProvider getApiClientProvider(Context applicationContext,
                                            BridgeConfig bridgeConfig,
                                            SocketFactory socketFactory) {
@@ -83,6 +85,7 @@ public class BridgeServiceModule {
     }
 
     @Provides
+    @BridgeStudyScope
     AndroidStudyUploadEncryptor getAndroidStudyUploadEncryptor(BridgeConfig bridgeConfig) {
         try {
             return new AndroidStudyUploadEncryptor(bridgeConfig.getPublicKey());

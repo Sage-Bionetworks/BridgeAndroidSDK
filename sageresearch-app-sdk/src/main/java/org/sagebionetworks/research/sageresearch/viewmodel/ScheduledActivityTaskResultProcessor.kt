@@ -1,9 +1,11 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
 import io.reactivex.Completable
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /*
  * BSD 3-Clause License
@@ -40,6 +42,7 @@ import javax.inject.Inject
 /**
  * This class is used to
  */
+@BridgeStudyParticipantScope
 class ScheduledActivityTaskResultProcessor
 @Inject constructor(private val scheduleRepo: ScheduleRepository) :
         TaskResultProcessingManager.TaskResultProcessor {

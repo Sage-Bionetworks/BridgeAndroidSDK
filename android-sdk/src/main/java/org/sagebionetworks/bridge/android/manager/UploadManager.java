@@ -11,6 +11,7 @@ import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 
 import org.joda.time.DateTime;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.UploadDAO;
 import org.sagebionetworks.bridge.android.manager.upload.FileUploadRequestBody;
 import org.sagebionetworks.bridge.android.manager.upload.S3Service;
@@ -65,6 +66,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * duplicate archive was detected.
  */
 @AnyThread
+@BridgeStudyParticipantScope
 public class UploadManager implements AuthenticationManager.AuthenticationEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(UploadManager.class);
     private static final String CONTENT_TYPE_DATA_ARCHIVE = "application/zip";

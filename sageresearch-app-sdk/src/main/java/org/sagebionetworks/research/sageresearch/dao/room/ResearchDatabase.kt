@@ -6,6 +6,7 @@ import android.arch.persistence.room.RoomDatabase
 import android.arch.persistence.room.TypeConverters
 import android.content.Context
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
+import javax.inject.Singleton
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.

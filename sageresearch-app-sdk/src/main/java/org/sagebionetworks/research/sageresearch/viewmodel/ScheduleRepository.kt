@@ -64,6 +64,7 @@ import javax.inject.Singleton
  * All @see ScheduleViewModel are required to call this class' function syncSchedules() to ensure that
  * the schedules are currently synced with bridge.
  */
+@Singleton
 open class ScheduleRepository constructor(
         private val scheduleDao: ScheduledActivityEntityDao,
         private val syncStateDao: ScheduledRepositorySyncStateDao,

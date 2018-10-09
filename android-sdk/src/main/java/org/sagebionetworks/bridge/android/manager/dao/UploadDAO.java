@@ -19,6 +19,7 @@ import javax.inject.Singleton;
  * Created by jyliu on 3/10/2017.
  */
 @AnyThread
+@Singleton // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
 public class UploadDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(UploadDAO.class);
 

@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.Survey;
@@ -20,6 +21,7 @@ import rx.Single;
  * Encapsulates Bridge API calls for getting surveys.
  */
 @AnyThread
+@BridgeStudyParticipantScope
 public class SurveyManager {
     @NonNull
     private final AtomicReference<AuthenticationManager.AuthStateHolder>

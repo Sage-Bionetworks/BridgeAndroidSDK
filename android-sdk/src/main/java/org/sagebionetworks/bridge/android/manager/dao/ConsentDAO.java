@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 
 import com.google.common.collect.Sets;
 
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Created by jyliu on 2/8/2017.
  */
 @AnyThread
+@Singleton // TODO: consider scoping to @BridgeStudyParticipantScope @liujoshua 2018/10/09
 public class ConsentDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(ConsentDAO.class);
 
