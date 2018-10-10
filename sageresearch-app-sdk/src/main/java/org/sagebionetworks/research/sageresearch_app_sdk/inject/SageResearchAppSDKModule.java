@@ -4,9 +4,9 @@ import android.arch.persistence.room.Room;
 import android.content.Context;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
-import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
-import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
+import org.sagebionetworks.bridge.android.di.BridgeApplicationScope;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
@@ -22,46 +22,44 @@ import org.sagebionetworks.research.sageresearch_app_sdk.archive.SageResearchRes
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 
 import javax.inject.Singleton;
 
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
+import dagger.multibindings.ElementsIntoSet;
 import dagger.multibindings.IntoSet;
 
-@Module
+@Module(includes = {})
 public abstract class SageResearchAppSDKModule {
     private static final Logger LOGGER = LoggerFactory.getLogger(SageResearchAppSDKModule.class);
+
     private static final String RESEARCH_DB_FILENAME = "org.sagebionetworks.research.ResearchDatabase";
 
     @Provides
-    @BridgeStudyScope
     static AbstractResultArchiveFactory provideAbstractResultArchiveFactory(
             ImmutableList<ResultArchiveFactory> resultArchiveFactories) {
         return new SageResearchResultArchiveFactory(resultArchiveFactories);
     }
 
-    @IntoSet
-    @Binds
-    abstract TaskResultProcessor provideScheduledActivityTaskResultProcessor(
-            ScheduledActivityTaskResultProcessor taskResultProcessor);
-
     /**
      * @return list of processors to receive final task results
      */
     @Provides
-    @BridgeStudyParticipantScope
-    static List<TaskResultProcessor> provideTaskResultProcessors(
+    @ElementsIntoSet
+    @BridgeApplicationScope
+    static Set<TaskResultProcessor> provideTaskResultProcessors(
             TaskResultUploader taskResultUploader,
             ScheduledActivityTaskResultProcessor scheduledActivityTaskResultProcessor) {
-        return Arrays.asList(taskResultUploader, scheduledActivityTaskResultProcessor);
+        LOGGER.debug("Providing TaskResultProcessors");
+
+        return Sets.newHashSet(taskResultUploader, scheduledActivityTaskResultProcessor);
     }
 
     @Provides
-    @BridgeStudyParticipantScope
+    @BridgeApplicationScope
     static ResearchDatabase provideResearchDatabase(Context context) {
         LOGGER.debug("Providing ResearchDatabase");
         return Room.databaseBuilder(context, ResearchDatabase.class, RESEARCH_DB_FILENAME)
@@ -69,13 +67,12 @@ public abstract class SageResearchAppSDKModule {
     }
 
     @Provides
-    @BridgeStudyParticipantScope
     static ScheduledActivityEntityDao provideScheduledActivityDao(ResearchDatabase researchDatabase) {
         return researchDatabase.scheduleDao();
     }
 
     @Provides
-    @BridgeStudyParticipantScope
+    @BridgeApplicationScope
     static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
             ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, ActivityManager activityManager,
             ParticipantRecordManager participantRecordManager) {

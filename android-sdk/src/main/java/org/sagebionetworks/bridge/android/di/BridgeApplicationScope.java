@@ -8,10 +8,9 @@ import java.lang.annotation.Retention;
 import javax.inject.Scope;
 
 /**
- * Scope to a Bridge study. Parent scope of {@link BridgeStudyParticipantScope}
+ * Scope to a Bridge application. Parent scope of {@link BridgeStudyScope}
  */
 @Documented
 @Retention(RUNTIME)
 @Scope
-public @interface BridgeStudyScope {
-}
+public @interface BridgeApplicationScope {}

@@ -65,7 +65,6 @@ import javax.inject.Singleton;
 import io.reactivex.Completable;
 import io.reactivex.subjects.CompletableSubject;
 
-@BridgeStudyParticipantScope
 public class TaskResultUploader implements TaskResultProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultUploader.class);
 
@@ -94,7 +93,7 @@ public class TaskResultUploader implements TaskResultProcessor {
 
     @Override
     public Completable processTaskResult(final TaskResult taskResult) {
-        LOGGER.info("Processing task result: {}", taskResult);
+        LOGGER.info("Uploading task result: {}", taskResult);
 
         // TODO: mdephillips 10/2/18 integrate into this flow to create metadata
 //        scheduleRepo.findSchedule(taskResult.getTaskUUID());

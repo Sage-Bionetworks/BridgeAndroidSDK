@@ -17,40 +17,34 @@
 
 package org.sagebionetworks.bridge.android.manager;
 
-import android.app.Application;
 import android.content.Context;
 import android.support.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.di.BridgeManagerProviderModule;
-import org.sagebionetworks.bridge.android.di.BridgeServiceModule;
+import org.sagebionetworks.bridge.android.di.BridgeStudyComponent;
 import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
-import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
-import org.sagebionetworks.bridge.android.di.S3Module;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
 
-import javax.inject.Singleton;
-
 import dagger.BindsInstance;
 import dagger.Component;
 
 /**
- * Component associated with Bridge study and participant.
- * TODO: Migrate to @BridgeStudyParticipantScope @liujoshua 2018/10/09
+ * Component associated with Bridge study and participant. TODO: Migrate to @BridgeStudyParticipantScope @liujoshua
+ * 2018/10/09
  */
-@Component(modules = {BridgeManagerProviderModule.class, BridgeServiceModule.class, S3Module.class})
-@Singleton
-@BridgeStudyScope
+@Component(dependencies = BridgeStudyComponent.class)
 @BridgeStudyParticipantScope
 public interface BridgeManagerProvider {
     @Component.Builder
     interface Builder {
         @BindsInstance
-        Builder application(Application application);
+        Builder applicationContext(Context context);
+
+        Builder bridgeStudyComponent(BridgeStudyComponent bridgeStudyComponent);
 
         BridgeManagerProvider build();
     }

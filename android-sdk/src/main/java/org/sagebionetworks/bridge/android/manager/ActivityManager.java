@@ -1,5 +1,9 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
+
 import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.CheckResult;
@@ -16,20 +20,14 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
-import rx.Completable;
 import rx.Observable;
 import rx.Single;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 @AnyThread
 @BridgeStudyParticipantScope

@@ -23,6 +23,7 @@ import android.support.annotation.Nullable;
 
 import com.google.gson.reflect.TypeToken;
 
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4;
 
@@ -30,12 +31,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.inject.Singleton;
-
 /**
  * Created by TheMDP on 12/29/17.
  */
-@Singleton // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
+@BridgeStudyScope // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
 public class ActivityListDAO extends SharedPreferencesJsonDAO {
 
     private static final String LOG_TAG = ActivityListDAO.class.getCanonicalName();

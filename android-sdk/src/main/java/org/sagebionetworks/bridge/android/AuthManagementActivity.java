@@ -7,13 +7,15 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.subscriptions.CompositeSubscription;
 
 import java.net.UnknownHostException;
+
+import rx.android.schedulers.AndroidSchedulers;
+import rx.subscriptions.CompositeSubscription;
 
 /**
  * Created by liujoshua on 12/17/2017.

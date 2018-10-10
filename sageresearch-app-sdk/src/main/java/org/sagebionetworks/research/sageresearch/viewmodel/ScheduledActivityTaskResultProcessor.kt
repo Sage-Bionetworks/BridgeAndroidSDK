@@ -4,8 +4,8 @@ import io.reactivex.Completable
 import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import javax.inject.Singleton
 
 /*
  * BSD 3-Clause License
@@ -42,12 +42,14 @@ import javax.inject.Singleton
 /**
  * This class is used to
  */
-@BridgeStudyParticipantScope
 class ScheduledActivityTaskResultProcessor
 @Inject constructor(private val scheduleRepo: ScheduleRepository) :
         TaskResultProcessingManager.TaskResultProcessor {
 
+    val logger = LoggerFactory.getLogger(ScheduledActivityTaskResultProcessor::class.java)
+
     override fun processTaskResult(taskResult: TaskResult): Completable {
-       return scheduleRepo.updateSchedule(taskResult)
+        logger.info("Updating schedule for taskRunUUID: {}", taskResult.taskUUID)
+        return scheduleRepo.updateSchedule(taskResult)
     }
 }

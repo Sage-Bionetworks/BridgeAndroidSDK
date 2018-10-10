@@ -19,13 +19,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  * Created by jyliu on 2/8/2017.
  */
 @AnyThread
-@Singleton // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
+@BridgeStudyScope // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
 public class AccountDAO extends SharedPreferencesJsonDAO {
     private static final TypeToken<List<String>> STRING_LIST = new TypeToken<List<String>>() {
     };

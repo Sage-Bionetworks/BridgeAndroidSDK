@@ -1,5 +1,10 @@
 package org.sagebionetworks.bridge.android;
 
+import static android.content.res.AssetManager.ACCESS_BUFFER;
+import static android.os.Build.VERSION;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -34,11 +39,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
-
-import static android.content.res.AssetManager.ACCESS_BUFFER;
-import static android.os.Build.VERSION;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Used to configure settings for Bridge.

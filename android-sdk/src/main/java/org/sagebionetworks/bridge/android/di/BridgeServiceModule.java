@@ -28,13 +28,13 @@ import org.sagebionetworks.bridge.android.R;
 import org.sagebionetworks.bridge.android.util.okhttp.DelegatingSocketFactory;
 import org.sagebionetworks.bridge.data.AndroidStudyUploadEncryptor;
 import org.sagebionetworks.bridge.rest.ApiClientProvider;
+import org.sagebionetworks.bridge.rest.api.PublicApi;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
 
-import javax.inject.Singleton;
 import javax.net.SocketFactory;
 
 import dagger.Module;
@@ -50,7 +50,7 @@ public class BridgeServiceModule {
     }
 
     @Provides
-    @Singleton
+    @BridgeStudyScope
     SocketFactory getSocketFactory() {
         return new DelegatingSocketFactory(SocketFactory.getDefault()) {
             @Override
@@ -65,8 +65,8 @@ public class BridgeServiceModule {
     @Provides
     @BridgeStudyScope
     ApiClientProvider getApiClientProvider(Context applicationContext,
-                                           BridgeConfig bridgeConfig,
-                                           SocketFactory socketFactory) {
+            BridgeConfig bridgeConfig,
+            SocketFactory socketFactory) {
 
         List<Interceptor> appInterceptors = Collections.emptyList();
         List<Interceptor> networkInterceptors = Lists.newArrayList();
@@ -82,6 +82,12 @@ public class BridgeServiceModule {
                 socketFactory,
                 networkInterceptors,
                 appInterceptors);
+    }
+
+    @Provides
+    @BridgeStudyScope
+    static PublicApi providePublicApi(ApiClientProvider apiClientProvider) {
+        return apiClientProvider.getClient(PublicApi.class);
     }
 
     @Provides
