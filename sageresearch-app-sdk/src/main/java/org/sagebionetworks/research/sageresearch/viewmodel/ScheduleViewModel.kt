@@ -53,7 +53,7 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
     @VisibleForTesting
     protected open fun scheduleDao() = db.scheduleDao()
 
-    private val scheduleRepo = ScheduleRepository.getInstance(app)
+    protected val scheduleRepo = ScheduleRepository.getInstance(app)
 
     @VisibleForTesting
     protected open val timezone: ZoneId get() {
@@ -97,5 +97,12 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
         schedule?.let {
             return scheduleRepo.createScheduleTaskRunUuid(schedule)
         } ?: return UUID.randomUUID()
+    }
+
+    /**
+     * @param schedule with new fields that should be saved to the database and uploaded to bridge
+     */
+    fun updateSchedule(schedule: ScheduledActivityEntity) {
+        scheduleRepo.updateSchedule(schedule)
     }
 }

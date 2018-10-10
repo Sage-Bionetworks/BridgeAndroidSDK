@@ -5,9 +5,11 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import android.support.annotation.VisibleForTesting
+import dagger.android.AndroidInjection
+import dagger.android.AndroidInjector
+import dagger.android.support.AndroidSupportInjection
 import org.joda.time.DateTime
 import org.joda.time.Days
-import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.Message
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
@@ -20,19 +22,19 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
+import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader
 import org.slf4j.LoggerFactory
-import org.threeten.bp.Instant
 
 import rx.Observable
 import rx.android.schedulers.AndroidSchedulers
 import rx.functions.Action1
 import rx.schedulers.Schedulers
 import rx.subscriptions.CompositeSubscription
-import java.util.Date
 import java.util.UUID
 
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Inject
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -85,6 +87,8 @@ open class ScheduleRepository(context: Context) {
 
     private val scheduleDao: ScheduledActivityEntityDao =
             ResearchDatabase.getInstance(context).scheduleDao()
+
+    @Inject lateinit var taskResultUploader: TaskResultUploader
 
     /**
      * @property isSyncing true if the study's schedules are currently being fetched from bridge,
@@ -263,19 +267,29 @@ open class ScheduleRepository(context: Context) {
      * @param taskResult the result of the user doing the schedule task
      */
     fun updateSchedule(taskResult: TaskResult) {
+        logger.info("Searching for schedule in db to update on bridge")
         // If we previously registered a guid with a taskRunUuid, we should be able to find the schedule in the
         // the database at this point based on the schedule guid
         findSchedule(taskResult.taskUUID, Action1 { schedule ->
+            logger.info("Found schedule with guid ${schedule.guid}")
             // TODO: mdephillips 9/14/2018 in past apps, here we would set client data from TaskResult
             // TODO: mdephillips 9/14/2018 instead use TaskResult to generate study report for schedule
             schedule.startedOn = taskResult.startTime
             schedule.finishedOn = taskResult.endTime
-            cacheSchedule(schedule)
-            updateScheduleToBridge(schedule)
+            updateSchedule(schedule)
         }, Action1 {
             // TODO: mdephillips 9/14/2018 message the user there will be no history?
             logger.warn(it.localizedMessage)
         })
+    }
+
+    /**
+     * Caches and updates the schedule on bridge
+     * @param schedule to update
+     */
+    fun updateSchedule(schedule: ScheduledActivityEntity) {
+        cacheSchedule(schedule)
+        updateScheduleToBridge(schedule)
     }
 
     /**
@@ -424,6 +438,7 @@ open class ScheduleRepository(context: Context) {
      */
     @VisibleForTesting
     protected open fun cacheSchedules(schedules: List<ScheduledActivityEntity>) {
+        logger.info("Caching schedules to db with guids ${schedules.map{it.guid}}")
         scheduleRepoSubscriptions.add(Observable.just(scheduleDao)
                 .subscribeOn(Schedulers.io())
                 .subscribe({ dao ->
@@ -439,6 +454,11 @@ open class ScheduleRepository(context: Context) {
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
         // @see ScheduleActivityEntity.clientWritableCopy()
+    }
+
+    fun uploadTaskResult(taskResult: TaskResult) {
+        // TODO: mdephillips 10/9/18 does not work because taskResultUploader is never initialized help!
+        // taskResultUploader.processTaskResult(taskResult)
     }
 }
 
