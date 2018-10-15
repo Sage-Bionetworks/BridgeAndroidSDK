@@ -101,9 +101,10 @@ public class TaskHelper {
         this.archiveFileFactory = archiveFileFactory;
     }
 
-    // To allow unit tests to mock.
-    @VisibleForTesting
-    void setSurveyFactory(@NonNull SurveyFactory surveyFactory) {
+    /**
+     * @param surveyFactory to be used when we deserialize JSON and built tasks
+     */
+    public void setSurveyFactory(@NonNull SurveyFactory surveyFactory) {
         this.surveyFactory = surveyFactory;
     }
 
