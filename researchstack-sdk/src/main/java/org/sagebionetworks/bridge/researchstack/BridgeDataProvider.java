@@ -729,9 +729,20 @@ public abstract class BridgeDataProvider extends DataProvider {
         uploadTaskResult(null, taskResult);
     }
 
+    /**
+     * @param context can be activity or application
+     * @param taskResult from the user doing the task
+     * @param associatedSchedule linked to the task result, for creating metadata and updating schedule on bridge
+     * @param shouldUpdateAssociatedScheduleOnBridge if true, schedule will be updated,
+     *                                               if false, it will only be used to create metadata
+     */
     @SuppressLint("RxLeakedSubscription")    // upload should run as long as it needs to, no early unsubscribe
-    @Override
-    public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
+    public void uploadTaskResult(
+            Context context,
+            @NonNull TaskResult taskResult,
+            @Nullable ScheduledActivity associatedSchedule,
+            boolean shouldUpdateAssociatedScheduleOnBridge) {
+
         // TODO: Update/Create TaskNotificationService
         logger.debug("Called uploadTaskResult");
 
@@ -744,33 +755,28 @@ public abstract class BridgeDataProvider extends DataProvider {
             }
         }
 
-        ScheduledActivity lastLoadedActivity = null;
-        if (lastLoadedTaskGuid == null) {
-            logger.error("lastLoadedTaskGuid must be set for this task to complete");
-            logger.error("The activity or metadata.json will NOT be updated on bridge");
+        if (associatedSchedule == null) {
+            logger.warn("associatedSchedule must be set for schedule "
+                    + "to be updated on bridge, and for metadata.json to be created");
         } else {
-            lastLoadedActivity = bridgeManagerProvider
-                    .getActivityManager().getLocalActivity(lastLoadedTaskGuid);
-
-            if (lastLoadedActivity == null) {
-                lastLoadedActivity = new ScheduledActivity();
-            }
-            lastLoadedActivity.setGuid(lastLoadedTaskGuid);
+            associatedSchedule.setGuid(lastLoadedTaskGuid);
             if (taskResult.getStartDate() != null) {
-                lastLoadedActivity.setStartedOn(new DateTime(taskResult.getStartDate()));
+                associatedSchedule.setStartedOn(new DateTime(taskResult.getStartDate()));
             }
             if (taskResult.getEndDate() != null) {
-                lastLoadedActivity.setFinishedOn(new DateTime(taskResult.getEndDate()));
+                associatedSchedule.setFinishedOn(new DateTime(taskResult.getEndDate()));
             }
-
-            bridgeManagerProvider.getActivityManager().updateActivity(lastLoadedActivity).subscribe(message -> {
-                logger.info("Update activity success " + message);
-            }, throwable -> logger.error(throwable.getLocalizedMessage()));
+            if (shouldUpdateAssociatedScheduleOnBridge) {
+                bridgeManagerProvider.getActivityManager().updateActivity(associatedSchedule).subscribe(message -> {
+                    logger.info("Update activity success " + message);
+                }, throwable -> logger.error(throwable.getLocalizedMessage()));
+            }
         }
 
         JsonArchiveFile metadataFile = null;
-        if (lastLoadedActivity != null) {
-            metadataFile = ArchiveUtil.createMetaDataFile(lastLoadedActivity, ImmutableList.copyOf(getLocalDataGroups()));
+        if (associatedSchedule != null) {
+            metadataFile = ArchiveUtil.createMetaDataFile(
+                    associatedSchedule, ImmutableList.copyOf(getLocalDataGroups()));
             logger.debug("metadata.json has been successfully created " + metadataFile.toString());
         }
 
@@ -790,6 +796,16 @@ public abstract class BridgeDataProvider extends DataProvider {
         } else {
             taskHelper.uploadSurveyResult(metadataFile, taskResult);
         }
+    }
+
+    @Override
+    public void uploadTaskResult(Context context, @NonNull TaskResult taskResult) {
+        ScheduledActivity lastLoadedActivity = null;
+        if (lastLoadedTaskGuid == null) {
+            lastLoadedActivity = bridgeManagerProvider
+                    .getActivityManager().getLocalActivity(lastLoadedTaskGuid);
+        }
+        uploadTaskResult(context, taskResult, lastLoadedActivity, true);
     }
 
     @Override
