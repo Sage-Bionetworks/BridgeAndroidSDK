@@ -5,9 +5,11 @@ import android.arch.persistence.room.Embedded
 import android.arch.persistence.room.Entity
 import android.arch.persistence.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
+import org.sagebionetworks.bridge.rest.model.Activity
 import org.sagebionetworks.bridge.rest.model.ActivityType
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
+import org.sagebionetworks.bridge.rest.model.TaskReference
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import java.util.ArrayList
@@ -85,20 +87,6 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
      */
     @ColumnInfo(index = true)
     var needsSyncedToBridge: Boolean? = null
-
-    /**
-     * A client writable copy is considered a new object with only the properties set on the object
-     * that are writable on bridge.  All other fields sent to bridge will be ignored anyways.
-     * @return a ScheduledActivity that can be sent to bridge
-     */
-    fun clientWritableCopy(): ScheduledActivity {
-        val schedule = ScheduledActivity()
-        schedule.guid = guid
-        schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
-        schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
-        schedule.clientData = clientData?.data
-        return schedule
-    }
 
     /**
      * @return the corresponding activity identifier, may be either task, survey, or compound identifier

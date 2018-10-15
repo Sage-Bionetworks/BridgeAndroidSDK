@@ -20,6 +20,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader

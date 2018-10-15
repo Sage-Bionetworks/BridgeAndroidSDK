@@ -7,6 +7,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonParseException
 import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSyntaxException
 import com.google.gson.TypeAdapter
 
 import com.google.gson.reflect.TypeToken
@@ -15,13 +16,18 @@ import com.google.gson.stream.JsonWriter
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import org.joda.time.format.ISODateTimeFormat
+import org.researchstack.backbone.utils.ResUtils
+import org.sagebionetworks.bridge.rest.RestUtils
 
 import org.sagebionetworks.bridge.rest.gson.ByteArrayToBase64TypeAdapter
 import org.sagebionetworks.bridge.rest.gson.DateTimeTypeAdapter
 import org.sagebionetworks.bridge.rest.gson.LocalDateTypeAdapter
+import org.sagebionetworks.bridge.rest.model.Activity
 import org.sagebionetworks.bridge.rest.model.ActivityType
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
+import org.sagebionetworks.bridge.rest.model.TaskReference
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.threeten.bp.Instant
 
@@ -67,6 +73,24 @@ import java.util.UUID
  * the @TypeConverter annotation, and inferred by the method structure
  */
 class EntityTypeConverters {
+
+    companion object {
+        /**
+         * Short-cuts to extension functionality because Java doesn't support extensions
+         */
+        @JvmStatic
+        fun bridgeMetaDataSchedule(fromEntity: ScheduledActivityEntity): ScheduledActivity {
+            return fromEntity.bridgeMetadataCopy()
+        }
+
+        /**
+         * Short-cuts to extension functionality because Java doesn't support extensions
+         */
+        @JvmStatic
+        fun clientWritableSchedule(fromEntity: ScheduledActivityEntity): ScheduledActivity {
+            return fromEntity.clientWritableCopy()
+        }
+    }
 
     val bridgeGson = GsonBuilder()
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
@@ -175,6 +199,77 @@ class EntityTypeConverters {
         }
         return activities
     }
+}
+
+/**
+ * A client writable copy is considered a new object with only the properties set on the object
+ * that are writable on bridge.  All other fields sent to bridge will be ignored anyways.
+ * @return a ScheduledActivity that can be sent to bridge
+ */
+fun ScheduledActivityEntity.clientWritableCopy(): ScheduledActivity {
+    val schedule = ScheduledActivity()
+    schedule.guid = guid
+    schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
+    schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
+    schedule.clientData = clientData?.data
+    return schedule
+}
+
+/**
+ * A bridge metadata copy is considered a new object with only the properties set on the object
+ * that the ArchiveUtil.createMetaDataFile() function is concerned with.
+ * @return a ScheduledActivity that can be pass to the BridgeDataProvider and have the metadata JSON included.
+ */
+fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
+    var schedule = ScheduledActivity()
+    val immutableFieldMap = HashMap<String, String>()
+
+    scheduledOn?.let {
+        // TODO: mdephillips 10/14/18 better way to convert from 3tenbp LocalDateTime to jodatime DateTime?
+        val dateTime = DateTime.now()
+                .withYear(it.year)
+                .withDayOfYear(it.dayOfYear)
+                .withHourOfDay(it.hour)
+                .withMinuteOfHour(it.minute)
+                .withSecondOfMinute(it.second)
+        val dateTimeStr = ISODateTimeFormat.dateTime().withOffsetParsed().print(dateTime)
+        immutableFieldMap.put("scheduledOn", dateTimeStr)
+    }
+
+    schedulePlanGuid?.let {
+        immutableFieldMap.put("schedulePlanGuid", it)
+    }
+
+    if (immutableFieldMap.isNotEmpty()) {
+        // TODO: mdephillips 10/14/18 sync with josh or dwayne to make scheduledOn and schedulePlanGuid mutable
+        // TODO: mdephillips 10/14/18 so I don't have to do this json non-sense
+        var scheduleJson = "{"
+        immutableFieldMap.keys.forEachIndexed { i, s ->
+            scheduleJson = "$scheduleJson \"$s\" : \"${immutableFieldMap[s]}\""
+            if (i < (immutableFieldMap.keys.size - 1)) {
+                scheduleJson = "$scheduleJson,"
+            }
+        }
+        scheduleJson = "$scheduleJson}"
+        try {
+            schedule = RestUtils.GSON.fromJson(scheduleJson, ScheduledActivity::class.java)
+        } catch (e: JsonSyntaxException) {
+            e.printStackTrace()
+        }
+    }
+
+    schedule.guid = guid
+    schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
+    schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
+
+    activity?.task?.let {
+        val bridgeActivity = Activity()
+        bridgeActivity.label = activity?.label
+        bridgeActivity.task = TaskReference()
+        bridgeActivity.task?.identifier = activityIdentifier()
+    }
+
+    return schedule
 }
 
 /**
