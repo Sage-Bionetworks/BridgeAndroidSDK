@@ -126,6 +126,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         NotificationHelper notificationHelper = NotificationHelper.
                 getInstance(bridgeManagerProvider.getApplicationContext());
+
         this.taskHelper = createTaskHelper(notificationHelper, storageAccessWrapper,
                 bridgeManagerProvider);
     }
@@ -561,6 +562,14 @@ public abstract class BridgeDataProvider extends DataProvider {
     public List<String> getLocalDataGroups() {
         logger.debug("Called getLocalDataGroups");
 
+        // The user session info data groups field is the most up to date reflection of data groups
+        UserSessionInfo userSessionInfo = bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
+        if (userSessionInfo != null) {
+            if (userSessionInfo.getDataGroups() != null && !userSessionInfo.getDataGroups().isEmpty()) {
+                return ImmutableList.copyOf(userSessionInfo.getDataGroups());
+            }
+        }
+        // Fallback to the account DAOs data groups, which is less likely to reflect the correct data groups
         return ImmutableList.copyOf(bridgeManagerProvider.getAccountDao().getDataGroups());
     }
 
