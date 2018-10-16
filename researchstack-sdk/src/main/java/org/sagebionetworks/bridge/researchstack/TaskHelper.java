@@ -73,7 +73,7 @@ public class TaskHelper {
 
     private ArchiveFactory archiveFactory = ArchiveFactory.INSTANCE;
     protected ArchiveFileFactory archiveFileFactory = new ArchiveFileFactory();
-    private SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
+    protected SurveyFactory surveyFactory = SurveyFactory.INSTANCE;
 
     public TaskHelper(
             StorageAccessWrapper storageAccess,
@@ -202,13 +202,16 @@ public class TaskHelper {
                     .onErrorReturn(throwable -> null);
         }
 
-        return taskModelSingle.map(taskModel -> {
-            if (taskModel != null) {
-                return surveyFactory.createSmartSurveyTask(context, taskModel);
-            } else {
-                return null;
-            }
-        });
+        return taskModelSingle.map(taskModel ->
+                createSmartSurveyTask(context, taskModel));
+    }
+
+    protected Task createSmartSurveyTask(Context context, @Nullable TaskModel taskModel) {
+        if (taskModel != null) {
+            return surveyFactory.createSmartSurveyTask(context, taskModel);
+        } else {
+            return null;
+        }
     }
 
     /**
