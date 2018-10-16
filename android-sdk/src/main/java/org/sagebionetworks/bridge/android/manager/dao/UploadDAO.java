@@ -5,6 +5,7 @@ import android.support.annotation.AnyThread;
 
 import com.google.common.collect.Sets;
 
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.rest.model.UploadSession;
 import org.slf4j.Logger;
@@ -13,12 +14,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  * Created by jyliu on 3/10/2017.
  */
 @AnyThread
+@BridgeStudyScope // TODO: @liujoshua consider scoping/namespacing to participant 2018/10/09
 public class UploadDAO extends SharedPreferencesJsonDAO {
     private static final Logger logger = LoggerFactory.getLogger(UploadDAO.class);
 

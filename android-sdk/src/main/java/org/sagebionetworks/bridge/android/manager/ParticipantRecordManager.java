@@ -1,12 +1,18 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
+
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
-import org.sagebionetworks.bridge.rest.api.ForConsentedUsersApi;
 import org.sagebionetworks.bridge.rest.model.DateRange;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
@@ -16,21 +22,16 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
-import dagger.Component;
 import rx.Completable;
 import rx.Single;
-import rx.functions.Action1;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
 
 /**
  * Any authenticated user may use this class's methods. The user does not need to have consented to
  * the study in order to manage their participant record.
  */
 @AnyThread
+@BridgeStudyParticipantScope
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 
@@ -121,5 +122,26 @@ public class ParticipantRecordManager {
                 .sendDataToUser(
                         new DateRange().startDate(startDate).endDate((endDate))
                 )).toCompletable();
+    }
+
+    /**
+     * @return the local tz date the participant created their account
+     *         null is returned if the user has not signed in yet
+     */
+    @Nullable
+    public DateTime getParticipantCreatedOn() {
+        UserSessionInfo sessionInfo = accountDAO.getUserSessionInfo();
+
+        if (sessionInfo == null) {
+            return null;
+        }
+
+        DateTime existingCreatedOnServerTimezone = sessionInfo.getCreatedOn();
+        if (existingCreatedOnServerTimezone == null) {
+            return null;
+        }
+
+        // Convert the date to local timezone, the rest of the app uses "DateTime.now()"
+        return existingCreatedOnServerTimezone.toDateTime(DateTimeZone.getDefault());
     }
 }

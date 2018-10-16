@@ -17,18 +17,19 @@
 
 package org.sagebionetworks.bridge.android.manager.dao;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import android.content.Context;
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
+
+import javax.inject.Inject;
 
 /** Caches study app config in shared preferences. */
 @AnyThread
+@BridgeStudyScope //TODO: consider scoping/namespacing to @BridgeStudyScope @liujoshua 2018/10/09
 public class AppConfigDAO extends SharedPreferencesJsonDAO {
     private static final String APP_CONFIG_KEY = "APP_CONFIG";
     private static final String PREFERENCES_FILE = "appconfig";

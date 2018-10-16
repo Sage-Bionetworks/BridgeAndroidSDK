@@ -17,22 +17,24 @@
 
 package org.sagebionetworks.bridge.android.manager;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import android.support.annotation.AnyThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import rx.Single;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
 import org.sagebionetworks.bridge.android.manager.dao.AppConfigDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
 import org.sagebionetworks.bridge.rest.api.PublicApi;
 import org.sagebionetworks.bridge.rest.model.AppConfig;
 
+import javax.inject.Inject;
+
+import rx.Single;
+
 /** Handles calling Bridge server to get study app config and caching the result. */
 @AnyThread
+@BridgeStudyScope
 public class AppConfigManager {
     private @NonNull final AppConfigDAO appConfigDAO;
     private @NonNull final PublicApi publicApi;

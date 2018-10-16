@@ -43,6 +43,8 @@ import org.threeten.bp.LocalDateTime
  * Room auto-generates the implementations of these methods as well as checks the syntax of the SQL statements
  * This class is designed to work @see ScheduleViewModel using LiveData DB returns
  * TODO: mdephillips 8/20/18 create the rest of the queries in iOS code repo file 'SBBScheduledActivity+Filters'
+ * TODO: @liujoshua 2018/10/05 for queries that should return zero or one values, instead of a collection,
+ *      return a @Nullable ScheduleActivityEntity, Optional<ScheduleActivityEntity>, Maybe<ScheduleActivityEntity>
  */
 @Dao
 interface ScheduledActivityEntityDao {
