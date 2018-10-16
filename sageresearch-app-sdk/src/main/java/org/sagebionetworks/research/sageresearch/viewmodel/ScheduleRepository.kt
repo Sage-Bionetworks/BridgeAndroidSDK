@@ -89,8 +89,6 @@ open class ScheduleRepository(context: Context) {
     private val scheduleDao: ScheduledActivityEntityDao =
             ResearchDatabase.getInstance(context).scheduleDao()
 
-    @Inject lateinit var taskResultUploader: TaskResultUploader
-
     /**
      * @property isSyncing true if the study's schedules are currently being fetched from bridge,
      *                     false if no syncing is currently occurring.
@@ -455,11 +453,6 @@ open class ScheduleRepository(context: Context) {
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
         // @see ScheduleActivityEntity.clientWritableCopy()
-    }
-
-    fun uploadTaskResult(taskResult: TaskResult) {
-        // TODO: mdephillips 10/9/18 does not work because taskResultUploader is never initialized help!
-        // taskResultUploader.processTaskResult(taskResult)
     }
 }
 
