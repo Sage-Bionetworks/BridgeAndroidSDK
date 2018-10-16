@@ -16,6 +16,7 @@ import com.google.gson.stream.JsonWriter
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import org.joda.time.format.ISODateTimeFormat
+import org.researchstack.backbone.utils.LogExt
 import org.researchstack.backbone.utils.ResUtils
 import org.sagebionetworks.bridge.rest.RestUtils
 
@@ -29,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.TaskReference
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
+import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
 
 import org.threeten.bp.LocalDateTime
@@ -73,6 +75,8 @@ import java.util.UUID
  * the @TypeConverter annotation, and inferred by the method structure
  */
 class EntityTypeConverters {
+
+    private val logger = LoggerFactory.getLogger(EntityTypeConverters::class.java)
 
     companion object {
         /**
@@ -232,7 +236,7 @@ fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
                 .withHourOfDay(it.hour)
                 .withMinuteOfHour(it.minute)
                 .withSecondOfMinute(it.second)
-        val dateTimeStr = ISODateTimeFormat.dateTime().withOffsetParsed().print(dateTime)
+        val dateTimeStr = RestUtils.GSON.toJson(dateTime)
         immutableFieldMap.put("scheduledOn", dateTimeStr)
     }
 
@@ -254,7 +258,7 @@ fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
         try {
             schedule = RestUtils.GSON.fromJson(scheduleJson, ScheduledActivity::class.java)
         } catch (e: JsonSyntaxException) {
-            e.printStackTrace()
+            LogExt.e(ScheduledActivityEntity::class.java, e)
         }
     }
 
