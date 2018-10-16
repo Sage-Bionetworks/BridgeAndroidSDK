@@ -5,9 +5,6 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import android.support.annotation.VisibleForTesting
-import dagger.android.AndroidInjection
-import dagger.android.AndroidInjector
-import dagger.android.support.AndroidSupportInjection
 import org.joda.time.DateTime
 import org.joda.time.Days
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
@@ -23,7 +20,6 @@ import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntit
 import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
-import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader
 import org.slf4j.LoggerFactory
 
 import rx.Observable
@@ -35,7 +31,6 @@ import java.util.UUID
 
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import javax.inject.Inject
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
