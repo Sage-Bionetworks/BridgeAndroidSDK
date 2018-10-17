@@ -1,10 +1,11 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
-import android.content.Context
 import io.reactivex.Completable
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
-import javax.inject.Inject
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 /*
  * BSD 3-Clause License
@@ -42,13 +43,13 @@ import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessi
  * This class is used to
  */
 class ScheduledActivityTaskResultProcessor
-    @Inject constructor(context: Context):
+@Inject constructor(private val scheduleRepo: ScheduleRepository) :
         TaskResultProcessingManager.TaskResultProcessor {
 
-    val scheduleRepo: ScheduleRepository = ScheduleRepository.getInstance(context)
+    val logger = LoggerFactory.getLogger(ScheduledActivityTaskResultProcessor::class.java)
 
     override fun processTaskResult(taskResult: TaskResult): Completable {
-        scheduleRepo.updateSchedule(taskResult)
-        return Completable.complete()
+        logger.info("Updating schedule for taskRunUUID: {}", taskResult.taskUUID)
+        return scheduleRepo.updateSchedule(taskResult)
     }
 }

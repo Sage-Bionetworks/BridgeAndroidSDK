@@ -119,8 +119,8 @@ public class ActivityManagerTest {
         Call<Message> activityCall = successCall(message);
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
-        Completable completable = activityManager.updateActivities(activityList);
-        completable.test().awaitTerminalEvent().assertCompleted();
+        Single<Message> messageSingle = activityManager.updateActivities(activityList);
+        messageSingle.test().awaitTerminalEvent().assertCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
     }
@@ -132,8 +132,8 @@ public class ActivityManagerTest {
         Call<Message> activityCall = errorCall(new BridgeSDKException("Failed", 500));
         when(activitiesApi.updateScheduledActivities(activityList)).thenReturn(activityCall);
 
-        Completable completable = activityManager.updateActivities(activityList);
-        completable.test().awaitTerminalEvent().assertNotCompleted();
+        Single<Message> messageSingle = activityManager.updateActivities(activityList);
+        messageSingle.test().awaitTerminalEvent().assertNotCompleted();
 
         verify(activitiesApi).updateScheduledActivities(activityList);
     }

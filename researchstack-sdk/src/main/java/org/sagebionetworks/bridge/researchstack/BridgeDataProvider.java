@@ -875,20 +875,6 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @Nullable
     public DateTime getParticipantCreatedOn() {
-        UserSessionInfo sessionInfo =
-                bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
-
-        if (sessionInfo == null) {
-            return null;
-        }
-
-        DateTime existingCreatedOnServerTimezone = sessionInfo.getCreatedOn();
-        if (existingCreatedOnServerTimezone == null) {
-            return null;
-        }
-
-        // Convert the date to local timezone, the rest of the app uses "DateTime.now()"
-        Date localDate = new Date(existingCreatedOnServerTimezone.getMillis());
-        return new DateTime(localDate.getTime());
+        return participantRecordManager.getParticipantCreatedOn();
     }
 }

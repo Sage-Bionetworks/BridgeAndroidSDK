@@ -6,6 +6,7 @@ import android.arch.persistence.room.RoomDatabase
 import android.arch.persistence.room.TypeConverters
 import android.content.Context
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
+import javax.inject.Singleton
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -41,18 +42,6 @@ import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
         version = 1)
 @TypeConverters(EntityTypeConverters::class)
 abstract class ResearchDatabase : RoomDatabase() {
-
-    /**
-     * Creates a singleton that takes Context as a parameter to access
-     * Use ResearchDatabase.getInstance(context)
-     * TODO: mdephillips 9/2/18 use dagger?
-     */
-    companion object : SingletonWithParam<ResearchDatabase, Context>({
-        Room.databaseBuilder(it.applicationContext,
-                ResearchDatabase::class.java, "ResearchDatabase.db")
-                .build()
-    })
-
     abstract fun scheduleDao(): ScheduledActivityEntityDao
 }
 
