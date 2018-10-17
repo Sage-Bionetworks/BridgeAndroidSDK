@@ -236,7 +236,7 @@ fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
                 .withHourOfDay(it.hour)
                 .withMinuteOfHour(it.minute)
                 .withSecondOfMinute(it.second)
-        val dateTimeStr = RestUtils.GSON.toJson(dateTime)
+        val dateTimeStr = RestUtils.GSON.toJson(dateTime).replace("\"", "")
         immutableFieldMap.put("scheduledOn", dateTimeStr)
     }
 

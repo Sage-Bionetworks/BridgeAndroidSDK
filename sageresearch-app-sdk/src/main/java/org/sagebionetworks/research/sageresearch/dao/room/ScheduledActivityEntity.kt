@@ -12,6 +12,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.TaskReference
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
+import java.io.Serializable
 import java.util.ArrayList
 
 //
@@ -45,7 +46,7 @@ import java.util.ArrayList
 //
 
 @Entity
-data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid: String) {
+data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid: String): Serializable {
 
     @SerializedName("schedulePlanGuid")
     var schedulePlanGuid: String? = null

@@ -57,6 +57,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.threeten.bp.Instant
 import java.util.Arrays
 import java.util.UUID
