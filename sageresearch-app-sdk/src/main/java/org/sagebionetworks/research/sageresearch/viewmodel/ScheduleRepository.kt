@@ -267,7 +267,6 @@ open class ScheduleRepository constructor(
                 )
     }
 
-    @VisibleForTesting
     @CheckReturnValue
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {

@@ -5,12 +5,14 @@ import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
 import android.arch.lifecycle.ViewModelProvider
 import android.support.annotation.VisibleForTesting
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
+
 import java.util.UUID
 
 //
@@ -84,7 +86,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
     init {
         // This will make sure the schedules are synced with the server
         compositeDispose.add(
-                scheduleRepo.syncSchedules().subscribe({
+                scheduleRepo.syncSchedules().observeOn(AndroidSchedulers.mainThread()).subscribe({
                     scheduleSyncErrorMessageLiveData.postValue(null)
                 }, { t ->
                     scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
@@ -101,6 +103,20 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
         schedule?.let {
             return scheduleRepo.createScheduleTaskRunUuid(schedule)
         } ?: return UUID.randomUUID()
+    }
+
+    /**
+     * This only updates the schedule on bridge, specifically only the fields copied schedule.clientWritableCopy()
+     * This function does not upload the result to S3
+     * @param schedule to update on bridge
+     */
+    fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
+        compositeDispose.add(
+                scheduleRepo.updateScheduleToBridge(schedule).observeOn(AndroidSchedulers.mainThread()).subscribe({
+                    scheduleSyncErrorMessageLiveData.postValue(null)
+                }, { t ->
+                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
+                }))
     }
 
     override fun onCleared() {
