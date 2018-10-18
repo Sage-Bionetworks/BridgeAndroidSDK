@@ -86,7 +86,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
     init {
         // This will make sure the schedules are synced with the server
         compositeDispose.add(
-                scheduleRepo.syncSchedules().observeOn(AndroidSchedulers.mainThread()).subscribe({
+                scheduleRepo.syncSchedules().subscribe({
                     scheduleSyncErrorMessageLiveData.postValue(null)
                 }, { t ->
                     scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
@@ -112,7 +112,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
      */
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
         compositeDispose.add(
-                scheduleRepo.updateScheduleToBridge(schedule).observeOn(AndroidSchedulers.mainThread()).subscribe({
+                scheduleRepo.updateScheduleToBridge(schedule).subscribe({
                     scheduleSyncErrorMessageLiveData.postValue(null)
                 }, { t ->
                     scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
