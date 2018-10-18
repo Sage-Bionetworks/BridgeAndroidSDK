@@ -10,6 +10,7 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.Single
+import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.Days
 import org.sagebionetworks.bridge.android.manager.ActivityManager
@@ -28,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.CheckReturnValue
 import javax.inject.Inject
-import javax.inject.Singleton
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -195,7 +195,9 @@ open class ScheduleRepository constructor(
      */
     @CheckReturnValue
     fun syncFailedSchedules(): Completable {
-        return updateSchedulesToBridge(scheduleDao.activitiesThatNeedSyncedToBridge())
+        return Single.fromCallable{scheduleDao.activitiesThatNeedSyncedToBridge()}
+                .subscribeOn(Schedulers.io())
+                .flatMapCompletable { updateSchedulesToBridge(it) }
                 .doOnError { logger.warn(it.localizedMessage) }
     }
 
@@ -319,9 +321,11 @@ open class ScheduleRepository constructor(
         } else {
             Single.fromCallable {
                 scheduleDao.activity(guid).first() // NoSuchElementException
-            }.onErrorResumeNext {
-                Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
             }
+                    .subscribeOn(Schedulers.io())
+                    .onErrorResumeNext {
+                        Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
+                    }
         }
     }
 
@@ -377,6 +381,7 @@ open class ScheduleRepository constructor(
         return Completable.fromAction {
             scheduleDao.upsert(schedules)
         }
+                .subscribeOn(Schedulers.io())
                 .doOnError {
                     logger.warn(it.localizedMessage)
                 }
