@@ -555,21 +555,15 @@ public abstract class BridgeDataProvider extends DataProvider {
     }
 
     /**
-     * Returns a list of data groups associated with this account. If there are no data groups,
+     * This method only returns temporary data groups that were added with the function addLocalDataGroup()
+     * This will not show you the current data groups on the user session.
+     * For that, use BridgeDataProvider.getInstance().getUserSessionInfo().getDataGroups()
+     * @return a list of data groups associated with this account. If there are no data groups,
      * this method returns an empty list.
      */
     @NonNull
     public List<String> getLocalDataGroups() {
         logger.debug("Called getLocalDataGroups");
-
-        // The user session info data groups field is the most up to date reflection of data groups
-        UserSessionInfo userSessionInfo = bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
-        if (userSessionInfo != null) {
-            if (userSessionInfo.getDataGroups() != null && !userSessionInfo.getDataGroups().isEmpty()) {
-                return ImmutableList.copyOf(userSessionInfo.getDataGroups());
-            }
-        }
-        // Fallback to the account DAOs data groups, which is less likely to reflect the correct data groups
         return ImmutableList.copyOf(bridgeManagerProvider.getAccountDao().getDataGroups());
     }
 
@@ -615,6 +609,15 @@ public abstract class BridgeDataProvider extends DataProvider {
             return null;
         }
         return session.getSharingScope();
+    }
+
+    /**
+     * @return the current user session, returns null if the user is not signed in.
+     */
+    @Nullable
+    public UserSessionInfo getUserSessionInfo() {
+        logger.info("Called getUserSessionInfo");
+        return authenticationManager.getUserSessionInfo();
     }
 
     @Override
@@ -900,20 +903,6 @@ public abstract class BridgeDataProvider extends DataProvider {
      */
     @Nullable
     public DateTime getParticipantCreatedOn() {
-        UserSessionInfo sessionInfo =
-                bridgeManagerProvider.getAuthenticationManager().getUserSessionInfo();
-
-        if (sessionInfo == null) {
-            return null;
-        }
-
-        DateTime existingCreatedOnServerTimezone = sessionInfo.getCreatedOn();
-        if (existingCreatedOnServerTimezone == null) {
-            return null;
-        }
-
-        // Convert the date to local timezone, the rest of the app uses "DateTime.now()"
-        Date localDate = new Date(existingCreatedOnServerTimezone.getMillis());
-        return new DateTime(localDate.getTime());
+        return participantRecordManager.getParticipantCreatedOn();
     }
 }

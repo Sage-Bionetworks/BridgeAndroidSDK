@@ -14,6 +14,7 @@ import com.google.common.collect.Sets;
 
 import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.dao.ConsentDAO;
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils;
@@ -46,7 +47,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import rx.Completable;
 import rx.Observable;
@@ -57,6 +57,7 @@ import rx.functions.Func1;
  * Authentication and authorization for the study participant using the app.
  */
 @AnyThread
+@BridgeStudyParticipantScope
 public class AuthenticationManager implements UserSessionInfoProvider.UserSessionInfoChangeListener {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);

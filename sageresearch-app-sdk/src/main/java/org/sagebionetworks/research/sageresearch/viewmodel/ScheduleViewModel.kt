@@ -1,13 +1,12 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
-import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.MutableLiveData
+import android.arch.lifecycle.ViewModel
+import android.arch.lifecycle.ViewModelProvider
 import android.support.annotation.VisibleForTesting
-import org.researchstack.backbone.result.TaskResult
-import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
+import io.reactivex.disposables.CompositeDisposable
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
-
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
@@ -47,18 +46,18 @@ import java.util.UUID
 /**
  * Abstract base class for ScheduleViewModel that simply uses the application to create the dao
  */
-abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
+abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntityDao,
+        protected var scheduleRepo: ScheduleRepository) : ViewModel() {
 
-    private val db = ResearchDatabase.getInstance(app)
+    protected val compositeDispose = CompositeDisposable()
+
+    val scheduleSyncErrorMessageLiveData = MutableLiveData<String>()
+
     @VisibleForTesting
-    protected open fun scheduleDao() = db.scheduleDao()
-
-    protected val scheduleRepo = ScheduleRepository.getInstance(app)
-
-    @VisibleForTesting
-    protected open val timezone: ZoneId get() {
-        return ZoneId.systemDefault()
-    }
+    protected open val timezone: ZoneId
+        get() {
+            return ZoneId.systemDefault()
+        }
 
     protected fun toInstant(dateTime: LocalDateTime): Instant {
         return dateTime.atZone(timezone).toInstant()
@@ -76,7 +75,7 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
             activityGroup: Set<String>,
             availableOnRange: Pair<LocalDateTime, LocalDateTime>): LiveData<List<ScheduledActivityEntity>> {
 
-        return scheduleDao().activityGroupAvailableBetween(activityGroup,
+        return scheduleDao.activityGroupAvailableBetween(activityGroup,
                 availableOnRange.first, availableOnRange.second,
                 toInstant(availableOnRange.first),
                 toInstant(availableOnRange.second))
@@ -84,7 +83,12 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         // This will make sure the schedules are synced with the server
-        ScheduleRepository.getInstance(app).syncSchedules()
+        compositeDispose.add(
+                scheduleRepo.syncSchedules().subscribe({
+                    scheduleSyncErrorMessageLiveData.postValue(null)
+                }, { t ->
+                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
+                }))
     }
 
     /**
@@ -99,10 +103,8 @@ abstract class ScheduleViewModel(app: Application) : AndroidViewModel(app) {
         } ?: return UUID.randomUUID()
     }
 
-    /**
-     * @param schedule with new fields that should be saved to the database and uploaded to bridge
-     */
-    fun updateSchedule(schedule: ScheduledActivityEntity) {
-        scheduleRepo.updateSchedule(schedule)
+    override fun onCleared() {
+        super.onCleared()
+        compositeDispose.clear()
     }
 }

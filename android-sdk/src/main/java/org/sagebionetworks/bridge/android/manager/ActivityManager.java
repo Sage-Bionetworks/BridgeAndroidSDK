@@ -1,12 +1,18 @@
 package org.sagebionetworks.bridge.android.manager;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
+
 import android.content.Context;
 import android.support.annotation.AnyThread;
+import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.ActivityListDAO;
 import org.sagebionetworks.bridge.rest.model.Message;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
@@ -19,16 +25,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
-import rx.Completable;
 import rx.Observable;
 import rx.Single;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.sagebionetworks.bridge.android.util.retrofit.RxUtils.toBodySingle;
-
 @AnyThread
+@BridgeStudyParticipantScope
 public class ActivityManager {
     private static final Logger LOG = LoggerFactory.getLogger(ActivityManager.class);
 
@@ -82,25 +84,21 @@ public class ActivityManager {
                 });
     }
 
-    public Completable updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
-
+    @CheckResult
+    public Single<Message> updateActivities(@NonNull List<ScheduledActivity> scheduledActivities) {
         checkNotNull(scheduledActivities);
 
         activityListDAO.updateActivityList(scheduledActivities);
         
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .updateScheduledActivities(scheduledActivities)).toCompletable();
+                .updateScheduledActivities(scheduledActivities));
     }
 
+    @CheckResult
     public Observable<Message> updateActivity(@NonNull ScheduledActivity scheduledActivity) {
-
         checkNotNull(scheduledActivity);
 
-        activityListDAO.updateActivityList(Collections.singletonList(scheduledActivity));
-
-        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .updateScheduledActivities(Collections.singletonList(scheduledActivity)))
-                .toObservable();
+        return updateActivities(Collections.singletonList(scheduledActivity)).toObservable();
     }
 
     public @Nullable ScheduledActivity getLocalActivity(String guid) {

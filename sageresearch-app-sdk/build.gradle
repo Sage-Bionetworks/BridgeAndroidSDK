@@ -48,6 +48,7 @@ dependencies {
     api project(':mobile-ui')
     api project(':android-sdk')
     api project(':researchstack-sdk')
+    implementation 'com.github.akarnokd:rxjava2-interop:0.13.2'
 
     api 'com.google.guava:guava:24.1-android'
 
@@ -71,7 +72,12 @@ dependencies {
     androidTestImplementation 'android.arch.core:core-testing:1.1.1'
 
     implementation 'com.android.support:appcompat-v7:28.0.0'
+
     testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-inline:2.8.9'
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.0.0-RC1"
+    testImplementation 'org.slf4j:slf4j-simple:1.7.21'
+
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
