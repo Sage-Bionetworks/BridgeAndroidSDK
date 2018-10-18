@@ -31,9 +31,9 @@ public class BridgeApplication extends DaggerApplication {
 
     @Override
     public void onCreate() {
+        JodaTimeAndroid.init(this);
         super.onCreate();
         getOrInitBridgeManagerProvider();
-        JodaTimeAndroid.init(this);
 
         if (this.getResources().getBoolean(R.bool.osb_stetho_debug_bridge)) {
             initStetho();

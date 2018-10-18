@@ -7,8 +7,8 @@ import org.sagebionetworks.bridge.android.BridgeApplication;
 public class BridgeSageResearchApp extends BridgeApplication {
     @Override
     public void onCreate() {
-        super.onCreate();
-
         AndroidThreeTen.init(this);
+
+        super.onCreate();
     }
 }
