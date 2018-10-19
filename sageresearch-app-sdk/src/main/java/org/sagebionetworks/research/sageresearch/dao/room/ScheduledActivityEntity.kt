@@ -5,11 +5,9 @@ import android.arch.persistence.room.Embedded
 import android.arch.persistence.room.Entity
 import android.arch.persistence.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
-import org.sagebionetworks.bridge.rest.model.Activity
 import org.sagebionetworks.bridge.rest.model.ActivityType
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
-import org.sagebionetworks.bridge.rest.model.ScheduledActivity
-import org.sagebionetworks.bridge.rest.model.TaskReference
+
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import java.io.Serializable
@@ -97,9 +95,9 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     }
 }
 
-data class ClientData(var data: Any? = null)
+data class ClientData(var data: Any? = null): Serializable
 
-data class RoomActivity(@SerializedName("guid") var guid: String) {
+data class RoomActivity(@SerializedName("guid") var guid: String): Serializable {
     @SerializedName("label")
     var label: String? = null
 
@@ -125,7 +123,7 @@ data class RoomActivity(@SerializedName("guid") var guid: String) {
     var type: String? = null
 }
 
-data class RoomSchemaReference(@SerializedName("id") var id: String) {
+data class RoomSchemaReference(@SerializedName("id") var id: String): Serializable {
     @SerializedName("revision")
     var revision: Long? = null
 
@@ -133,7 +131,7 @@ data class RoomSchemaReference(@SerializedName("id") var id: String) {
     var type: String? = null
 }
 
-data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = true) var identifier: String) {
+data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = true) var identifier: String): Serializable {
     @SerializedName("schema")
     @Embedded(prefix = "schema_")
     var schema: RoomSchemaReference? = null
@@ -142,7 +140,7 @@ data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = t
     var type: String? = null
 }
 
-data class RoomSurveyReference(@SerializedName("guid") var guid: String) {
+data class RoomSurveyReference(@SerializedName("guid") var guid: String): Serializable {
     @SerializedName("identifier")
     @ColumnInfo(index = true)
     var identifier: String? = null
@@ -158,7 +156,7 @@ data class RoomSurveyReference(@SerializedName("guid") var guid: String) {
 }
 
 data class RoomCompoundActivity(@SerializedName("taskIdentifier") @ColumnInfo(
-        index = true) var taskIdentifier: String) {
+        index = true) var taskIdentifier: String): Serializable {
 
     @SerializedName("schemaList")
     var schemaList: List<RoomSchemaReference> = ArrayList()

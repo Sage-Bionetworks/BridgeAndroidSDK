@@ -13,9 +13,12 @@ import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.Days
+import org.researchstack.backbone.model.survey.factory.SurveyFactory
 import org.sagebionetworks.bridge.android.manager.ActivityManager
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
+import org.sagebionetworks.bridge.android.manager.SurveyManager
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
+import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
@@ -68,6 +71,7 @@ import javax.inject.Inject
 open class ScheduleRepository constructor(
         private val scheduleDao: ScheduledActivityEntityDao,
         private val syncStateDao: ScheduledRepositorySyncStateDao,
+        private val surveyManager: SurveyManager,
         private val activityManager: ActivityManager,
         private val participantRecordManager: ParticipantRecordManager) {
 
@@ -393,6 +397,19 @@ open class ScheduleRepository constructor(
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
         // @see ScheduleActivityEntity.clientWritableCopy()
+    }
+
+    /**
+     * Loads a ResearchStack survey from bridge
+     * @param surveyGuid of the survey
+     * @param surveyCreatedOn of the survey, if null, newest published survey will be fetched
+     */
+    fun loadRsSurvey(surveySchedule: ScheduledActivityEntity): Single<Survey> {
+        surveySchedule.activity?.survey?.let {
+            return toV2Single(surveyManager.getSurvey(it.guid, null))
+        } ?: run {
+            return Single.error(IllegalArgumentException("Schedule is not a survey"))
+        }
     }
 }
 
