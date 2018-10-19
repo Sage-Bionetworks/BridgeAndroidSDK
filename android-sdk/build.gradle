@@ -39,7 +39,7 @@ dependencies {
     api 'org.sagebionetworks.bridge:rest-client:0.16.2', {
         exclude group: 'joda-time', module: 'joda-time'
     }
-    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.3', {
+    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.5', {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
         exclude group: 'com.madgag.spongycastle' //pkix renamed to bcpkix-jdk15on, causes dupes
