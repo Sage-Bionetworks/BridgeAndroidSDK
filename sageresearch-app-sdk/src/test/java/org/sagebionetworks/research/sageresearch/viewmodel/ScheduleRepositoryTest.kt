@@ -52,6 +52,7 @@ import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import org.sagebionetworks.bridge.android.manager.ActivityManager
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
+import org.sagebionetworks.bridge.android.manager.SurveyManager
 import org.sagebionetworks.bridge.rest.model.Message
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
@@ -73,6 +74,9 @@ class ScheduleRepositoryTest {
     private lateinit var activityManager: ActivityManager
 
     @Mock
+    private lateinit var surveyManager: SurveyManager
+
+    @Mock
     private lateinit var participantRecordManager: ParticipantRecordManager
 
     @Mock
@@ -87,8 +91,8 @@ class ScheduleRepositoryTest {
     fun beforeTest() {
         MockitoAnnotations.initMocks(this)
         scheduleRepository = spy(
-                ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao, activityManager,
-                        participantRecordManager))
+                ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao,
+                        surveyManager, activityManager, participantRecordManager))
     }
 
     @Test
