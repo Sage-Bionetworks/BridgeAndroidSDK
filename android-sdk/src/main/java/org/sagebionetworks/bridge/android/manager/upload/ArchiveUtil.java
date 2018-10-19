@@ -32,6 +32,28 @@ public class ArchiveUtil {
         checkNotNull(scheduledActivity);
         checkNotNull(dataGroups);
 
+        Map<String, Object> metaDataMap = createMetaDataInfoMap(scheduledActivity, dataGroups);
+
+        // Grab the end date
+        DateTime endDate = DateTime.now();
+        if (scheduledActivity.getFinishedOn() != null) {
+            endDate = scheduledActivity.getFinishedOn();
+        }
+
+        String metaDataJson = RestUtils.GSON.toJson(metaDataMap);
+        return new JsonArchiveFile("metadata.json", endDate, metaDataJson);
+    }
+
+    /**
+     * Creates a metadata info map for archive file containing information about the schedule and user
+     * @param scheduledActivity used for metadata info map
+     * @param dataGroups to include in the metadata info map
+     * @return map to be used in JsonArchiveFile for metadata
+     */
+    public static Map<String, Object> createMetaDataInfoMap(
+            @NonNull ScheduledActivity scheduledActivity,
+            @NonNull ImmutableList<String> dataGroups) {
+
         Map<String, Object> metaDataMap = new HashMap<>();
 
         // Set end data
@@ -80,7 +102,6 @@ public class ArchiveUtil {
 
         metaDataMap.put("dataGroups", TextUtils.join(",", dataGroups));
 
-        String metaDataJson = RestUtils.GSON.toJson(metaDataMap);
-        return new JsonArchiveFile("metadata.json", endDate, metaDataJson);
+        return metaDataMap;
     }
 }

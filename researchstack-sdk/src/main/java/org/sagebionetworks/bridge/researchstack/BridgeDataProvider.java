@@ -787,8 +787,7 @@ public abstract class BridgeDataProvider extends DataProvider {
 
         JsonArchiveFile metadataFile = null;
         if (associatedSchedule != null) {
-            metadataFile = ArchiveUtil.createMetaDataFile(
-                    associatedSchedule, ImmutableList.copyOf(getLocalDataGroups()));
+            metadataFile = createMetaDataFile(associatedSchedule, getLocalDataGroups());
             logger.debug("metadata.json has been successfully created " + metadataFile.toString());
         }
 
@@ -808,6 +807,18 @@ public abstract class BridgeDataProvider extends DataProvider {
         } else {
             taskHelper.uploadSurveyResult(metadataFile, taskResult);
         }
+    }
+
+    /**
+     * Creates a metadata json archive file containing information about the schedule and user
+     * @param associatedSchedule used for metadata json file creation
+     * @param dataGroups to include in the metadata file
+     * @return JsonArchiveFile for metadata
+     */
+    protected JsonArchiveFile createMetaDataFile(
+            ScheduledActivity associatedSchedule, List<String> dataGroups) {
+        return ArchiveUtil.createMetaDataFile(
+                associatedSchedule, ImmutableList.copyOf(dataGroups));
     }
 
     @Override
