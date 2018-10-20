@@ -3,13 +3,16 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
+import android.arch.lifecycle.ViewModelProvider
 import android.support.annotation.VisibleForTesting
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
+
 import java.util.UUID
 
 //
@@ -46,9 +49,9 @@ import java.util.UUID
  * Abstract base class for ScheduleViewModel that simply uses the application to create the dao
  */
 abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntityDao,
-        private var scheduleRepo: ScheduleRepository) : ViewModel() {
+        protected var scheduleRepo: ScheduleRepository) : ViewModel() {
 
-    private val compositeDispose = CompositeDisposable()
+    protected val compositeDispose = CompositeDisposable()
 
     val scheduleSyncErrorMessageLiveData = MutableLiveData<String>()
 
@@ -100,6 +103,20 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
         schedule?.let {
             return scheduleRepo.createScheduleTaskRunUuid(schedule)
         } ?: return UUID.randomUUID()
+    }
+
+    /**
+     * This only updates the schedule on bridge, specifically only the fields copied schedule.clientWritableCopy()
+     * This function does not upload the result to S3
+     * @param schedule to update on bridge
+     */
+    fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
+        compositeDispose.add(
+                scheduleRepo.updateScheduleToBridge(schedule).subscribe({
+                    scheduleSyncErrorMessageLiveData.postValue(null)
+                }, { t ->
+                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
+                }))
     }
 
     override fun onCleared() {

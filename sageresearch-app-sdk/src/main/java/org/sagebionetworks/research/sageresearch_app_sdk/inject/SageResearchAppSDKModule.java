@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import org.sagebionetworks.bridge.android.di.BridgeApplicationScope;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
+import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
@@ -74,10 +75,10 @@ public abstract class SageResearchAppSDKModule {
     @Provides
     @BridgeApplicationScope
     static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
-            ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, ActivityManager activityManager,
-            ParticipantRecordManager participantRecordManager) {
+            ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, SurveyManager surveyManager,
+            ActivityManager activityManager, ParticipantRecordManager participantRecordManager) {
         LOGGER.debug("Providing ScheduleRepository");
-        return new ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao, activityManager,
-                participantRecordManager);
+        return new ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao,
+                surveyManager, activityManager, participantRecordManager);
     }
 }

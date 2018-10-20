@@ -7,9 +7,10 @@ import android.arch.persistence.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 import org.sagebionetworks.bridge.rest.model.ActivityType
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
-import org.sagebionetworks.bridge.rest.model.ScheduledActivity
+
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
+import java.io.Serializable
 import java.util.ArrayList
 
 //
@@ -43,7 +44,7 @@ import java.util.ArrayList
 //
 
 @Entity
-data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid: String) {
+data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid: String): Serializable {
 
     @SerializedName("schedulePlanGuid")
     var schedulePlanGuid: String? = null
@@ -87,20 +88,6 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     var needsSyncedToBridge: Boolean? = null
 
     /**
-     * A client writable copy is considered a new object with only the properties set on the object
-     * that are writable on bridge.  All other fields sent to bridge will be ignored anyways.
-     * @return a ScheduledActivity that can be sent to bridge
-     */
-    fun clientWritableCopy(): ScheduledActivity {
-        val schedule = ScheduledActivity()
-        schedule.guid = guid
-        schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
-        schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
-        schedule.clientData = clientData?.data
-        return schedule
-    }
-
-    /**
      * @return the corresponding activity identifier, may be either task, survey, or compound identifier
      */
     fun activityIdentifier(): String? {
@@ -108,9 +95,9 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     }
 }
 
-data class ClientData(var data: Any? = null)
+data class ClientData(var data: Any? = null): Serializable
 
-data class RoomActivity(@SerializedName("guid") var guid: String) {
+data class RoomActivity(@SerializedName("guid") var guid: String): Serializable {
     @SerializedName("label")
     var label: String? = null
 
@@ -136,7 +123,7 @@ data class RoomActivity(@SerializedName("guid") var guid: String) {
     var type: String? = null
 }
 
-data class RoomSchemaReference(@SerializedName("id") var id: String) {
+data class RoomSchemaReference(@SerializedName("id") var id: String): Serializable {
     @SerializedName("revision")
     var revision: Long? = null
 
@@ -144,7 +131,7 @@ data class RoomSchemaReference(@SerializedName("id") var id: String) {
     var type: String? = null
 }
 
-data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = true) var identifier: String) {
+data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = true) var identifier: String): Serializable {
     @SerializedName("schema")
     @Embedded(prefix = "schema_")
     var schema: RoomSchemaReference? = null
@@ -153,7 +140,7 @@ data class RoomTaskReference(@SerializedName("identifier") @ColumnInfo(index = t
     var type: String? = null
 }
 
-data class RoomSurveyReference(@SerializedName("guid") var guid: String) {
+data class RoomSurveyReference(@SerializedName("guid") var guid: String): Serializable {
     @SerializedName("identifier")
     @ColumnInfo(index = true)
     var identifier: String? = null
@@ -169,7 +156,7 @@ data class RoomSurveyReference(@SerializedName("guid") var guid: String) {
 }
 
 data class RoomCompoundActivity(@SerializedName("taskIdentifier") @ColumnInfo(
-        index = true) var taskIdentifier: String) {
+        index = true) var taskIdentifier: String): Serializable {
 
     @SerializedName("schemaList")
     var schemaList: List<RoomSchemaReference> = ArrayList()

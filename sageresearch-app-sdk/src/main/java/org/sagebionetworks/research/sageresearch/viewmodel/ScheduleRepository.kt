@@ -10,15 +10,20 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.Single
+import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.Days
+import org.researchstack.backbone.model.survey.factory.SurveyFactory
 import org.sagebionetworks.bridge.android.manager.ActivityManager
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
+import org.sagebionetworks.bridge.android.manager.SurveyManager
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
+import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -27,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.CheckReturnValue
 import javax.inject.Inject
-import javax.inject.Singleton
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -67,6 +71,7 @@ import javax.inject.Singleton
 open class ScheduleRepository constructor(
         private val scheduleDao: ScheduledActivityEntityDao,
         private val syncStateDao: ScheduledRepositorySyncStateDao,
+        private val surveyManager: SurveyManager,
         private val activityManager: ActivityManager,
         private val participantRecordManager: ParticipantRecordManager) {
 
@@ -194,7 +199,9 @@ open class ScheduleRepository constructor(
      */
     @CheckReturnValue
     fun syncFailedSchedules(): Completable {
-        return updateSchedulesToBridge(scheduleDao.activitiesThatNeedSyncedToBridge())
+        return Single.fromCallable{scheduleDao.activitiesThatNeedSyncedToBridge()}
+                .subscribeOn(Schedulers.io())
+                .flatMapCompletable { updateSchedulesToBridge(it) }
                 .doOnError { logger.warn(it.localizedMessage) }
     }
 
@@ -266,7 +273,6 @@ open class ScheduleRepository constructor(
                 )
     }
 
-    @VisibleForTesting
     @CheckReturnValue
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {
@@ -319,9 +325,11 @@ open class ScheduleRepository constructor(
         } else {
             Single.fromCallable {
                 scheduleDao.activity(guid).first() // NoSuchElementException
-            }.onErrorResumeNext {
-                Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
             }
+                    .subscribeOn(Schedulers.io())
+                    .onErrorResumeNext {
+                        Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
+                    }
         }
     }
 
@@ -377,6 +385,7 @@ open class ScheduleRepository constructor(
         return Completable.fromAction {
             scheduleDao.upsert(schedules)
         }
+                .subscribeOn(Schedulers.io())
                 .doOnError {
                     logger.warn(it.localizedMessage)
                 }
@@ -388,6 +397,19 @@ open class ScheduleRepository constructor(
         // For all but the client-writable fields, the server value is completely canonical.
         // For the client-writable fields, the client value is canonical unless it is nil.
         // @see ScheduleActivityEntity.clientWritableCopy()
+    }
+
+    /**
+     * Loads a ResearchStack survey from bridge
+     * @param surveyGuid of the survey
+     * @param surveyCreatedOn of the survey, if null, newest published survey will be fetched
+     */
+    fun loadRsSurvey(surveySchedule: ScheduledActivityEntity): Single<Survey> {
+        surveySchedule.activity?.survey?.let {
+            return toV2Single(surveyManager.getSurvey(it.guid, null))
+        } ?: run {
+            return Single.error(IllegalArgumentException("Schedule is not a survey"))
+        }
     }
 }
 
