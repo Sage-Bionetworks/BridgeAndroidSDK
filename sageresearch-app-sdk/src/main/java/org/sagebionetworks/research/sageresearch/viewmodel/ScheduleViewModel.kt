@@ -7,6 +7,7 @@ import android.arch.lifecycle.ViewModelProvider
 import android.support.annotation.VisibleForTesting
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
@@ -113,6 +114,25 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
         compositeDispose.add(
                 scheduleRepo.updateScheduleToBridge(schedule).subscribe({
+                    scheduleSyncErrorMessageLiveData.postValue(null)
+                }, { t ->
+                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
+                }))
+    }
+
+    /**
+     * This should only be called with results of old research stack results
+     * @param schedule to make the metadata info json archive, if null, none will be included
+     * @param taskResult to upload to S3
+     */
+    fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
+            taskResult: org.researchstack.backbone.result.TaskResult) {
+
+        compositeDispose.add(
+                scheduleRepo.uploadResearchStackTaskResultToS3(schedule, taskResult)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({
                     scheduleSyncErrorMessageLiveData.postValue(null)
                 }, { t ->
                     scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
