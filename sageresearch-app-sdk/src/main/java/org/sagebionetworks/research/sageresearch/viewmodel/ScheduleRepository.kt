@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.support.annotation.RestrictTo
 import android.support.annotation.VisibleForTesting
+import com.google.common.collect.ImmutableList
 import hu.akarnokd.rxjava.interop.RxJavaInterop
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
@@ -13,10 +14,12 @@ import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.Days
-import org.researchstack.backbone.model.survey.factory.SurveyFactory
+import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.manager.ActivityManager
+import org.sagebionetworks.bridge.android.manager.AuthenticationManager
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
 import org.sagebionetworks.bridge.android.manager.SurveyManager
+import org.sagebionetworks.bridge.android.manager.UploadManager
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
@@ -73,7 +76,10 @@ open class ScheduleRepository constructor(
         private val syncStateDao: ScheduledRepositorySyncStateDao,
         private val surveyManager: SurveyManager,
         private val activityManager: ActivityManager,
-        private val participantRecordManager: ParticipantRecordManager) {
+        private val participantRecordManager: ParticipantRecordManager,
+        private val authenticationManager: AuthenticationManager,
+        private val uploadManager: UploadManager,
+        private val bridgeConfig: BridgeConfig) {
 
     private val logger = LoggerFactory.getLogger(ScheduleRepository::class.java)
 
@@ -108,6 +114,12 @@ open class ScheduleRepository constructor(
      *                                  the correct schedule to update after a task completes
      */
     private val scheduleTaskRunUuidMap = HashMap<UUID, String>()
+
+    /**
+     * @property researchStackUploadArchiveFactory is only used when uploading ResearchStack results to S3
+     *                                             set to provide custom archive functionality
+     */
+    var researchStackUploadArchiveFactory = ResearchStackUploadArchiveFactory()
 
     @VisibleForTesting
     protected open fun studyStartDate(): DateTime? {
@@ -404,12 +416,51 @@ open class ScheduleRepository constructor(
      * @param surveyGuid of the survey
      * @param surveyCreatedOn of the survey, if null, newest published survey will be fetched
      */
-    fun loadRsSurvey(surveySchedule: ScheduledActivityEntity): Single<Survey> {
+    fun loadResearchStackSurvey(surveySchedule: ScheduledActivityEntity): Single<Survey> {
         surveySchedule.activity?.survey?.let {
             return toV2Single(surveyManager.getSurvey(it.guid, null))
         } ?: run {
             return Single.error(IllegalArgumentException("Schedule is not a survey"))
         }
+    }
+
+    /**
+     * Uploads the ResearchStack task result to S3 with corresponding metadata
+     * @param schedule for creating the metadata json file in the archive
+     * @param taskResult for creating the answers map
+     */
+    fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
+            taskResult: org.researchstack.backbone.result.TaskResult): Completable {
+
+        // Attempt to build the archive to upload, if successful, upload to bridge
+        researchStackUploadArchiveFactory.buildResearchStackArchive(
+                schedule, bridgeConfig, userDataGroups(), userExternalId(), taskResult)?.let {
+
+            return Completable.fromAction {
+                uploadManager.queueUpload(it.first, it.second.build())
+                        .flatMapCompletable {
+                            uploadFile -> uploadManager.processUploadFile(uploadFile)
+                        }.await()
+            }
+
+        } ?: return Completable.error(Exception("Failed to build upload archive"))
+    }
+
+    /**
+     * @return the list of the users data groups,
+     *         an empty list if the user is not signed in or has no data groups
+     */
+    protected fun userExternalId(): String? {
+        return authenticationManager.userSessionInfo?.externalId
+    }
+
+    /**
+     * @return the list of the users data groups,
+     *         an empty list if the user is not signed in or has no data groups
+     */
+    protected fun userDataGroups(): ImmutableList<String> {
+        return ImmutableList.copyOf(
+                authenticationManager.userSessionInfo?.dataGroups ?: ArrayList())
     }
 }
 
