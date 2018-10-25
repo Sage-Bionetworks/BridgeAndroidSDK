@@ -30,6 +30,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.TaskReference
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
+import org.sagebionetworks.research.sageresearch.extensions.toJodaDateTime
 import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
 
@@ -229,13 +230,7 @@ fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
     val immutableFieldMap = HashMap<String, String>()
 
     scheduledOn?.let {
-        // TODO: mdephillips 10/14/18 better way to convert from 3tenbp LocalDateTime to jodatime DateTime?
-        val dateTime = DateTime.now()
-                .withYear(it.year)
-                .withDayOfYear(it.dayOfYear)
-                .withHourOfDay(it.hour)
-                .withMinuteOfHour(it.minute)
-                .withSecondOfMinute(it.second)
+        val dateTime = it.toJodaDateTime()
         val dateTimeStr = RestUtils.GSON.toJson(dateTime).replace("\"", "")
         immutableFieldMap.put("scheduledOn", dateTimeStr)
     }

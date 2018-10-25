@@ -45,19 +45,19 @@ import android.net.Uri
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import org.slf4j.LoggerFactory
+import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZoneId
+import java.util.concurrent.TimeUnit
 
 /**
  * Used to pass key/values through intent data
  */
-const val REMINDER_KEY_GUID     = "KEY_GUID"
-const val REMINDER_KEY_CODE     = "KEY_CODE"
-const val REMINDER_KEY_TITLE    = "KEY_TITLE"
-const val REMINDER_KEY_TEXT     = "KEY_TEXT"
+const val REMINDER_JSON_KEY = "REMINDER_DATA_CLASS"
 
 /**
  * ReminderManager controls the scheduling and cancellation of the reminder alarms
  */
-open class ReminderManager {
+open class ReminderManager(context: Context) {
 
     private val logger = LoggerFactory.getLogger(ReminderManager::class.java)
 
@@ -75,6 +75,12 @@ open class ReminderManager {
         }
 
     /**
+     * @property sharedPrefs used to read/write PendingIntent vars
+     */
+    protected var sharedPrefs: SharedPreferences =
+            context.getSharedPreferences("ReminderManagerPendingIntents", MODE_PRIVATE)
+
+    /**
      * @property allActivePendingIntents active pending intents must always have the same value for
      *                                   notifications that are currently scheduled to be properly canceled
      */
@@ -89,7 +95,7 @@ open class ReminderManager {
      * @return reminders that are currently scheduled to be shown
      */
     protected fun allActiveReminders(context: Context): List<Reminder> {
-        return pendingIntentPrefs(context).all.mapNotNull {
+        return sharedPrefs.all.mapNotNull {
             (it.value as? String)?.let { reminderJson ->
                 return@mapNotNull reminderFromJson(reminderJson)
             } ?: run {
@@ -104,13 +110,15 @@ open class ReminderManager {
      * @param reminderJson formed by serializing a Reminder object with Gson
      * @return reminder formed from reminderJson using Gson
      */
-    protected fun reminderFromJson(reminderJson: String): Reminder? {
-        try {
-            return gson.fromJson(reminderJson, Reminder::class.java)
-        } catch (e: JsonSyntaxException) {
-            logger.warn(e.localizedMessage)
-            return null
+    fun reminderFromJson(reminderJson: String?): Reminder? {
+        reminderJson?.let {
+            try {
+                return gson.fromJson(it, Reminder::class.java)
+            } catch (e: JsonSyntaxException) {
+                logger.error(e.localizedMessage)
+            }
         }
+        return null
     }
 
     /**
@@ -122,20 +130,9 @@ open class ReminderManager {
     protected fun pendingIntentForReminder(context: Context, reminder: Reminder): PendingIntent {
         val intent = Intent(context, reminderAlarmReceiver)
         intent.action = reminder.action
-        intent.putExtra(REMINDER_KEY_GUID, reminder.guid)
-        intent.putExtra(REMINDER_KEY_CODE, reminder.code)
-        intent.putExtra(REMINDER_KEY_TITLE, reminder.title)
-        intent.putExtra(REMINDER_KEY_TEXT, reminder.text)
+        intent.putExtra(REMINDER_JSON_KEY, gson.toJson(reminder))
         intent.data = Uri.parse(reminder.guid)
         return PendingIntent.getBroadcast(context, reminder.code, intent, PendingIntent.FLAG_ONE_SHOT)
-    }
-
-    /**
-     * @param context can be app or activity
-     * @return a shared preferences object used to store PendingIntents
-     */
-    protected fun pendingIntentPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences("ReminderManagerPendingIntents", MODE_PRIVATE)
     }
 
     /**
@@ -156,14 +153,18 @@ open class ReminderManager {
 
         // Persist the reminder info so we can cancel it later if we need to
         val reminderJson = gson.toJson(reminder)
-        pendingIntentPrefs(context).edit().putString(reminder.guid, reminderJson).apply()
+        sharedPrefs.edit().putString(reminder.guid, reminderJson).apply()
 
-        reminder.repeatAlarmInterval?.let {
+        val initialAlarmDateTime = reminder.reminderScheduleRules.initialAlarmTime
+        val initialAlarmEpochMillis = TimeUnit.SECONDS.toMillis(
+                initialAlarmDateTime.atZone(ZoneId.systemDefault()).toEpochSecond())
+
+        reminder.reminderScheduleRules.repeatAlarmInterval?.let {
             logger.info("Setting repeat reminder with info $reminder")
-            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, reminder.alarmEpochMillis, it, pendingIntent)
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, initialAlarmEpochMillis, it, pendingIntent)
         } ?: run {
             logger.info("Setting reminder with info $reminder")
-            alarmManager.set(AlarmManager.RTC_WAKEUP, reminder.alarmEpochMillis, pendingIntent)
+            alarmManager.set(AlarmManager.RTC_WAKEUP, initialAlarmEpochMillis, pendingIntent)
         }
     }
 
@@ -174,6 +175,16 @@ open class ReminderManager {
      */
     fun cancelReminder(context: Context, reminder: Reminder) {
         (context.getSystemService(ALARM_SERVICE) as? AlarmManager)?.let { alarmManager ->
+            // Let's check for a previously scheduled reminder with the same guid
+            // Some Reminder data may have changed, but if it has the same guid it should always be canceled
+            sharedPrefs.getString(reminder.guid, null)?.let { reminderJson ->
+                reminderFromJson(reminderJson)?.let {
+                    val pendingIntent = pendingIntentForReminder(context, it)
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                }
+            }
+            // Always cancel the reminder as it currently exists as well
             val pendingIntent = pendingIntentForReminder(context, reminder)
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
@@ -233,14 +244,9 @@ data class Reminder(
      */
     val code: Int,
     /**
-     * @property alarmEpochMillis time in milliseconds when the initial alarm will fire
+     * @property reminderScheduleRules determines the timing and frequency of scheduling the reminder alarms
      */
-    val alarmEpochMillis: Long,
-    /**
-     * @property repeatAlarmInterval if non-null, will be used to schedule repeated alarms,
-     *                               if null, alarm only fires once
-     */
-    val repeatAlarmInterval: Long? = null,
+    val reminderScheduleRules: ReminderScheduleRules,
     /**
      * @property title that will show on the notification
      */
@@ -249,3 +255,50 @@ data class Reminder(
      * @property text more details that will show on the notification
      */
     val text: String? = null)
+
+/**
+ * ReminderScheduleRules is built to contain info about how to schedule alarms, and rules about
+ * if they should be ignored or if they should show a notification
+ */
+data class ReminderScheduleRules(
+    /**
+     * @property initialAlarmTime time in milliseconds when the initial alarm will fire
+     */
+    val initialAlarmTime: LocalDateTime,
+    /**
+     * @property repeatAlarmInterval if non-null, will be used to schedule repeated alarms,
+     *                               if null, alarm only fires once
+     */
+    val repeatAlarmInterval: Long? = null,
+    /**
+     * @property ignoreAlarmsRule to be used to ignore showing notifications for set periods of complex scheduling
+     */
+    val ignoreAlarmsRule: ReminderScheduleIgnoreRule? = null,
+    /**
+     * @property isDailyAlarm If true, this reminder will be rescheduled every time its broadcast
+     *                        receiver is called so that the daily LocalDateTime is as accurate as possible.
+     *                        If false, no automatic rescheduling will be done.
+     *                        This may be useful if the notification needs to be triggered at a certain
+     *                        time of day, every day.  Otherwise, DST would throw off the repeat interval,
+     *                        which has to be in milliseconds.
+     */
+    val isDailyAlarm: Boolean = false)
+
+/**
+ * ReminderScheduleIgnoreRule is to be used to ignore set periods of alarms for complex schedules
+ */
+data class ReminderScheduleIgnoreRule(
+    /**
+     * @property startDateTime of the period to ignore showing an alarm notification
+     */
+    val startDateTime: LocalDateTime,
+    /**
+     * @property endDateTime of the period to ignore showing an alarm notification
+     */
+    val endDateTime: LocalDateTime,
+    /**
+     * @property repeatIntervalInDays the range can be repeated at an interval to achieve complex ignore logic
+     *                                for example, if ignoring 10/10 - 10/20, and repeat is 20, then
+     *                                10/30 - 11/9 will also be ignored, and so forth
+     */
+    val repeatIntervalInDays: Long? = null)

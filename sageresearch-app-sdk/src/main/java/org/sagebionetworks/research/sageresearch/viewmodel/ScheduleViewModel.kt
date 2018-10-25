@@ -8,6 +8,7 @@ import android.support.annotation.VisibleForTesting
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import org.joda.time.DateTime
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
 import org.threeten.bp.Instant
@@ -137,6 +138,13 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
                 }, { t ->
                     scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
                 }))
+    }
+
+    /**
+     * @return the study start date
+     */
+    fun studyStartDate(): DateTime? {
+        return scheduleRepo.studyStartDate()
     }
 
     override fun onCleared() {

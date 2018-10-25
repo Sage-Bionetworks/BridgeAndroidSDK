@@ -1,5 +1,6 @@
 package org.sagebionetworks.research.sageresearch.extensions
 
+import org.joda.time.DateTime
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
@@ -85,4 +86,24 @@ fun Instant.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime, timezon
     val endZoned = end.atZone(timezone).toInstant()
     return this == startZoned || this == endZoned ||
             (this.isAfter(startZoned) && this.isBefore(endZoned))
+}
+
+fun LocalDateTime.toJodaDateTime(): org.joda.time.DateTime {
+    // TODO: mdephillips 10/14/18 better way to convert from 3tenbp LocalDateTime to jodatime DateTime?
+    return DateTime.now()
+            .withYear(this.year)
+            .withDayOfYear(this.dayOfYear)
+            .withHourOfDay(this.hour)
+            .withMinuteOfHour(this.minute)
+            .withSecondOfMinute(this.second)
+}
+
+fun org.joda.time.DateTime.toThreeTenLocalDateTime(): LocalDateTime {
+    // TODO: mdephillips 10/14/18 better way to convert from jodatime DateTime 3tenbp LocalDateTime?
+    return LocalDateTime.now()
+            .withYear(this.year)
+            .withDayOfYear(this.dayOfYear)
+            .withHour(this.hourOfDay)
+            .withMinute(this.minuteOfHour)
+            .withSecond(this.secondOfMinute)
 }

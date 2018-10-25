@@ -45,9 +45,11 @@ import android.net.Uri
 import android.os.Build
 import android.support.v4.app.NotificationCompat
 import org.researchstack.backbone.ui.MainActivity
+import org.sagebionetworks.research.sageresearch.extensions.isBetweenInclusive
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 
 import org.slf4j.LoggerFactory
+import org.threeten.bp.LocalDateTime
 
 /**
  * The ReminderAlarmReceiver can be sub-classed and used to easily control showing notifications to the user
@@ -57,28 +59,25 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
     private val logger = LoggerFactory.getLogger(ReminderAlarmReceiver::class.java)
 
     /**
-     * @property notificationChannelId set on Android OS >= 26, uniquely identified your notifications
+     * @return notificationChannelId which is set on Android OS >= 26, uniquely identified your notifications
      */
-    protected open val notificationChannelId: String
-        get() {
-            return "Sage-Research NotificationChannelId"
-        }
+    protected fun notificationChannelId(context: Context): String {
+        return context.getString(R.string.reminder_notification_channel_id)
+    }
 
     /**
-     * @property notificationChannelId set on Android OS >= 26, explains your notifications
+     * @return notificationChannelTitle which set on Android OS >= 26, explains your notifications
      */
-    protected open val notificationChannelTitle: String
-        get() {
-            return "Sage-Research Reminders"
-        }
+    protected fun notificationChannelTitle(context: Context): String {
+        return context.getString(R.string.reminder_notification_channel_title)
+    }
 
     /**
-     * @property notificationChannelId set on Android OS >= 26, explains your notifications in more detail
+     * @return notificationChannelDesc which is set on Android OS >= 26, explains your notifications in more detail
      */
-    protected open val notificationChannelDesc: String
-        get() {
-            return "SageResearch reminders help you remember to log your data."
-        }
+    protected fun notificationChannelDesc(context: Context): String {
+        return context.getString(R.string.reminder_notification_channel_desc)
+    }
 
     /**
      * If true, when the notification is tapped, it will leave the user's status bar, false, it will stay there
@@ -89,20 +88,20 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         }
 
     /**
-     * @param code associated with this sound
+     * @param reminder associated with this sound
      * @param action of the notification
      * @return an alarm sound that plays when the notification appears in the status bar
      */
-    protected open fun alarmSound(code: Int, action: String): Uri? {
+    protected open fun alarmSound(reminder: Reminder, action: String): Uri? {
         return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
     }
 
     /**
-     * @param code associated with this icon
+     * @param reminder associated with this icon
      * @param action of the notification
      * @return a drawable resource value of the small icon that shows with the notification
      */
-    protected open fun notificationIcon(code: Int, action: String): Int? {
+    protected open fun notificationIcon(reminder: Reminder, action: String): Int? {
         return R.mipmap.ic_launcher
     }
 
@@ -137,33 +136,62 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
             return
         }
 
-        // Collection reminder notification info
-        val code = intent.getIntExtra(REMINDER_KEY_CODE, -1)
-        val title = intent.getStringExtra(REMINDER_KEY_TITLE)
-        val text = intent.getStringExtra(REMINDER_KEY_TEXT)
         val action = intent.action
 
-        logger.info("Broadcast reminder received with code $code, " +
-                "title $title, text $text, and action $action")
+        // Collection reminder notification info
+        val reminderManager = ReminderManager(context)
+        val reminderJson = intent.getStringExtra(REMINDER_JSON_KEY)
+        val reminder = reminderManager.reminderFromJson(reminderJson)
 
+        if (reminder == null) {
+            logger.error("Broadcast reminder action $action received but reminder extra is missing!")
+            return
+        }
+
+        logger.info("Broadcast reminder action $action received with reminder info $reminder")
         // Trigger the notification
-        showNotification(context, code, title, text, intent.action)
+        if (!shouldIgnoreAlarm(reminder)) {
+            showNotification(context, reminder, action)
+        } else {
+            logger.info("Reminder notification not being shown, today\'s date is in the ignore rules")
+        }
+
+        // Reschedule the reminders if it is a daily alarm
+        if (reminder.reminderScheduleRules.isDailyAlarm) {
+            rescheduleDailyReminder(context, reminderManager, reminder)
+        }
+    }
+
+    /**
+     * Override to provide custom re-scheduling logic
+     * @param context should be broadcast receiver context
+     * @param reminderManager for convenience
+     * @param reminder the reminder to re-schedule
+     */
+    open protected fun rescheduleDailyReminder(
+            context: Context, reminderManager: ReminderManager, reminder: Reminder) {
+
+        val now = LocalDateTime.now()
+        var newInitialAlarmTime = now
+                .withHour(reminder.reminderScheduleRules.initialAlarmTime.hour)
+                .withMinute(reminder.reminderScheduleRules.initialAlarmTime.minute)
+                .withSecond(reminder.reminderScheduleRules.initialAlarmTime.second)
+        if (newInitialAlarmTime.isBefore(now)) {
+            newInitialAlarmTime = newInitialAlarmTime.plusDays(1)
+        }
+        val scheduleReminderRules = reminder.reminderScheduleRules.copy(initialAlarmTime = newInitialAlarmTime)
+        val newReminder = reminder.copy(reminderScheduleRules = scheduleReminderRules)
+
+        reminderManager.scheduleReminder(context, newReminder)
     }
 
     /**
      * Shows the notification to the user's status bar
      * @param context should be broadcast receiver context
-     * @param code the notification code
-     * @param title the title to show in the notification
-     * @param text the text to show in the notification
+     * @param reminder the reminder to show in the notification
      * @param action the notification action
      */
-    protected fun showNotification(
-            context: Context,
-            code: Int,
-            title: String?,
-            text: String?,
-            action: String) {
+    protected fun showNotification(context: Context, reminder: Reminder, action: String) {
 
         val notificationManager = (context.getSystemService(NOTIFICATION_SERVICE) as? NotificationManager) ?: run {
             logger.warn("Could not obtain the notification manager service")
@@ -171,37 +199,62 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         }
 
         // Register the notification channel (this is needed on Android 26 and greater)
-        registerNotificationChannel(notificationManager)
+        registerNotificationChannel(context, notificationManager)
 
-        val builder = NotificationCompat.Builder(context, notificationChannelId)
-        alarmSound(code, action)?.let {
+        val builder = NotificationCompat.Builder(context, notificationChannelId(context))
+        alarmSound(reminder, action)?.let {
             builder.setSound(it)
         }
-        notificationIcon(code, action)?.let {
+        notificationIcon(reminder, action)?.let {
             builder.setSmallIcon(it)
         }
         builder.setAutoCancel(shouldAutoCancel)
-        builder.setContentTitle(title)
-        builder.setContentText(text)
+        builder.setContentTitle(reminder.title)
+        builder.setContentText(reminder.text)
 
         // The pending intent controls where the user goes after they tap the notification
-        val pendingIntent = pendingIntent(context, code, action)
+        val pendingIntent = pendingIntent(context, reminder.code, action)
         builder.setContentIntent(pendingIntent)
 
         // Build and post the notification to the status bar
         val notification = builder.build()
-        notificationManager.notify(code, notification)
+        notificationManager.notify(reminder.code, notification)
     }
 
-    protected fun registerNotificationChannel(notificationManager: NotificationManager) {
+    protected fun registerNotificationChannel(context: Context, notificationManager: NotificationManager) {
         // Starting with API 26, notifications must be contained in a channel
         if (Build.VERSION.SDK_INT >= 26) {
             val channel = NotificationChannel(
-                    notificationChannelId,
-                    notificationChannelTitle,
+                    notificationChannelId(context),
+                    notificationChannelTitle(context),
                     NotificationManager.IMPORTANCE_DEFAULT)
-            channel.description = notificationChannelDesc
+            channel.description = notificationChannelDesc(context)
             notificationManager.createNotificationChannel(channel)
         }
+    }
+
+    /**
+     * @param reminder to be checked
+     * @return true if the current date is within the reminder's ignore rule, false if alarm should not be ignored
+     */
+    protected fun shouldIgnoreAlarm(reminder: Reminder): Boolean {
+        val now = LocalDateTime.now()
+        reminder.reminderScheduleRules.ignoreAlarmsRule?.let { ignoreRule ->
+            var startDate = ignoreRule.startDateTime
+            var endDate = ignoreRule.endDateTime
+            if (now.isBetweenInclusive(startDate, endDate)) {
+                return true
+            }
+            ignoreRule.repeatIntervalInDays?.let { repeatInDays ->
+                while (now.isBefore(endDate)) {
+                    if (now.isBetweenInclusive(startDate, endDate)) {
+                        return true
+                    }
+                    startDate = ignoreRule.startDateTime.plusDays(repeatInDays)
+                    endDate = ignoreRule.endDateTime.plusDays(repeatInDays)
+                }
+            }
+        }
+        return false
     }
 }

@@ -121,8 +121,10 @@ open class ScheduleRepository constructor(
      */
     var researchStackUploadArchiveFactory = ResearchStackUploadArchiveFactory()
 
-    @VisibleForTesting
-    protected open fun studyStartDate(): DateTime? {
+    /**
+     * @return the date the participant was created
+     */
+    open fun studyStartDate(): DateTime? {
         return participantRecordManager.participantCreatedOn
     }
 
