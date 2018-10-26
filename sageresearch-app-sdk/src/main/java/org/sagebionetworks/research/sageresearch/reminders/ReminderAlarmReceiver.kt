@@ -43,6 +43,7 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.support.annotation.VisibleForTesting
 import android.support.v4.app.NotificationCompat
 import org.researchstack.backbone.ui.MainActivity
 import org.sagebionetworks.research.sageresearch.extensions.isBetweenInclusive
@@ -82,10 +83,10 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
     /**
      * If true, when the notification is tapped, it will leave the user's status bar, false, it will stay there
      */
-    protected open val shouldAutoCancel: Boolean
-        get() {
-            return true
-        }
+    protected open val shouldAutoCancel: Boolean get() = true
+
+    @VisibleForTesting
+    protected open val localDateTimeNow: LocalDateTime get() = LocalDateTime.now()
 
     /**
      * @param reminder associated with this sound
@@ -143,7 +144,7 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         val action = intent.action
 
         // Collection reminder notification info
-        val reminderManager = ReminderManager(context)
+        val reminderManager = createReminderManager(context)
         val reminderJson = intent.getStringExtra(REMINDER_JSON_KEY)
         val reminder = reminderManager.reminderFromJson(reminderJson)
 
@@ -162,7 +163,8 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
 
         // Reschedule the reminders if it is a daily alarm
         if (reminder.reminderScheduleRules.isDailyAlarm) {
-            rescheduleDailyReminder(context, reminderManager, reminder)
+            val newReminder = recreateDailyReminder(reminder)
+            reminderManager.scheduleReminder(context, newReminder)
         }
 
         if (reminder.isOneShotAlarm()) {
@@ -170,16 +172,17 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         }
     }
 
+    @VisibleForTesting
+    open protected fun createReminderManager(context: Context): ReminderManager {
+        return ReminderManager(context)
+    }
+
     /**
      * Override to provide custom re-scheduling logic
-     * @param context should be broadcast receiver context
-     * @param reminderManager for convenience
-     * @param reminder the reminder to re-schedule
+     * @param reminder the reminder to re-schedule based on days that have passed
      */
-    open protected fun rescheduleDailyReminder(
-            context: Context, reminderManager: ReminderManager, reminder: Reminder) {
-
-        val now = LocalDateTime.now()
+    open fun recreateDailyReminder(reminder: Reminder): Reminder {
+        val now = localDateTimeNow
         var newInitialAlarmTime = now
                 .withHour(reminder.reminderScheduleRules.initialAlarmTime.hour)
                 .withMinute(reminder.reminderScheduleRules.initialAlarmTime.minute)
@@ -189,8 +192,7 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         }
         val scheduleReminderRules = reminder.reminderScheduleRules.copy(initialAlarmTime = newInitialAlarmTime)
         val newReminder = reminder.copy(reminderScheduleRules = scheduleReminderRules)
-
-        reminderManager.scheduleReminder(context, newReminder)
+        return newReminder
     }
 
     /**
@@ -247,8 +249,8 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
      * @param reminder to be checked
      * @return true if the current date is within the reminder's ignore rule, false if alarm should not be ignored
      */
-    protected fun shouldIgnoreAlarm(reminder: Reminder): Boolean {
-        val now = LocalDateTime.now()
+    open fun shouldIgnoreAlarm(reminder: Reminder): Boolean {
+        val now = localDateTimeNow
         reminder.reminderScheduleRules.ignoreAlarmsRule?.let { ignoreRule ->
             var startDate = ignoreRule.startDateTime
             var endDate = ignoreRule.endDateTime
@@ -257,7 +259,7 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
             }
             ignoreRule.repeatIntervalInDays?.let { repeatInDays ->
                 var counter = 0
-                while (now.isAfter(endDate)) {
+                while (now.isAfter(startDate)) {
                     counter += 1
                     if (now.isBetweenInclusive(startDate, endDate)) {
                         return true

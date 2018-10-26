@@ -36,7 +36,6 @@ import android.content.Context
 import android.support.test.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.sagebionetworks.research.sageresearch.reminders.Reminder
@@ -49,37 +48,58 @@ class ReminderManagerTests {
     fun scheduleReminder() {
         val context = InstrumentationRegistry.getTargetContext()
         val reminderManager = MockReminderManager(context)
-        val reminder = Reminder("guid1", "action", 1,
+        val reminder1 = Reminder("guid1", "action", 1,
                 ReminderScheduleRules(LocalDateTime.now()), "title")
 
-        reminderManager.scheduleReminder(context, reminder)
+        reminderManager.scheduleReminder(context, reminder1)
         assertTrue(reminderManager.receiverEnabled)
         assertEquals(1, reminderManager.currentReminders().size)
-        assertEquals(reminder, reminderManager.currentReminders().firstOrNull())
+        assertEquals(reminder1, reminderManager.currentReminders().firstOrNull())
 
-        reminderManager.cancelReminder(context, reminder)
+        reminderManager.cancelReminder(context, reminder1)
         assertEquals(0, reminderManager.currentReminders().size)
         assertTrue(reminderManager.receiverEnabled)
 
-        reminderManager.scheduleReminder(context, reminder)
+        reminderManager.scheduleReminder(context, reminder1)
         assertTrue(reminderManager.receiverEnabled)
         assertEquals(1, reminderManager.currentReminders().size)
-        assertEquals(reminder, reminderManager.currentReminders().firstOrNull())
+        assertEquals(reminder1, reminderManager.currentReminders().firstOrNull())
+
+        reminderManager.cancelAllReminders(context)
+        assertEquals(0, reminderManager.currentReminders().size)
+        assertFalse(reminderManager.receiverEnabled)
+
+        val reminder2 = Reminder("guid2", "action", 1,
+                ReminderScheduleRules(LocalDateTime.now()), "title")
+
+        reminderManager.scheduleReminder(context, reminder1)
+        assertTrue(reminderManager.receiverEnabled)
+        assertEquals(1, reminderManager.currentReminders().size)
+        assertEquals(reminder1, reminderManager.currentReminders().firstOrNull())
+
+        reminderManager.scheduleReminder(context, reminder2)
+        assertTrue(reminderManager.receiverEnabled)
+        assertEquals(2, reminderManager.currentReminders().size)
+        assertEquals(reminder1, reminderManager.currentReminders().firstOrNull())
+        assertEquals(reminder2, reminderManager.currentReminders().lastOrNull())
+
+        reminderManager.cancelReminder(context, reminder1)
+        assertEquals(1, reminderManager.currentReminders().size)
+        assertTrue(reminderManager.receiverEnabled)
 
         reminderManager.cancelAllReminders(context)
         assertEquals(0, reminderManager.currentReminders().size)
         assertFalse(reminderManager.receiverEnabled)
     }
-}
 
-class MockReminderManager(context: Context): ReminderManager(context) {
+    class MockReminderManager(context: Context): ReminderManager(context) {
+        fun currentReminders(): List<Reminder> {
+            return super.allActiveReminders()
+        }
 
-    fun currentReminders(): List<Reminder> {
-        return super.allActiveReminders()
-    }
-
-    var receiverEnabled = false
-    override fun enableReceiver(context: Context, enable: Boolean) {
-        receiverEnabled = enable
+        var receiverEnabled = false
+        override fun enableReceiver(context: Context, enable: Boolean) {
+            receiverEnabled = enable
+        }
     }
 }

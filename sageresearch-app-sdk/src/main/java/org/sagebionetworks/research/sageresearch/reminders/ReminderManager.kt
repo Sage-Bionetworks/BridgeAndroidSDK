@@ -70,10 +70,7 @@ open class ReminderManager(context: Context) {
     /**
      * @property reminderAlarmReceiver the receiver to associate with this manager
      */
-    open val reminderAlarmReceiver: Class<*>
-        get() {
-            return ReminderAlarmReceiver::class.java
-        }
+    open val reminderAlarmReceiver: Class<*> get() = ReminderAlarmReceiver::class.java
 
     /**
      * @property sharedPrefs used to read/write PendingIntent vars
