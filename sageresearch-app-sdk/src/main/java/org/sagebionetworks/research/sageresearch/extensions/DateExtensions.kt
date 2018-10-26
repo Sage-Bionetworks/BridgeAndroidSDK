@@ -96,6 +96,8 @@ fun LocalDateTime.toJodaDateTime(): org.joda.time.DateTime {
             .withHourOfDay(this.hour)
             .withMinuteOfHour(this.minute)
             .withSecondOfMinute(this.second)
+            // nano seconds not support by Joda and will be converted to milliseconds
+            .withMillisOfSecond((this.nano / 1e6).toInt())
 }
 
 fun org.joda.time.DateTime.toThreeTenLocalDateTime(): LocalDateTime {
@@ -106,4 +108,6 @@ fun org.joda.time.DateTime.toThreeTenLocalDateTime(): LocalDateTime {
             .withHour(this.hourOfDay)
             .withMinute(this.minuteOfHour)
             .withSecond(this.secondOfMinute)
+            // millis only supported by Joda and will be converted to nano seconds
+            .withNano((this.millisOfSecond * 1e6).toInt())
 }

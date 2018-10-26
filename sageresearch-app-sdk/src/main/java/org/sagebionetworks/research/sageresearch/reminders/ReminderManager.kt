@@ -42,6 +42,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.support.annotation.VisibleForTesting
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import org.slf4j.LoggerFactory
@@ -81,20 +82,10 @@ open class ReminderManager(context: Context) {
             context.getSharedPreferences("ReminderManagerPendingIntents", MODE_PRIVATE)
 
     /**
-     * @property allActivePendingIntents active pending intents must always have the same value for
-     *                                   notifications that are currently scheduled to be properly canceled
-     */
-    protected fun allActivePendingIntents(context: Context): List<PendingIntent> {
-        return allActiveReminders(context).map {
-            pendingIntentForReminder(context, it)
-        }
-    }
-
-    /**
      * @param context can be app, activity, or service
      * @return reminders that are currently scheduled to be shown
      */
-    protected fun allActiveReminders(context: Context): List<Reminder> {
+    protected fun allActiveReminders(): List<Reminder> {
         return sharedPrefs.all.mapNotNull {
             (it.value as? String)?.let { reminderJson ->
                 return@mapNotNull reminderFromJson(reminderJson)
@@ -122,6 +113,14 @@ open class ReminderManager(context: Context) {
     }
 
     /**
+     * @param reminder to be serialized into a json string
+     * @return json string from a reminder object using default gson
+     */
+    fun jsonFromReminder(reminder: Reminder): String {
+        return gson.toJson(reminder)
+    }
+
+    /**
      * For reminder to be canceled, each reminder must produce the same PendingIntent each time
      * @param context can be app or activity
      * @param reminder to be turned into a PendingIntent
@@ -130,7 +129,7 @@ open class ReminderManager(context: Context) {
     protected fun pendingIntentForReminder(context: Context, reminder: Reminder): PendingIntent {
         val intent = Intent(context, reminderAlarmReceiver)
         intent.action = reminder.action
-        intent.putExtra(REMINDER_JSON_KEY, gson.toJson(reminder))
+        intent.putExtra(REMINDER_JSON_KEY, jsonFromReminder(reminder))
         intent.data = Uri.parse(reminder.guid)
         return PendingIntent.getBroadcast(context, reminder.code, intent, PendingIntent.FLAG_ONE_SHOT)
     }
@@ -152,7 +151,7 @@ open class ReminderManager(context: Context) {
         val pendingIntent = pendingIntentForReminder(context, reminder)
 
         // Persist the reminder info so we can cancel it later if we need to
-        val reminderJson = gson.toJson(reminder)
+        val reminderJson = jsonFromReminder(reminder)
         sharedPrefs.edit().putString(reminder.guid, reminderJson).apply()
 
         val initialAlarmDateTime = reminder.reminderScheduleRules.initialAlarmTime
@@ -188,6 +187,7 @@ open class ReminderManager(context: Context) {
             val pendingIntent = pendingIntentForReminder(context, reminder)
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
+            sharedPrefs.edit().remove(reminder.guid).apply()
         } ?: run {
             logger.warn("Failed to obtain alarm service to cancel all reminders")
         }
@@ -198,17 +198,20 @@ open class ReminderManager(context: Context) {
      * This only works if @property allActivePendingIntents returns identical PendingIntents
      * to the ones used when the notification was originally scheduled
      * @context can be app or activity
+     * @return the list of reminders that were cancelled
      */
-    fun cancelAllReminders(context: Context) {
+    fun cancelAllReminders(context: Context): List<Reminder> {
         enableReceiver(context, false)
+        val reminderList = ArrayList<Reminder>()
         (context.getSystemService(ALARM_SERVICE) as? AlarmManager)?.let { alarmManager ->
-            allActivePendingIntents(context).forEach {
-                alarmManager.cancel(it)
-                it.cancel()
+            allActiveReminders().map {
+                cancelReminder(context, it)
+                reminderList.add(it)
             }
         } ?: run {
             logger.warn("Failed to obtain alarm service to cancel all reminders")
         }
+        return reminderList
     }
 
     /**
@@ -216,7 +219,8 @@ open class ReminderManager(context: Context) {
      * @param enable if true, the broadcast receiver will be enabled,
      *               if false, it will be disabled and it won't receive existing pending intents
      */
-    protected fun enableReceiver(context: Context, enable: Boolean) {
+    @VisibleForTesting
+    protected open fun enableReceiver(context: Context, enable: Boolean) {
         val state =
             if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
@@ -302,3 +306,11 @@ data class ReminderScheduleIgnoreRule(
      *                                10/30 - 11/9 will also be ignored, and so forth
      */
     val repeatIntervalInDays: Long? = null)
+
+/**
+ * @return true if the alarm should only fire once, and should be cancelled after it has
+ */
+fun Reminder.isOneShotAlarm(): Boolean {
+    return !this.reminderScheduleRules.isDailyAlarm &&
+            this.reminderScheduleRules.repeatAlarmInterval == null
+}

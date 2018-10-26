@@ -111,15 +111,19 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
      * @param action of the notification
      * @return the pending intent which is run when the user taps the notification
      */
-    protected open fun pendingIntent(context: Context, code: Int, action: String): PendingIntent {
+    protected open fun pendingIntent(
+            context: Context, reminderManager: ReminderManager,
+            reminder: Reminder, action: String): PendingIntent {
+
         val notificationIntent = Intent(context, MainActivity::class.java)
         notificationIntent.action = action
         notificationIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+        notificationIntent.putExtra(REMINDER_JSON_KEY, reminderManager.jsonFromReminder(reminder))
         val stackBuilder = TaskStackBuilder.create(context)
         stackBuilder.addParentStack(MainActivity::class.java)
         stackBuilder.addNextIntent(notificationIntent)
         return stackBuilder.getPendingIntent(
-                code, PendingIntent.FLAG_UPDATE_CURRENT)
+                reminder.code, PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     /**
@@ -151,7 +155,7 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         logger.info("Broadcast reminder action $action received with reminder info $reminder")
         // Trigger the notification
         if (!shouldIgnoreAlarm(reminder)) {
-            showNotification(context, reminder, action)
+            showNotification(context, reminderManager, reminder, action)
         } else {
             logger.info("Reminder notification not being shown, today\'s date is in the ignore rules")
         }
@@ -159,6 +163,10 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         // Reschedule the reminders if it is a daily alarm
         if (reminder.reminderScheduleRules.isDailyAlarm) {
             rescheduleDailyReminder(context, reminderManager, reminder)
+        }
+
+        if (reminder.isOneShotAlarm()) {
+            reminderManager.cancelReminder(context, reminder)
         }
     }
 
@@ -191,7 +199,9 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
      * @param reminder the reminder to show in the notification
      * @param action the notification action
      */
-    protected fun showNotification(context: Context, reminder: Reminder, action: String) {
+    protected fun showNotification(
+            context: Context, reminderManager: ReminderManager,
+            reminder: Reminder, action: String) {
 
         val notificationManager = (context.getSystemService(NOTIFICATION_SERVICE) as? NotificationManager) ?: run {
             logger.warn("Could not obtain the notification manager service")
@@ -213,7 +223,7 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         builder.setContentText(reminder.text)
 
         // The pending intent controls where the user goes after they tap the notification
-        val pendingIntent = pendingIntent(context, reminder.code, action)
+        val pendingIntent = pendingIntent(context, reminderManager, reminder, action)
         builder.setContentIntent(pendingIntent)
 
         // Build and post the notification to the status bar
@@ -246,12 +256,14 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
                 return true
             }
             ignoreRule.repeatIntervalInDays?.let { repeatInDays ->
-                while (now.isBefore(endDate)) {
+                var counter = 0
+                while (now.isAfter(endDate)) {
+                    counter += 1
                     if (now.isBetweenInclusive(startDate, endDate)) {
                         return true
                     }
-                    startDate = ignoreRule.startDateTime.plusDays(repeatInDays)
-                    endDate = ignoreRule.endDateTime.plusDays(repeatInDays)
+                    startDate = ignoreRule.startDateTime.plusDays(repeatInDays * counter)
+                    endDate = ignoreRule.endDateTime.plusDays(repeatInDays * counter)
                 }
             }
         }
