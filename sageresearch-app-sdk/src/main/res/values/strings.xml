@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">SageResearch App SDK</string>
+
+    <!-- Notification Channel Strings -->
+    <string name="reminder_notification_channel_id">Sage Research Channel</string>
+    <string name="reminder_notification_channel_title">Sage Research Reminders</string>
+    <string name="reminder_notification_channel_desc">SageResearch reminders help you remember to log your data</string>
+
 </resources>
