@@ -32,10 +32,8 @@
 
 package org.sagebionetworks.research.sageresearch.viewmodel
 
-import android.app.AlarmManager
 import android.app.AlarmManager.INTERVAL_DAY
 import android.content.Context
-import android.content.Intent
 import android.support.test.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -148,8 +146,8 @@ class ReminderAlarmReceiverTests {
                 newReminder.reminderScheduleRules.initialAlarmTime)
     }
 
-    class MockAlarmReceiver(val reminderManager: MockReminderManager): ReminderAlarmReceiver() {
-        var currentDateTime = LocalDateTime.now()
+    class MockAlarmReceiver(private val reminderManager: MockReminderManager): ReminderAlarmReceiver() {
+        var currentDateTime: LocalDateTime = LocalDateTime.now()
         override val localDateTimeNow: LocalDateTime get() = currentDateTime
 
         override fun createReminderManager(context: Context): ReminderManager {
