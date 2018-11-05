@@ -98,12 +98,12 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
     /**
      * Runs a schedule using the task launcher, and informs the schedule repository about the
      * association between the taskRunUuid and the schedule guid so that it can be completed
-     * @param schedule of the task to run
+     * @param scheduleGuid of the task to run
      * @return the uuid associated with this schedule
      */
-    fun createScheduleTaskRunUuid(schedule: ScheduledActivityEntity?): UUID {
-        schedule?.let {
-            return scheduleRepo.createScheduleTaskRunUuid(schedule)
+    fun createScheduleTaskRunUuid(scheduleGuid: String?): UUID {
+        scheduleGuid?.let {
+            return scheduleRepo.createScheduleTaskRunUuid(it)
         } ?: return UUID.randomUUID()
     }
 
