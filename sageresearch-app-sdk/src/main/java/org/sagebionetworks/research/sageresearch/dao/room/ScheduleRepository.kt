@@ -220,12 +220,12 @@ open class ScheduleRepository constructor(
 
     /**
      * Creates and associates the taskRunUuid and the schedule guid so that it can accessed later when complete
-     * @param schedule of the task
+     * @param scheduleGuid of the schedule
      * @return the new associated uuid with this schedule
      */
-    fun createScheduleTaskRunUuid(schedule: ScheduledActivityEntity): UUID {
+    fun createScheduleTaskRunUuid(scheduleGuid: String): UUID {
         val uuid = UUID.randomUUID()
-        syncStateDao.setScheduleGuid(uuid, schedule.guid)
+        syncStateDao.setScheduleGuid(uuid, scheduleGuid)
         return uuid
     }
 
