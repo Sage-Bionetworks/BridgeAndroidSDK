@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "e99b143dd1b63abc0c3f72fd3cc7f6ea",
+    "identityHash": "f5aab3ca96bf9188990b461c0bb0e2db",
     "entities": [
       {
         "tableName": "ScheduledActivityEntity",
@@ -230,70 +230,11 @@
           }
         ],
         "foreignKeys": []
-      },
-      {
-        "tableName": "ReportEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`primaryKey` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `identifier` TEXT, `data` TEXT, `dateTime` INTEGER, `localDate` TEXT, `needsSyncedToBridge` INTEGER)",
-        "fields": [
-          {
-            "fieldPath": "primaryKey",
-            "columnName": "primaryKey",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "identifier",
-            "columnName": "identifier",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "data",
-            "columnName": "data",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "dateTime",
-            "columnName": "dateTime",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "localDate",
-            "columnName": "localDate",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "needsSyncedToBridge",
-            "columnName": "needsSyncedToBridge",
-            "affinity": "INTEGER",
-            "notNull": false
-          }
-        ],
-        "primaryKey": {
-          "columnNames": [
-            "primaryKey"
-          ],
-          "autoGenerate": true
-        },
-        "indices": [
-          {
-            "name": "index_ReportEntity_needsSyncedToBridge",
-            "unique": false,
-            "columnNames": [
-              "needsSyncedToBridge"
-            ],
-            "createSql": "CREATE  INDEX `index_ReportEntity_needsSyncedToBridge` ON `${TABLE_NAME}` (`needsSyncedToBridge`)"
-          }
-        ],
-        "foreignKeys": []
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"e99b143dd1b63abc0c3f72fd3cc7f6ea\")"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"f5aab3ca96bf9188990b461c0bb0e2db\")"
     ]
   }
 }
