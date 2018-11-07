@@ -1,4 +1,4 @@
-package org.sagebionetworks.research.sageresearch.viewmodel
+package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -23,11 +23,8 @@ import org.sagebionetworks.bridge.android.manager.UploadManager
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
-import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
-import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.sagebionetworks.research.sageresearch.extensions.isUnrecoverableError
+import org.sagebionetworks.research.sageresearch.viewmodel.ResearchStackUploadArchiveFactory
 import org.slf4j.LoggerFactory
 import java.util.Collections
 import java.util.UUID
@@ -81,7 +78,8 @@ open class ScheduleRepository constructor(
         private val uploadManager: UploadManager,
         private val bridgeConfig: BridgeConfig) {
 
-    private val logger = LoggerFactory.getLogger(ScheduleRepository::class.java)
+    private val logger = LoggerFactory.getLogger(
+            ScheduleRepository::class.java)
 
     private val entityConverter = EntityTypeConverters()
 
@@ -170,7 +168,8 @@ open class ScheduleRepository constructor(
 
         val startDate = syncStartDate ?: return Completable.complete() // return if we aren't signed in yet
         val endDate = syncEndDate
-        val requestMap = ScheduleRepositoryHelper.buildRequestMap(startDate, endDate, maxRequestDays)
+        val requestMap = ScheduleRepositoryHelper.buildRequestMap(
+                startDate, endDate, maxRequestDays)
 
         // Use these atomic variables to track of the state of the requests
         val requestHasFailed = AtomicBoolean(false)
@@ -181,7 +180,7 @@ open class ScheduleRepository constructor(
         return Observable.fromIterable(requestMap.keys)
                 .filter { requestMap[it] != null }
                 .flatMapSingle {
-                    RxJavaInterop.toV2Single(activityManager.getActivities(it, requestMap[it]!!))
+                    toV2Single(activityManager.getActivities(it, requestMap[it]!!))
                 }
                 .flatMapCompletable {
                     // If another request previously failed we won't trigger any success callbacks
@@ -268,7 +267,7 @@ open class ScheduleRepository constructor(
         return cacheSchedules(schedules)
                 .andThen(toV2Single(activityManager
                         .updateActivities(bridgeSchedules))
-                        .flatMapCompletable {
+                        .flatMapCompletable { _ ->
                             schedules.forEach {
                                 it.needsSyncedToBridge = false
                             }
@@ -348,25 +347,6 @@ open class ScheduleRepository constructor(
     }
 
     /**
-     * @param schedules that failed to update on bridge.
-     * @param throwable the reason the schedule failed to update on bridge.
-     */
-    @CheckReturnValue
-    private fun scheduleUpdateFailed(schedule: ScheduledActivityEntity, throwable: Throwable?): Completable {
-        throwable?.let { t ->
-            // There are some responses from the server that mean this call
-            // will never succeed, like a 400 client data too large error.
-            // If so, do not add the activity again to update.
-            schedule.needsSyncedToBridge = !t.isUnrecoverableError()
-            logger.warn("Unrecoverable error when syncing to Bridge, disabling future sync attempts", t)
-        }
-                ?: run {
-                    schedule.needsSyncedToBridge = true
-                }
-        return cacheSchedules(listOf(schedule))
-    }
-
-    /**
      * @param schedule to cache in the db, simply a helper function to convert to list
      */
     @CheckReturnValue
@@ -397,12 +377,12 @@ open class ScheduleRepository constructor(
         logger.debug("cacheSchedules called for schedule guids: {}", schedules.map { it.guid })
 
         return Completable.fromAction {
-            scheduleDao.upsert(schedules)
-        }
-                .subscribeOn(Schedulers.io())
-                .doOnError {
-                    logger.warn(it.localizedMessage)
-                }
+                scheduleDao.upsert(schedules)
+            }
+            .subscribeOn(Schedulers.io())
+            .doOnError {
+                logger.warn(it.localizedMessage)
+            }
     }
 
     // TODO: mdephillips 9/2/18 correctly reconcile the schedules instead of doing an upsert
@@ -501,7 +481,8 @@ object ScheduleRepositoryHelper {
 }
 
 open class ScheduledRepositorySyncStateDao @Inject constructor(context: Context) {
-    val logger = LoggerFactory.getLogger(ScheduledRepositorySyncStateDao::class.java)
+    val logger = LoggerFactory.getLogger(
+            ScheduledRepositorySyncStateDao::class.java)
 
     private val lastQueryDateKey = "lastQueryEndDate"
 

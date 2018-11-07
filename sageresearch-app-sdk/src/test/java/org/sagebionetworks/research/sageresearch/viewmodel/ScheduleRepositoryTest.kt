@@ -59,10 +59,11 @@ import org.sagebionetworks.bridge.android.manager.SurveyManager
 import org.sagebionetworks.bridge.android.manager.UploadManager
 import org.sagebionetworks.bridge.rest.model.Message
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
-import org.sagebionetworks.bridge.rest.model.Upload
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledRepositorySyncStateDao
 import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
 import org.threeten.bp.Instant
 import java.util.Arrays
@@ -107,7 +108,8 @@ class ScheduleRepositoryTest {
     fun beforeTest() {
         MockitoAnnotations.initMocks(this)
         scheduleRepository = spy(
-                ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao,
+                ScheduleRepository(scheduledActivityEntityDao,
+                        scheduledRepositorySyncStateDao,
                         surveyManager, activityManager, participantRecordManager,
                         authManager, uploadManager, bridgeConfig))
     }

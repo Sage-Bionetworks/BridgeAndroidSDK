@@ -95,8 +95,6 @@ data class ScheduledActivityEntity(@SerializedName("guid") @PrimaryKey var guid:
     }
 }
 
-data class ClientData(var data: Any? = null): Serializable
-
 data class RoomActivity(@SerializedName("guid") var guid: String): Serializable {
     @SerializedName("label")
     var label: String? = null

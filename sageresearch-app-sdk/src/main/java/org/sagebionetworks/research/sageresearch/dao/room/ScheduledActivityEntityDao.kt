@@ -5,6 +5,7 @@ import android.arch.persistence.room.Dao
 import android.arch.persistence.room.Insert
 import android.arch.persistence.room.OnConflictStrategy
 import android.arch.persistence.room.Query
+import android.support.annotation.VisibleForTesting
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 
@@ -54,6 +55,7 @@ interface ScheduledActivityEntityDao {
      * This may take a long time and use a lot of memory if the table is large, call with caution
      * @return all the scheduled activities in the table
      */
+    @VisibleForTesting
     @Query(RoomSql.SCHEDULE_QUERY_ALL)
     fun all(): LiveData<List<ScheduledActivityEntity>>
 

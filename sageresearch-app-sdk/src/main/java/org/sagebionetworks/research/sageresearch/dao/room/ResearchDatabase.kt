@@ -7,6 +7,10 @@ import android.arch.persistence.room.TypeConverters
 import android.content.Context
 import org.sagebionetworks.research.sageresearch.util.SingletonWithParam
 import javax.inject.Singleton
+import android.arch.persistence.db.SupportSQLiteDatabase
+import android.arch.persistence.room.migration.Migration
+
+
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -38,11 +42,52 @@ import javax.inject.Singleton
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-@Database(entities = arrayOf(ScheduledActivityEntity::class),
-        version = 1)
+@Database(entities = arrayOf(
+        ScheduledActivityEntity::class,
+        ReportEntity::class),
+        version = 2)
+
+/**
+ * version 1 - ScheduleActivityEntity table created and added
+ * version 2 - ReportEntity table created and added
+ */
+
 @TypeConverters(EntityTypeConverters::class)
 abstract class ResearchDatabase : RoomDatabase() {
+
+    companion object {
+        val migrations: Array<Migration> get() = arrayOf(
+                object : Migration(1, 2) {
+                    override fun migrate(database: SupportSQLiteDatabase) {
+                        val reportTable = "ReportEntity"
+                        // Create the ReportEntity table
+                        // This can be copy/pasted from "2.json" or whatever version database was created
+                        database.execSQL("CREATE TABLE `$reportTable` " +
+                                "(`primaryKey` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`identifier` TEXT, " +
+                                "`data` TEXT, " +
+                                "`dateTime` INTEGER, " +
+                                "`localDate` TEXT, " +
+                                "`needsSyncedToBridge` INTEGER)")
+                        // If indexes are specified for a field name, they need to be added separately
+                        database.execSQL(migrationAddIndex(reportTable, "identifier"))
+                        database.execSQL(migrationAddIndex(reportTable, "dateTime"))
+                        database.execSQL(migrationAddIndex(reportTable, "localDate"))
+                        database.execSQL(migrationAddIndex(reportTable, "needsSyncedToBridge"))
+                    }
+                })
+        /**
+         * @param tableName to add the index to
+         * @param fieldName to add the index to
+         * @return the SQL command to add an index to a field name in a table
+         */
+        private fun migrationAddIndex(tableName: String, fieldName: String): String {
+            return "CREATE INDEX index_${tableName}_$fieldName ON $tableName ($fieldName)"
+        }
+    }
+
     abstract fun scheduleDao(): ScheduledActivityEntityDao
+    abstract fun reportDao(): ReportEntityDao
 }
 
 internal class RoomSql {
@@ -63,17 +108,22 @@ internal class RoomSql {
          * DELETE constants delete tables
          */
         const val SCHEDULE_DELETE = "DELETE FROM scheduledactivityentity"
+        const val REPORT_DELETE = "DELETE FROM reportentity"
+        const val REPORT_DELETE_WHERE = "DELETE FROM reportentity WHERE "
 
         /**
          * SELECT constants start off queries
          */
         private const val SCHEDULE_SELECT = "SELECT * FROM scheduledactivityentity WHERE "
+        private const val REPORT_SELECT = "SELECT * FROM reportentity WHERE "
 
         /**
          * ORDER BY constants do sorting on queries
          */
 
         private const val ORDER_BY_FINISHED = " ORDER BY finishedOn DESC"
+        private const val ORDER_BY_LOCAL_DATE = " ORDER BY localDate DESC"
+        private const val ORDER_BY_DATE_TIME = " ORDER BY dateTime DESC"
 
         /**
          * LIMIT constants restrict the number of db rows
@@ -124,10 +174,31 @@ internal class RoomSql {
                         SCHEDULE_CONDITION_EXPIRES_BETWEEN_OR_NULL + OP_AND +
                         "(scheduledOn <= :end)" + ")"
 
+        private const val REPORT_CONDITION_REPORT_IDENTIFIER = "(identifier = :reportIdentifier)"
+
+        private const val REPORT_CONDITION_LOCAL_DATE_NOT_NULL = "(localDate IS NOT NULL)"
+        private const val REPORT_CONDITION_LOCAL_DATE_BETWEEN = "(localDate BETWEEN :start AND :end)"
+
+        private const val REPORT_CONDITION_DATE_TIME_NOT_NULL = "(dateTime IS NOT NULL)"
+        private const val REPORT_CONDITION_DATE_TIME_BETWEEN = "(dateTime BETWEEN :start AND :end)"
+
+        const val REPORTS_CONDITION_BETWEEN_DATE_TIME_WITH_IDENTIFIER =
+                REPORT_CONDITION_REPORT_IDENTIFIER + OP_AND +
+                        REPORT_CONDITION_DATE_TIME_NOT_NULL + OP_AND + REPORT_CONDITION_DATE_TIME_BETWEEN
+
+        const val REPORTS_CONDITION_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER =
+                REPORT_CONDITION_REPORT_IDENTIFIER + OP_AND +
+                        REPORT_CONDITION_LOCAL_DATE_NOT_NULL + OP_AND + REPORT_CONDITION_LOCAL_DATE_BETWEEN
+
+        // Room doesn't have boolean type and maps true = 1 and false = 0
+        private const val REPORT_CONDITION_NEEDS_SYNCED_TO_BRIDGE =
+                "(needsSyncedToBridge IS NOT NULL AND needsSyncedToBridge = 1)"
+
         /**
          * QUERY constants are full Room queries
          */
         const val SCHEDULE_QUERY_ALL = "SELECT * FROM scheduledactivityentity"
+        const val REPORT_QUERY_ALL = "SELECT * FROM reportentity"
 
         const val SCHEDULE_QUERY_SELECT_GUID =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_GUID
@@ -165,6 +236,22 @@ internal class RoomSql {
 
         const val SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_NEEDS_SYNCED_TO_BRIDGE
+
+
+
+        const val SELECT_REPORTS_BETWEEN_DATE_TIME_WITH_IDENTIFIER =
+                REPORT_SELECT + REPORTS_CONDITION_BETWEEN_DATE_TIME_WITH_IDENTIFIER
+
+        const val SELECT_REPORTS_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER =
+                REPORT_SELECT + REPORTS_CONDITION_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER
+
+        const val DELETE_REPORTS_BETWEEN_DATE_TIME_WITH_IDENTIFIER =
+                REPORT_DELETE_WHERE + REPORTS_CONDITION_BETWEEN_DATE_TIME_WITH_IDENTIFIER
+
+        const val DELETE_REPORTS_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER =
+                REPORT_DELETE_WHERE + REPORTS_CONDITION_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER
+
+        const val REPORTS_THAT_NEED_SYNCED =
+                REPORT_SELECT + REPORT_CONDITION_NEEDS_SYNCED_TO_BRIDGE
     }
 }
-

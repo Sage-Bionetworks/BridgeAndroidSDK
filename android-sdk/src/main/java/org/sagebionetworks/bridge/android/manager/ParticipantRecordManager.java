@@ -14,6 +14,10 @@ import org.joda.time.LocalDate;
 import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.rest.model.DateRange;
+import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList;
+import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.bridge.rest.model.ReportData;
+import org.sagebionetworks.bridge.rest.model.ReportDataList;
 import org.sagebionetworks.bridge.rest.model.StudyParticipant;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;
@@ -21,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import rx.Completable;
@@ -143,5 +148,79 @@ public class ParticipantRecordManager {
 
         // Convert the date to local timezone, the rest of the app uses "DateTime.now()"
         return existingCreatedOnServerTimezone.toDateTime(DateTimeZone.getDefault());
+    }
+
+    /**
+     * @param reportIdentifier associated with this report data
+     * @param reportData to be uploaded to bridge
+     * @return a completable that signals when the request is complete
+     */
+    public Single<Message> saveReportJSON(String reportIdentifier, ReportData reportData) {
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                .saveParticipantReportRecordsV4(
+                        reportIdentifier, reportData
+                ));
+    }
+
+    /**
+     * Helper function to get reports with default page size and offset key
+     * @param reportIdentifier for the reports
+     * @param startLocalDate to query the reports
+     * @param endLocalDate to query the reports
+     * @return a Single for carrying out the network request to get reports
+     */
+    public Single<ReportDataList> getReportsV3(
+            @Nonnull String reportIdentifier,
+            @Nonnull LocalDate startLocalDate,
+            @Nonnull LocalDate endLocalDate) {
+
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                .getParticipantReportRecords(reportIdentifier, startLocalDate, endLocalDate))
+                .doOnSuccess(scheduleActivityList -> {
+                    logger.debug("Got report list");
+                })
+                .doOnError(throwable -> {
+                    logger.error(throwable.getMessage());
+                });
+    }
+
+    /**
+     * @param reportIdentifier for the reports
+     * @param startTime to query the reports
+     * @param endTime to query the reports
+     * @param pageSize for the requests
+     * @param offsetKey of the report group, obtained from a previous network call
+     * @return a Single for carrying out the network request to get reports
+     */
+    public Single<ForwardCursorReportDataList> getReportsV4(
+            @Nonnull String reportIdentifier,
+            @Nonnull DateTime startTime,
+            @Nonnull DateTime endTime,
+            @Nullable Integer pageSize,
+            @Nullable String offsetKey) {
+
+        DateTime requestEndTime = endTime;
+
+        try {
+            int startOffset = startTime.getZone().getOffset(startTime);
+            int endOffset = endTime.getZone().getOffset(endTime);
+            if (startOffset != endOffset) {
+                requestEndTime = endTime.toDateTime(DateTimeZone.forOffsetMillis(startOffset));
+                logger.warn("Correcting for mismatched offset. startTime: {}, endTime: {}, newEndTime: {}", startTime,
+                        endTime, requestEndTime);
+            }
+        } catch (Exception e) {
+            // in case we do something wrong with JodaTime
+            return Single.error(e);
+        }
+
+        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                .getParticipantReportRecordsV4(reportIdentifier, startTime, requestEndTime, pageSize, offsetKey))
+                .doOnSuccess(scheduleActivityList -> {
+                    logger.debug("Got report list");
+                })
+                .doOnError(throwable -> {
+                    logger.error(throwable.getMessage());
+                });
     }
 }

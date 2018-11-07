@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "e99b143dd1b63abc0c3f72fd3cc7f6ea",
+    "version": 2,
+    "identityHash": "1c31d4618d53ad7f905da415cc22fabc",
     "entities": [
       {
         "tableName": "ScheduledActivityEntity",
@@ -280,6 +280,30 @@
         },
         "indices": [
           {
+            "name": "index_ReportEntity_identifier",
+            "unique": false,
+            "columnNames": [
+              "identifier"
+            ],
+            "createSql": "CREATE  INDEX `index_ReportEntity_identifier` ON `${TABLE_NAME}` (`identifier`)"
+          },
+          {
+            "name": "index_ReportEntity_dateTime",
+            "unique": false,
+            "columnNames": [
+              "dateTime"
+            ],
+            "createSql": "CREATE  INDEX `index_ReportEntity_dateTime` ON `${TABLE_NAME}` (`dateTime`)"
+          },
+          {
+            "name": "index_ReportEntity_localDate",
+            "unique": false,
+            "columnNames": [
+              "localDate"
+            ],
+            "createSql": "CREATE  INDEX `index_ReportEntity_localDate` ON `${TABLE_NAME}` (`localDate`)"
+          },
+          {
             "name": "index_ReportEntity_needsSyncedToBridge",
             "unique": false,
             "columnNames": [
@@ -293,7 +317,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"e99b143dd1b63abc0c3f72fd3cc7f6ea\")"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"1c31d4618d53ad7f905da415cc22fabc\")"
     ]
   }
 }

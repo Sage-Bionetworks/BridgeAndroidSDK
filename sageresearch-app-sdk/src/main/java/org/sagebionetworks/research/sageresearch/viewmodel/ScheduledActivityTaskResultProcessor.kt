@@ -4,6 +4,7 @@ import io.reactivex.Completable
 import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 

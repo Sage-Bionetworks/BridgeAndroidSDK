@@ -59,6 +59,7 @@ dependencies {
     implementation 'com.google.dagger:dagger-android-support:2.16'
     kapt 'com.google.dagger:dagger-android-processor:2.16'
     kapt "com.google.dagger:dagger-compiler:2.16"
+    kaptTest "com.google.dagger:dagger-compiler:2.16"
 
     implementation 'android.arch.lifecycle:extensions:1.1.1'
 
@@ -78,6 +79,8 @@ dependencies {
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.0.0-RC1"
     testImplementation 'org.slf4j:slf4j-simple:1.7.21'
 
+    // A dev at linkedin made a mock maker that works with mockito 2X
+    androidTestCompile 'com.linkedin.dexmaker:dexmaker-mockito:2.2.0'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }

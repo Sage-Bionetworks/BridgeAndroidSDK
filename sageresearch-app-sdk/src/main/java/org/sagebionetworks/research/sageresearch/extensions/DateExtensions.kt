@@ -2,6 +2,7 @@ package org.sagebionetworks.research.sageresearch.extensions
 
 import org.joda.time.DateTime
 import org.threeten.bp.Instant
+import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
 import org.threeten.bp.ZonedDateTime
@@ -88,6 +89,10 @@ fun Instant.isBetweenInclusive(start: LocalDateTime, end: LocalDateTime, timezon
             (this.isAfter(startZoned) && this.isBefore(endZoned))
 }
 
+fun org.joda.time.DateTime.toThreeTenInstant(): Instant {
+    return Instant.ofEpochMilli(this.millis)
+}
+
 fun LocalDateTime.toJodaDateTime(): org.joda.time.DateTime {
     // TODO: mdephillips 10/14/18 better way to convert from 3tenbp LocalDateTime to jodatime DateTime?
     return DateTime.now()
@@ -110,4 +115,14 @@ fun org.joda.time.DateTime.toThreeTenLocalDateTime(): LocalDateTime {
             .withSecond(this.secondOfMinute)
             // millis only supported by Joda and will be converted to nano seconds
             .withNano((this.millisOfSecond * 1e6).toInt())
+}
+
+fun LocalDate.toJodaLocalDate(): org.joda.time.LocalDate {
+    return org.joda.time.LocalDate()
+            .withYear(this.year)
+            .withDayOfYear(this.dayOfYear)
+}
+
+fun org.joda.time.LocalDate.toThreeTenLocalDate(): LocalDate {
+    return LocalDate.ofYearDay(this.year, this.dayOfYear)
 }

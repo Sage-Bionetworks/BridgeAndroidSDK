@@ -1,0 +1,100 @@
+[{
+  "identifier": "reportV3",
+  "localDate": "2018-11-07",
+  "data": {
+    "data": {
+      "guid": "0"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV3",
+  "localDate": "2018-11-08",
+  "data": {
+    "data": {
+      "guid": "1"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV3",
+  "localDate": "2018-11-09",
+  "data": {
+    "data": {
+      "guid": "2"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV3",
+  "localDate": "2018-11-09",
+  "data": {
+    "data": {
+      "guid": "3"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV3",
+  "localDate": "2018-11-10",
+  "data": {
+    "data": {
+      "guid": "4"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-07T05:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "5"
+    }
+  },
+  "type": "type"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-08T05:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "6"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-09T10:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "7"
+    }
+  },
+  "type": "type"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-09T1:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "8"
+    }
+  },
+  "type": "string"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-10T5:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "9"
+    }
+  },
+  "type": "type"
+}]
