@@ -331,14 +331,14 @@ open class ReportRepository constructor(
     open fun setReportDate(report: ReportEntity, resultEndTime: Instant?) {
         val reportIdentifier = report.identifier ?: return
         when (reportCategory(reportIdentifier)) {
-            SINGLETON -> {
-                report.dateTime = reportSingletonDate
+            TIMESTAMP -> {
+                report.dateTime = resultEndTime
             }
             GROUP_BY_DAY -> {
                 report.localDate = resultEndTime?.atZone(defaultTimeZone())?.toLocalDate()
             }
-            TIMESTAMP -> {
-                report.dateTime = resultEndTime
+            SINGLETON -> {
+                report.localDate = reportSingletonLocalDate
             }
         }
     }
