@@ -58,10 +58,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
     val scheduleSyncErrorMessageLiveData = MutableLiveData<String>()
 
     @VisibleForTesting
-    protected open val timezone: ZoneId
-        get() {
-            return ZoneId.systemDefault()
-        }
+    protected open val timezone: ZoneId get() = ZoneId.systemDefault()
 
     protected fun toInstant(dateTime: LocalDateTime): Instant {
         return dateTime.atZone(timezone).toInstant()

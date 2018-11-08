@@ -78,13 +78,3 @@ data class ReportEntity(
      */
     @ColumnInfo(index = true)
     var needsSyncedToBridge: Boolean? = null)
-
-/**
- * The category for a given report. This is used to determine whether the `dateTime` or `localDate`
- * properties on `ReportDataEntity` are used to group the reports.
- */
-enum class ReportCategory(val rawValue: String) {
-    SINGLETON("singleton"),
-    GROUP_BY_DAY("groupByDay"),
-    TIMESTAMP("timestamp")
-}

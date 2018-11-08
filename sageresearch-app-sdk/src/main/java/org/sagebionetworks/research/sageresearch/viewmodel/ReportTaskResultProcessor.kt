@@ -4,6 +4,7 @@ import io.reactivex.Completable
 import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager
+import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -43,14 +44,18 @@ import javax.inject.Inject
 /**
  * This class is used to operate a Completable operation after a TaskResult is created
  */
-class ScheduledActivityTaskResultProcessor
-@Inject constructor(private val scheduleRepo: ScheduleRepository) :
+class ReportTaskResultProcessor
+@Inject constructor(private val reportRepo: ReportRepository) :
         TaskResultProcessingManager.TaskResultProcessor {
 
-    val logger = LoggerFactory.getLogger(ScheduledActivityTaskResultProcessor::class.java)
+    val logger = LoggerFactory.getLogger(ReportTaskResultProcessor::class.java)
 
     override fun processTaskResult(taskResult: TaskResult): Completable {
-        logger.info("Updating schedule for taskRunUUID: {}", taskResult.taskUUID)
-        return scheduleRepo.updateSchedule(taskResult)
+        logger.info("Saving reports for taskResult ${taskResult.identifier}")
+        // The ReportRepository is a singleton that won't be destroyed during the operation of the application
+        // Therefore, there is no need to wait for it's completion
+        reportRepo.saveReports(taskResult)
+        // Immediately complete
+        return Completable.complete()
     }
 }

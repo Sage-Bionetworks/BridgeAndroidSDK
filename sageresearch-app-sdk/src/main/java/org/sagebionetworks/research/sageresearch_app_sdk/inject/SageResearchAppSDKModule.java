@@ -1,10 +1,7 @@
 package org.sagebionetworks.research.sageresearch_app_sdk.inject;
 
-import android.arch.persistence.db.SupportSQLiteDatabase;
 import android.arch.persistence.room.Room;
-import android.arch.persistence.room.migration.Migration;
 import android.content.Context;
-import android.support.annotation.NonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
@@ -17,9 +14,12 @@ import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.dao.room.ReportEntityDao;
+import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.viewmodel.ReportTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledRepositorySyncStateDao;
 import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
@@ -55,10 +55,14 @@ public abstract class SageResearchAppSDKModule {
     @BridgeApplicationScope
     static Set<TaskResultProcessor> provideTaskResultProcessors(
             TaskResultUploader taskResultUploader,
-            ScheduledActivityTaskResultProcessor scheduledActivityTaskResultProcessor) {
+            ScheduledActivityTaskResultProcessor scheduledActivityTaskResultProcessor,
+            ReportTaskResultProcessor reportTaskResultProcessor) {
         LOGGER.debug("Providing TaskResultProcessors");
 
-        return Sets.newHashSet(taskResultUploader, scheduledActivityTaskResultProcessor);
+        return Sets.newHashSet(
+                taskResultUploader,
+                scheduledActivityTaskResultProcessor,
+                reportTaskResultProcessor);
     }
 
     @Provides
@@ -76,6 +80,11 @@ public abstract class SageResearchAppSDKModule {
     }
 
     @Provides
+    static ReportEntityDao provideReportDao(ResearchDatabase researchDatabase) {
+        return researchDatabase.reportDao();
+    }
+
+    @Provides
     @BridgeApplicationScope
     static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
             ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, SurveyManager surveyManager,
@@ -84,5 +93,14 @@ public abstract class SageResearchAppSDKModule {
         LOGGER.debug("Providing ScheduleRepository");
         return new ScheduleRepository(scheduledActivityEntityDao, scheduledRepositorySyncStateDao,
                 surveyManager, activityManager, participantRecordManager, authManager, uploadManager, bridgeConfig);
+    }
+
+    @Provides
+    @BridgeApplicationScope
+    static ReportRepository provideReportRepository(ReportEntityDao reportDao,
+            ParticipantRecordManager participantRecordManager, BridgeConfig bridgeConfig) {
+
+        LOGGER.debug("Providing ReportRepository");
+        return new ReportRepository(reportDao, participantRecordManager, bridgeConfig);
     }
 }

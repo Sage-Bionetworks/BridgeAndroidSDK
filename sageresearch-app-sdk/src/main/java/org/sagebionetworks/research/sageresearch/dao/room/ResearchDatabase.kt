@@ -122,8 +122,7 @@ internal class RoomSql {
          */
 
         private const val ORDER_BY_FINISHED = " ORDER BY finishedOn DESC"
-        private const val ORDER_BY_LOCAL_DATE = " ORDER BY localDate DESC"
-        private const val ORDER_BY_DATE_TIME = " ORDER BY dateTime DESC"
+        private const val ORDER_BY_REPORT_DATE = " ORDER BY localDate, dateTime DESC"
 
         /**
          * LIMIT constants restrict the number of db rows
@@ -237,8 +236,6 @@ internal class RoomSql {
         const val SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_NEEDS_SYNCED_TO_BRIDGE
 
-
-
         const val SELECT_REPORTS_BETWEEN_DATE_TIME_WITH_IDENTIFIER =
                 REPORT_SELECT + REPORTS_CONDITION_BETWEEN_DATE_TIME_WITH_IDENTIFIER
 
@@ -253,5 +250,8 @@ internal class RoomSql {
 
         const val REPORTS_THAT_NEED_SYNCED =
                 REPORT_SELECT + REPORT_CONDITION_NEEDS_SYNCED_TO_BRIDGE
+
+        const val SELECT_MOST_RECENT_REPORT_WITH_IDENTIFIER =
+                REPORT_SELECT + REPORT_CONDITION_REPORT_IDENTIFIER + ORDER_BY_REPORT_DATE + LIMIT_1
     }
 }

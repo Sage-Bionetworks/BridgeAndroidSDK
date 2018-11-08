@@ -39,17 +39,15 @@ import io.reactivex.Observable
 import io.reactivex.Scheduler
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.sagebionetworks.bridge.android.BridgeConfig
+import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory
+import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory.*
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
 import org.sagebionetworks.research.domain.Schema
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.GROUP_BY_DAY
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.SINGLETON
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.TIMESTAMP
 import org.sagebionetworks.research.sageresearch.extensions.clientDataAnswerMap
 import org.sagebionetworks.research.sageresearch.extensions.toInstant
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
@@ -61,6 +59,9 @@ import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
 import java.util.Collections
 
+/**
+ * The ReportRepository is responsible for downloading the study's reports and saving them to the Room database
+ */
 open class ReportRepository constructor(
         protected val reportDao: ReportEntityDao,
         protected val participantManager: ParticipantRecordManager,
@@ -68,7 +69,11 @@ open class ReportRepository constructor(
 
     private val logger = LoggerFactory.getLogger(ReportRepository::class.java)
 
-    private val compositeDispose = CompositeDisposable()
+    protected val compositeDispose = CompositeDisposable()
+    /**
+     * Subscribes to the completable using the CompositeDisposable
+     * This is open for unit testing purposes to to run a blockingGet() instead of an asynchronous subscribe
+     */
     @VisibleForTesting
     protected open fun subscribeCompletable(completable: Completable, successMsg: String, errorMsg: String) {
         compositeDispose.add(completable
@@ -92,12 +97,15 @@ open class ReportRepository constructor(
     val reportSingletonJodaLocalDate = org.joda.time.LocalDate(reportSingletonDate.toEpochMilli(), DateTimeZone.UTC)
     val reportSingletonLocalDate = reportSingletonJodaLocalDate.toThreeTenLocalDate()
 
-    // TODO: mdephillips 11/4/18 allow for customization of report categories through an asset file in Bridge Config
     /**
      * @property categoryMapping for report identifiers and which category they should be considered
+     *                           the bridge config asset report_mapping.json takes precedence over this map
      */
-    open val categoryMapping: Map<String, ReportCategory> get() = mapOf()
+    val categoryMapping: MutableMap<String, ReportCategory> get() = mutableMapOf()
 
+    /**
+     * @return the timezone to allow for customization for unit testing
+     */
     @VisibleForTesting
     protected open fun defaultTimeZone(): ZoneId {
         return ZoneId.systemDefault()
@@ -171,6 +179,9 @@ open class ReportRepository constructor(
                     Observable.just(it)
                 }
                 .flatMapCompletable {
+                    // This is called every page, so even if page 2/3 fails,
+                    // page 1 reports will still save to the database correctly
+                    // On the last page, the progress will contain the sum of all reports
                     replaceReportsInRoom(it.reportIdentifier, start, end, it.allReports)
                 }
                 .doOnError {
@@ -225,8 +236,8 @@ open class ReportRepository constructor(
      * Builds and saves the reports for the task result
      * @param taskResult to be analyzed and have reports made from its data
      */
-    fun saveReports(rsTaskResult: org.researchstack.backbone.result.TaskResult) {
-        val reports = buildReports(rsTaskResult) ?:
+    fun saveResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult) {
+        val reports = buildResearchStackReports(taskResult) ?:
         return // Exit early if there are no reports for this task.
         saveReports(reports)
     }
@@ -282,7 +293,7 @@ open class ReportRepository constructor(
      * @param taskResult to convert into reports
      * @return the reports to return for this task result.
      */
-    open fun buildReports(taskResult: org.researchstack.backbone.result.TaskResult): List<ReportEntity>? {
+    open fun buildResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult): List<ReportEntity>? {
         // Recursively build a report for all the schemas in this task path.
         val schemaInfo = schema(taskResult.identifier)
         val schemaIdentifier = schemaInfo?.identifier ?: taskResult.identifier
@@ -333,11 +344,13 @@ open class ReportRepository constructor(
     }
 
     /**
-     * Get the report category (if any defined) for the given identifier. Default calls through to
-     * `BridgeConfiguration` and returns `.timestamp` if undefined by the configuration.
+     * @return the report category (if any defined) for the given identifier. Default calls through to
+     *         `BridgeConfiguration`, then the member var categoryMapping, then defaults to timestamp
      */
     open fun reportCategory(reportIdentifier: String): ReportCategory {
-        return categoryMapping[reportIdentifier] ?: TIMESTAMP
+        bridgeConfig.taskToReportCategoryMap[reportIdentifier]?.let { return it }
+        categoryMapping[reportIdentifier]?.let { return it }
+        return TIMESTAMP
     }
 
     /**

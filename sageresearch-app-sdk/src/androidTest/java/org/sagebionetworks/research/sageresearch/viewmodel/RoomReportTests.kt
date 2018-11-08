@@ -40,7 +40,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
-import org.sagebionetworks.research.sageresearch.dao.room.entityCopy
 import org.sagebionetworks.research.sageresearch.dao.room.mapValue
 import org.threeten.bp.LocalDate
 import org.threeten.bp.ZonedDateTime
@@ -137,6 +136,20 @@ class RoomReportTests: RoomTestHelper() {
         })
         val allReports = reportDao.reportsThatNeedSyncedToBridge()
         assertReportsContain(listOf("0", "1", "2", "3", "4"), allReports)
+    }
+
+    @Test
+    fun query_testMostRecentLocalDate() {
+        reportDao.upsert(reportEntityList)
+        val mosRecent = getValue(reportDao.mostRecentReport(reportIdentifierV3))
+        assertReportsContain(listOf("4"), mosRecent)
+    }
+
+    @Test
+    fun query_testMostRecentDateTime() {
+        reportDao.upsert(reportEntityList)
+        val mosRecent = getValue(reportDao.mostRecentReport(reportIdentifierV4))
+        assertReportsContain(listOf("9"), mosRecent)
     }
 
     @Test

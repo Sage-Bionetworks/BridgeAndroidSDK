@@ -46,12 +46,9 @@ import org.mockito.Mock
 import org.mockito.Mockito.doReturn
 import org.mockito.MockitoAnnotations
 import org.sagebionetworks.bridge.android.BridgeConfig
+import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.GROUP_BY_DAY
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.SINGLETON
-import org.sagebionetworks.research.sageresearch.dao.room.ReportCategory.TIMESTAMP
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.entityCopy
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
@@ -132,15 +129,15 @@ class ReportRepositoryTests: RoomTestHelper() {
         assertEquals(0, getValue(reportDao.reports(reportIdentifier, startInstant, endInstant)).size)
 
         // Set up the participantManager to return the correct report page sequence
-        doReturn(Single.just(reportCursorV4Page1))  // page 1, no next offset key
+        doReturn(Single.just(reportCursorV4Page1))  // page 1 contains 2 reports
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, null)
 
-        doReturn(Single.just(reportCursorV4Page2))  // page 2, offset key is "2", see "test_reports_v4_1.json"
+        doReturn(Single.just(reportCursorV4Page2))  // page 2 contains 2 reports, offset key is "2", see "test_reports_v4_1.json"
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, "2")
 
-        doReturn(Single.just(reportCursorV4Page3))  // page 3, offset key is "3", see "test_reports_v4_2.json"
+        doReturn(Single.just(reportCursorV4Page3))  // page 3 contains 1 report, offset key is "3", see "test_reports_v4_2.json"
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, "3")
 
@@ -161,7 +158,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         assertEquals(0, getValue(reportDao.reports(reportIdentifier, startInstant, endInstant)).size)
 
         // Set up the participantManager to return the correct report page sequence
-        doReturn(Single.just(reportCursorV4Page1))  // page 1, no next offset key
+        doReturn(Single.just(reportCursorV4Page1))  // page 1 contains 2 reports, no next offset key
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, null)
 
@@ -206,7 +203,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         assertEquals(0, getValue(reportDao.reports(reportIdentifier, start, end)).size)
 
         // Set up the participantManager to return the correct report page sequence
-        doReturn(Single.just(reportDataListV3))
+        doReturn(Single.just(reportDataListV3)) // contains 5 reports
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV3(reportIdentifier, start.toJodaLocalDate(), end.toJodaLocalDate())
 
@@ -244,7 +241,7 @@ class ReportRepositoryTests: RoomTestHelper() {
                 reportRepository.reportSingletonLocalDate, reportRepository.reportSingletonLocalDate)).size)
 
         // Set up the participantManager to return the correct report page sequence
-        doReturn(Single.just(reportDataListSingletonV3))
+        doReturn(Single.just(reportDataListSingletonV3)) // contains 5 reports
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV3(reportIdentifier,
                         reportRepository.reportSingletonJodaLocalDate,
@@ -277,8 +274,14 @@ class ReportRepositoryTests: RoomTestHelper() {
             val reportIdentifierV3Singleton = "reportV3Singleton"
         }
 
+        init {
+            categoryMapping[reportIdentifierV4] = ReportCategory.TIMESTAMP
+            categoryMapping[reportIdentifierV3] = ReportCategory.GROUP_BY_DAY
+            categoryMapping[reportIdentifierV3Singleton] = ReportCategory.SINGLETON
+        }
+
         override fun defaultTimeZone(): ZoneId {
-            return ZoneOffset.UTC
+            return ZoneOffset.UTC  // makes unit tests consistent across device location
         }
 
         override fun subscribeCompletable(
@@ -286,13 +289,10 @@ class ReportRepositoryTests: RoomTestHelper() {
             completable.blockingGet()  // make the entire stream a blocking synchronous call
         }
 
+        // Make a small page size for unit testing purposes (50 would require unnecessarily large json files)
         override val reportPageSizeV4: Int get() = 2
 
+        // Make sure that even the async scheduler runs on the main threads
         override val asyncScheduler: Scheduler get() = AndroidSchedulers.mainThread()
-
-        override val categoryMapping: Map<String, ReportCategory> get() = mapOf(
-                Pair(reportIdentifierV4, TIMESTAMP),
-                Pair(reportIdentifierV3, GROUP_BY_DAY),
-                Pair(reportIdentifierV3Singleton, SINGLETON))
     }
 }
