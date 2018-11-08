@@ -74,6 +74,10 @@ open class ReportViewModel(
      * @return live data that will return the most recent report for the identifier, empty list if no reports found
      */
     fun mostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
+        // Unless there is at least one cached report with this identifier
+        // Fetch the entire study's worth of reports from bridge to find the most recent
+        reportRepo.fetchMostRecentReportIfNotCached(reportIdentifier)
+        // return the live data link to the database query for the most recent report
         return reportDao.mostRecentReport(reportIdentifier)
     }
 
@@ -85,16 +89,19 @@ open class ReportViewModel(
      * @return the reports with reportIdentifier and between start and end
      */
     fun reportsLiveData(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime): LiveData<List<ReportEntity>> {
+        // Fetch the reports from bridge
+        reportRepo.fetchReports(reportIdentifier, start, end)
+        // return the live data link to the database query that will update again when reports return from bridge
         return when(reportRepo.reportCategory(reportIdentifier)) {
             TIMESTAMP ->
                 reportDao.reports(reportIdentifier,
                     start.toInstant(timezone), end.toInstant(timezone))
             GROUP_BY_DAY ->
                 reportDao.reports(reportIdentifier,
-                    start.toLocalDate(), end.toLocalDate())
+                        start.toLocalDate(), end.toLocalDate())
             SINGLETON ->
                 reportDao.reports(reportIdentifier,
-                    reportRepo.reportSingletonLocalDate, reportRepo.reportSingletonLocalDate)
+                        reportRepo.reportSingletonLocalDate, reportRepo.reportSingletonLocalDate)
         }
     }
 

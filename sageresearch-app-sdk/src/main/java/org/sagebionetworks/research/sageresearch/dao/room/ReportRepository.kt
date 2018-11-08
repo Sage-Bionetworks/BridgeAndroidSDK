@@ -52,6 +52,7 @@ import org.sagebionetworks.research.sageresearch.extensions.clientDataAnswerMap
 import org.sagebionetworks.research.sageresearch.extensions.toInstant
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
 import org.sagebionetworks.research.sageresearch.extensions.toThreeTenLocalDate
+import org.sagebionetworks.research.sageresearch.extensions.toThreeTenLocalDateTime
 import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDate
@@ -101,7 +102,23 @@ open class ReportRepository constructor(
      * @property categoryMapping for report identifiers and which category they should be considered
      *                           the bridge config asset report_mapping.json takes precedence over this map
      */
-    val categoryMapping: MutableMap<String, ReportCategory> get() = mutableMapOf()
+    val categoryMapping: MutableMap<String, ReportCategory> = mutableMapOf()
+
+    /**
+     * @return the date the participant was created
+     */
+    open fun studyStartDate(): org.joda.time.DateTime? {
+        return participantManager.participantCreatedOn
+    }
+
+    /**
+     * Open for testing purposes
+     * @return the current date and time
+     */
+    @VisibleForTesting
+    protected open fun now(): org.joda.time.DateTime {
+        return org.joda.time.DateTime.now()
+    }
 
     /**
      * @return the timezone to allow for customization for unit testing
@@ -125,21 +142,31 @@ open class ReportRepository constructor(
      * @param end of the time window for grabbing reports
      */
     fun fetchReports(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime) {
-        subscribeCompletable(
-                when (reportCategory(reportIdentifier)) {
-                    TIMESTAMP ->
-                        fetchAllReportsV4(reportIdentifier,
-                                start.toInstant(defaultTimeZone()),
-                                end.toInstant(defaultTimeZone()))
-                    GROUP_BY_DAY ->
-                        fetchReportsV3(reportIdentifier,
-                                start.toLocalDate().toJodaLocalDate(),
-                                end.toLocalDate().toJodaLocalDate())
-                    SINGLETON ->
-                        fetchReportsV3(reportIdentifier,
-                                reportSingletonJodaLocalDate,
-                                reportSingletonJodaLocalDate)
-                }, "fetch reports succeeded", "fetch reports failed")
+        subscribeCompletable(fetchCompletable(reportIdentifier, start, end),
+                "fetch reports succeeded", "fetch reports failed")
+    }
+
+    /**
+     * Wrapper function for the mapping of the report category to the correct completable call
+     * @param reportIdentifier only reports with this identifier will be fetched
+     * @param start of the time window for grabbing reports
+     * @param end of the time window for grabbing reports
+     */
+    protected fun fetchCompletable(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime): Completable {
+        return when (reportCategory(reportIdentifier)) {
+            TIMESTAMP ->
+                fetchAllReportsV4(reportIdentifier,
+                        start.toInstant(defaultTimeZone()),
+                        end.toInstant(defaultTimeZone()))
+            GROUP_BY_DAY ->
+                fetchReportsV3(reportIdentifier,
+                        start.toLocalDate().toJodaLocalDate(),
+                        end.toLocalDate().toJodaLocalDate())
+            SINGLETON ->
+                fetchReportsV3(reportIdentifier,
+                        reportSingletonJodaLocalDate,
+                        reportSingletonJodaLocalDate)
+        }
     }
 
     /**
@@ -220,6 +247,29 @@ open class ReportRepository constructor(
                         Observable.just(progressCopy).concatWith(getReportPageAndNextRecursive(progressCopy))
                     }
                 }
+    }
+
+    /**
+     * This function will first check if the most recent report is in the database.
+     * If it is, no fetch from bridge is needed. If not, we need to query for all reports in the study duration.
+     * @param reportIdentifier of the report
+     */
+    fun fetchMostRecentReportIfNotCached(reportIdentifier: String) {
+        subscribeCompletable(
+            Observable.just(reportDao)
+                    .observeOn(asyncScheduler)
+                    .concatMap {
+                        if (it.mostRecentReportInternal(reportIdentifier).isEmpty()) {
+                            val end = now().toThreeTenLocalDateTime()
+                            val start = studyStartDate()?.toThreeTenLocalDateTime() ?: end
+                            return@concatMap fetchCompletable(reportIdentifier, start, end)
+                                    .toObservable<ReportEntityDao>()
+                        }
+                        Observable.just(it)
+                    }
+                    .flatMapCompletable {
+                        Completable.complete()
+                    }, "Fetch most recent finished", "Fetch most recent failed")
     }
 
     /**

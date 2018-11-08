@@ -107,14 +107,15 @@ fun LocalDateTime.toJodaDateTime(): org.joda.time.DateTime {
 
 fun org.joda.time.DateTime.toThreeTenLocalDateTime(): LocalDateTime {
     // TODO: mdephillips 10/14/18 better way to convert from jodatime DateTime 3tenbp LocalDateTime?
-    return LocalDateTime.now()
-            .withYear(this.year)
-            .withDayOfYear(this.dayOfYear)
-            .withHour(this.hourOfDay)
-            .withMinute(this.minuteOfHour)
-            .withSecond(this.secondOfMinute)
+    return LocalDateTime.of(
+            this.year,
+            this.monthOfYear,
+            this.dayOfMonth,
+            this.hourOfDay,
+            this.minuteOfHour,
+            this.secondOfMinute,
             // millis only supported by Joda and will be converted to nano seconds
-            .withNano((this.millisOfSecond * 1e6).toInt())
+            (this.millisOfSecond * 1e6).toInt())
 }
 
 fun LocalDate.toJodaLocalDate(): org.joda.time.LocalDate {

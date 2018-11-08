@@ -48,9 +48,12 @@ import org.mockito.MockitoAnnotations
 import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
+import org.sagebionetworks.research.sageresearch.dao.room.ClientData
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
+import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.entityCopy
+import org.sagebionetworks.research.sageresearch.dao.room.mapValue
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
@@ -86,7 +89,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         val bridgeGson = EntityTypeConverters().bridgeGson
     }
 
-    lateinit var reportRepository: ReportRepository
+    lateinit var reportRepository: MockReportRepository
     @Mock
     lateinit var participantManager: ParticipantRecordManager
     @Mock
@@ -253,6 +256,118 @@ class ReportRepositoryTests: RoomTestHelper() {
                 reportRepository.reportSingletonLocalDate, reportRepository.reportSingletonLocalDate)).size)
     }
 
+    @Test
+    fun test_fetchReportsMostRecentV4() {
+        // the MockReportRepository will map this to the timestamp category
+        val reportIdentifier = MockReportRepository.reportIdentifierV4
+        assertEquals(0, getValue(reportDao.mostRecentReport(reportIdentifier)).size)
+
+        val end = reportRepository.nowVal
+        val start = reportRepository.studyStartDate() ?: end
+
+        // Set up the participantManager to return the correct report page sequence
+        doReturn(Single.just(reportCursorV4Page1))  // page 1 contains 2 reports
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, null)
+
+        doReturn(Single.just(reportCursorV4Page2))  // page 2 contains 2 reports, offset key is "2", see "test_reports_v4_1.json"
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "2")
+
+        doReturn(Single.just(reportCursorV4Page3))  // page 3 contains 1 report, offset key is "3", see "test_reports_v4_2.json"
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "3")
+
+        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        // The first page should still save to the database correctly
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
+        assertReportsContain(listOf("4"), mostRecent)
+    }
+
+    @Test
+    fun test_fetchReportsNoFetchNeededV4() {
+        // the MockReportRepository will map this to the groupByDay
+        val reportIdentifier = MockReportRepository.reportIdentifierV3Singleton
+        reportDao.upsert(listOf(ReportEntity(identifier = reportIdentifier,
+                data = ClientData("5"),
+                localDate = reportRepository.reportSingletonLocalDate)))
+        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReport(reportIdentifier)))
+
+        val end = reportRepository.nowVal
+        val start = reportRepository.studyStartDate() ?: end
+
+        // Set up the participantManager to return the correct report page sequence
+        doReturn(Single.just(reportCursorV4Page1))  // page 1 contains 2 reports
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, null)
+
+        doReturn(Single.just(reportCursorV4Page2))  // page 2 contains 2 reports, offset key is "2", see "test_reports_v4_1.json"
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "2")
+
+        doReturn(Single.just(reportCursorV4Page3))  // page 3 contains 1 report, offset key is "3", see "test_reports_v4_2.json"
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "3")
+
+        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        // The fetch request should never happen, and therefore, the "4" guid should not be the newest
+        // even though it would be the newest if the fetch went through
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
+        assertReportsContain(listOf("5"), mostRecent)
+    }
+
+    @Test
+    fun test_fetchReportsMostRecentV3() {
+        // the MockReportRepository will map this to the groupByDay
+        val reportIdentifier = MockReportRepository.reportIdentifierV3Singleton
+        assertEquals(0, getValue(reportDao.mostRecentReport(reportIdentifier)).size)
+
+        // Set up the participantManager to return the correct report page sequence
+        doReturn(Single.just(reportDataListSingletonV3)) // contains 5 reports
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV3(reportIdentifier,
+                        reportRepository.reportSingletonJodaLocalDate,
+                        reportRepository.reportSingletonJodaLocalDate)
+
+        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        // The first page should still save to the database correctly
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
+        assertReportsContain(listOf("4"), mostRecent)
+    }
+
+    @Test
+    fun test_fetchReportsNoFetchNeededV3() {
+        // the MockReportRepository will map this to the groupByDay
+        val reportIdentifier = MockReportRepository.reportIdentifierV3Singleton
+        reportDao.upsert(listOf(ReportEntity(identifier = reportIdentifier,
+                data = ClientData("5"),
+                localDate = reportRepository.reportSingletonLocalDate)))
+        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReport(reportIdentifier)))
+
+        // Set up the participantManager to return the correct report page sequence
+        doReturn(Single.just(reportDataListSingletonV3)) // contains 5 reports
+                .`when`<ParticipantRecordManager>(participantManager)
+                .getReportsV3(reportIdentifier,
+                        reportRepository.reportSingletonJodaLocalDate,
+                        reportRepository.reportSingletonJodaLocalDate)
+
+        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        // The fetch request should never happen, and therefore, the "4" guid should not be the newest
+        // even though it would be the newest if the fetch went through
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
+        assertReportsContain(listOf("5"), mostRecent)
+    }
+
+    fun assertReportsContain(clientDataGuid: List<String>, reportList: List<ReportEntity>) {
+        assertEquals(clientDataGuid.size, reportList.size)
+        assertEquals(0, reportList.filter { report ->
+            report.data?.mapValue("guid")?.let {
+                clientDataGuid.contains(it)
+            }
+            false
+        }.size)
+    }
+
     fun assertMapEquals(expected: Map<String, Any>, actual: Map<String, Any>) {
         assertEquals(expected.size, actual.size)
         expected.forEach {
@@ -278,6 +393,15 @@ class ReportRepositoryTests: RoomTestHelper() {
             categoryMapping[reportIdentifierV4] = ReportCategory.TIMESTAMP
             categoryMapping[reportIdentifierV3] = ReportCategory.GROUP_BY_DAY
             categoryMapping[reportIdentifierV3Singleton] = ReportCategory.SINGLETON
+        }
+
+        val nowVal: org.joda.time.DateTime get() = now()
+        override fun now(): org.joda.time.DateTime {
+            return org.joda.time.DateTime.parse("2018-11-12T0:00:00.000Z")
+        }
+
+        override fun studyStartDate(): org.joda.time.DateTime? {
+            return org.joda.time.DateTime.parse("2018-11-06T0:00:00.00Z")
         }
 
         override fun defaultTimeZone(): ZoneId {

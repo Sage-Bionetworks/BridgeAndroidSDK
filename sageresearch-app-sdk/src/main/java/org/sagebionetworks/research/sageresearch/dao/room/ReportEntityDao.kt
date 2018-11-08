@@ -88,6 +88,14 @@ interface ReportEntityDao {
     fun mostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>>
 
     /**
+     * Get the most recent report for a reportIdentifier
+     * @param reportIdentifier reports returned will all have this report identifier
+     * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
+     */
+    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_IDENTIFIER)
+    fun mostRecentReportInternal(reportIdentifier: String): List<ReportEntity>
+
+    /**
      * Deletes all rows that match the query
      * @param reportIdentifier reports deleted will all have this report identifier
      * @param start of the time window to query for reports
