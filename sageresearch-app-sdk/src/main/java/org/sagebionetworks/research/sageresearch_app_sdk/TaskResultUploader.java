@@ -39,7 +39,6 @@ import android.support.annotation.NonNull;
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
-import org.sagebionetworks.bridge.android.di.BridgeStudyParticipantScope;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
@@ -52,7 +51,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
-import org.sagebionetworks.research.sageresearch.viewmodel.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +59,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Locale;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import io.reactivex.Completable;
 import io.reactivex.subjects.CompletableSubject;

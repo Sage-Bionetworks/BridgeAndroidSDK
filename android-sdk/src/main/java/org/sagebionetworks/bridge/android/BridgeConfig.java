@@ -17,6 +17,7 @@ import android.text.TextUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonParseException;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
 import org.sagebionetworks.bridge.android.di.BridgeStudyScope;
@@ -77,12 +78,21 @@ public class BridgeConfig {
      */
     public static final String TASK_TO_SCHEMA_FILENAME = "task_to_schema.json";
 
+    /**
+     * The filename for the json map of task identifier to report category mappings.
+     * If none is provided, or a task identifier is absent, TIMESTAMP category will be used.
+     * This file should be placed in the asset folder.
+     */
+    public static final String REPORT_CATEGORY_MAPPINGS_FILENAME = "report_mappings.json";
+
     private static final String KEY_EXTERNAL_ID_EMAIL_FORMAT = "emailFormat";
     private static final String KEY_EXTERNAL_ID_PASSWORD_FORMAT = "passwordFormat";
     private static final Type STRING_TO_STRING_MAP =
             new TypeToken<Map<String, String>>(){}.getType();
     private static final Type TASK_TO_SCHEMA_TYPE =
             new TypeToken<Map<String, SchemaKey>>(){}.getType();
+    private static final Type REPORT_CATEGORY_MAP_TYPE =
+            new TypeToken<Map<String, ReportCategory>>(){}.getType();
 
     private final Context applicationContext;
     private final String externalIdEmailFormat;
@@ -95,6 +105,7 @@ public class BridgeConfig {
 
     private final String externalIdPasswordFormat;
     private final Map<String, SchemaKey> taskToSchemaMap;
+    private final Map<String, ReportCategory> taskToReportCategoryMap;
 
     @Inject
     public BridgeConfig(@NonNull Context context) {
@@ -104,9 +115,14 @@ public class BridgeConfig {
 
         // Load task ID to schema map.
         // Temp var is required to satisfy Java's assign-once semantics for final members.
-        Map<String, SchemaKey> tempTaskToSchemaMap = loadJsonAsset(TASK_TO_SCHEMA_FILENAME,
-                TASK_TO_SCHEMA_TYPE);
+        Map<String, SchemaKey> tempTaskToSchemaMap =
+                loadJsonAsset(TASK_TO_SCHEMA_FILENAME, TASK_TO_SCHEMA_TYPE);
         taskToSchemaMap = tempTaskToSchemaMap != null ? tempTaskToSchemaMap : ImmutableMap.of();
+
+        // Load task ID to report category map
+        Map<String, ReportCategory> reportMappings =
+                loadJsonAsset(REPORT_CATEGORY_MAPPINGS_FILENAME, REPORT_CATEGORY_MAP_TYPE);
+        taskToReportCategoryMap = reportMappings != null ? reportMappings : ImmutableMap.of();
 
         // Load external ID settings, if present.
         Map<String, String> externalIdSettings = loadJsonAsset(EXTERNAL_ID_SETTINGS_FILENAME,
@@ -230,6 +246,16 @@ public class BridgeConfig {
     }
 
     /**
+     * This is obtained from assets/report_mappings.json in your app.
+     * This will never return null, but may return an empty map.
+     * @return the map from task id to report category.
+     */
+    @NonNull
+    public Map<String, ReportCategory> getTaskToReportCategoryMap() {
+        return taskToReportCategoryMap;
+    }
+
+    /**
      * Uses {@link #getStudyName()}, {@link #getAppVersion()}, {@link #getDeviceName()}, {@link
      * VERSION#RELEASE}, and {@link #getSdkVersion()}
      *
@@ -313,5 +339,18 @@ public class BridgeConfig {
             throw new UnsupportedOperationException("Credentials for external ID require asset file " +
                     EXTERNAL_ID_SETTINGS_FILENAME);
         }
+    }
+
+    /**
+     * The category for a given report. This is used to determine whether the `dateTime` or `localDate`
+     * properties on `ReportDataEntity` are used to group the reports.
+     */
+    public enum ReportCategory {
+        @SerializedName("timestamp")
+        TIMESTAMP,
+        @SerializedName("groupByDay")
+        GROUP_BY_DAY,
+        @SerializedName("singleton")
+        SINGLETON
     }
 }

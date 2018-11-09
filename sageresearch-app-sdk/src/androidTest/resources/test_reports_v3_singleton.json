@@ -1,0 +1,66 @@
+{
+  "requestParams": {
+    "allOfGroups": [
+      "string"
+    ],
+    "assignmentFilter": true,
+    "emailFilter": "string",
+    "endDate": "2018-11-8",
+    "endTime": "2018-11-8T00:00:00.000Z",
+    "idFilter": "string",
+    "language": "string",
+    "noneOfGroups": [
+      "string"
+    ],
+    "offsetBy": 0,
+    "offsetKey": "string",
+    "pageSize": 0,
+    "phoneFilter": "string",
+    "reportType": "participant",
+    "scheduledOnStart": "2018-11-07T00:00:00.000Z",
+    "scheduledOnEnd": "2018-11-7T00:00:00.000Z",
+    "startDate": "2018-11-7",
+    "startTime": "2018-11-7T00:00:00.000Z",
+    "total": 0,
+    "summary": true,
+    "type": "string"
+  },
+  "items": [
+    {
+      "localDate": "1970-01-01",
+      "data": {
+        "guid" : "0"
+      },
+      "type": "string"
+    },
+    {
+      "localDate": "1970-01-01",
+      "data": {
+        "guid" : "1"
+      },
+      "type": "string"
+    },
+    {
+      "localDate": "1970-01-01",
+      "data": {
+        "guid" : "2"
+      },
+      "type": "string"
+    },
+    {
+      "localDate": "1970-01-01",
+      "data": {
+        "guid" : "3"
+      },
+      "type": "string"
+    },
+    {
+      "localDate": "1970-01-01",
+      "data": {
+        "guid" : "4"
+      },
+      "type": "string"
+    }
+  ],
+  "type": "string"
+}

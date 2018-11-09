@@ -2,11 +2,6 @@ package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.arch.persistence.room.TypeConverter
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonParseException
-import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSyntaxException
 import com.google.gson.TypeAdapter
 
@@ -14,10 +9,8 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.DateTimeZone
 import org.researchstack.backbone.utils.LogExt
-import org.researchstack.backbone.utils.ResUtils
 import org.sagebionetworks.bridge.rest.RestUtils
 
 import org.sagebionetworks.bridge.rest.gson.ByteArrayToBase64TypeAdapter
@@ -25,20 +18,24 @@ import org.sagebionetworks.bridge.rest.gson.DateTimeTypeAdapter
 import org.sagebionetworks.bridge.rest.gson.LocalDateTypeAdapter
 import org.sagebionetworks.bridge.rest.model.Activity
 import org.sagebionetworks.bridge.rest.model.ActivityType
+import org.sagebionetworks.bridge.rest.model.ReportData
 import org.sagebionetworks.bridge.rest.model.ScheduleStatus
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.TaskReference
-import org.sagebionetworks.research.domain.result.interfaces.TaskResult
 import org.sagebionetworks.research.sageresearch.extensions.toJodaDateTime
+import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
+import org.sagebionetworks.research.sageresearch.extensions.toThreeTenInstant
+import org.sagebionetworks.research.sageresearch.extensions.toThreeTenLocalDate
 import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
+import org.threeten.bp.LocalDate
 
 import org.threeten.bp.LocalDateTime
+import org.threeten.bp.ZonedDateTime
 import org.threeten.bp.format.DateTimeFormatter
 import java.io.IOException
-import java.lang.reflect.Type
-import java.util.UUID
+import java.io.Serializable
 
 //
 //  Copyright © 2018 Sage Bionetworks. All rights reserved.
@@ -99,14 +96,28 @@ class EntityTypeConverters {
 
     val bridgeGson = GsonBuilder()
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
-            .registerTypeAdapter(LocalDate::class.java, LocalDateTypeAdapter())
+            .registerTypeAdapter(org.joda.time.LocalDate::class.java, LocalDateTypeAdapter())
             .registerTypeAdapter(DateTime::class.java, DateTimeTypeAdapter())
             .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter())
+            .registerTypeAdapter(ZonedDateTime::class.java, ZonedDateTimeAdapter())
+            .registerTypeAdapter(LocalDate::class.java, LocalDateAdapter())
             .registerTypeAdapter(Instant::class.java, InstantAdapter())
             .create()
 
     private val schemaRefListType = object : TypeToken<List<RoomSchemaReference>>() {}.type
     private val surveyRefListType = object : TypeToken<List<RoomSurveyReference>>() {}.type
+
+    @TypeConverter
+    fun fromLocalDateString(value: String?): LocalDate? {
+        val valueChecked = value ?: return null
+        return LocalDate.parse(valueChecked)
+    }
+
+    @TypeConverter
+    fun fromLocalDate(value: LocalDate?): String? {
+        val valueChecked = value ?: return null
+        return valueChecked.toString()
+    }
 
     @TypeConverter
     fun fromLocalDateTimeString(value: String?): LocalDateTime? {
@@ -193,9 +204,9 @@ class EntityTypeConverters {
 
     fun fromScheduledActivityListV4(value: ScheduledActivityListV4?): List<ScheduledActivityEntity>? {
         val valueChecked = value ?: return null
-        var activities = ArrayList<ScheduledActivityEntity>()
+        val activities = ArrayList<ScheduledActivityEntity>()
         for (scheduledActivity in valueChecked.items) {
-            var roomActivity = bridgeGson.fromJson(
+            val roomActivity = bridgeGson.fromJson(
                     bridgeGson.toJson(scheduledActivity), ScheduledActivityEntity::class.java)
             scheduledActivity.clientData.let {
                 roomActivity.clientData = ClientData(it)
@@ -272,6 +283,32 @@ fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
 }
 
 /**
+ * @return ReportData that can be consumed by bridge
+ */
+fun ReportData.entityCopy(reportIdentifier: String): ReportEntity {
+    return ReportEntity(
+            identifier = reportIdentifier,
+            data = if (this.data != null) ClientData(this.data) else null,
+            dateTime = this.dateTime?.toThreeTenInstant(),
+            localDate = this.localDate?.toThreeTenLocalDate())
+}
+
+/**
+ * @return ReportData that can be consumed by bridge
+ */
+fun ReportEntity.bridgeCopy(): ReportData {
+    val report = ReportData()
+    this.dateTime?.let {
+        report.dateTime = DateTime(it.toEpochMilli(), DateTimeZone.UTC)
+    }
+    this.localDate?.let {
+        report.localDate = it.toJodaLocalDate()
+    }
+    report.data = this.data?.data
+    return report
+}
+
+/**
  * 'LocalDateTimeAdapter' is needed when going from
  * ScheduledActivity.scheduledOn: DateTime to ScheduledActivityEntity.scheduledOn: LocalDateTime
  */
@@ -311,4 +348,75 @@ class InstantAdapter: TypeAdapter<Instant>() {
             writer.nullValue()
         }
     }
+}
+
+/**
+ * 'LocalDateTimeAdapter' is needed when going from
+ * ScheduledActivity.scheduledOn: DateTime to ScheduledActivityEntity.scheduledOn: LocalDateTime
+ */
+class LocalDateAdapter: TypeAdapter<LocalDate>() {
+    @Throws(IOException::class)
+    override fun read(reader: JsonReader): LocalDate {
+        val src = reader.nextString()
+        return LocalDate.parse(src)
+    }
+
+    @Throws(IOException::class)
+    override fun write(writer: JsonWriter, date: LocalDate?) {
+        date?.let {
+            writer.value(it.toString())
+        } ?: run {
+            writer.nullValue()
+        }
+    }
+}
+
+/**
+ * 'ZonedDateTimeAdapter' is needed when going from client data zoned date time to a iso date format
+ */
+class ZonedDateTimeAdapter: TypeAdapter<ZonedDateTime>() {
+    @Throws(IOException::class)
+    override fun read(reader: JsonReader): ZonedDateTime {
+        val src = reader.nextString()
+        return ZonedDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(src))
+    }
+
+    @Throws(IOException::class)
+    override fun write(writer: JsonWriter, date: ZonedDateTime?) {
+        date?.let {
+            writer.value(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(it))
+        } ?: run {
+            writer.nullValue()
+        }
+    }
+}
+
+/**
+ * Client data wrapper class to allow for custom read/write for Room Any type objects
+ */
+data class ClientData(var data: Any? = null): Serializable
+
+/**
+ * @param key for retrieving the value if client data is a map
+ * @return the value for the map key if client data is a map, null otherwise
+ */
+fun ClientData.mapValue(key: String): Any? {
+    (this.data as? Map<*, *>)?.forEach { it ->
+        if (it.key == key) {
+            return it.value
+        }
+    }
+    return null
+}
+
+@Suppress("UNCHECKED_CAST")
+fun <T> ClientData.mapValue(key: String, type: Class<T>): T? {
+    (this.data as? Map<*, *>)?.forEach { entry ->
+        if (entry.key == key) {
+            (entry.value as? T)?.let {
+                return it
+            }
+        }
+    }
+    return null
 }
