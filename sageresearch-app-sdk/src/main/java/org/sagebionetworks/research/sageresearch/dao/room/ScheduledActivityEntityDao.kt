@@ -151,6 +151,14 @@ interface ScheduledActivityEntityDao {
     fun mostRecentFinishedActivity(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
 
     /**
+     * Get the the oldest activity from the group of activities within the set of activity identifiers
+     * @param activityGroup that will be included in results
+     * @return the oldest schedule that matches the query
+     */
+    @Query(RoomSql.SCHEDULE_OLDEST_ACTIVITY)
+    fun oldestActivity(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
+
+    /**
      * @return all the activities where activity.needsSyncedToBridge is true
      */
     @Query(RoomSql.SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED)

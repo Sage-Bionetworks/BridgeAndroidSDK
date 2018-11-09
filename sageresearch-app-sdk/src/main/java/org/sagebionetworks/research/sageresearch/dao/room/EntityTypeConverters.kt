@@ -408,3 +408,15 @@ fun ClientData.mapValue(key: String): Any? {
     }
     return null
 }
+
+@Suppress("UNCHECKED_CAST")
+fun <T> ClientData.mapValue(key: String, type: Class<T>): T? {
+    (this.data as? Map<*, *>)?.forEach { entry ->
+        if (entry.key == key) {
+            (entry.value as? T)?.let {
+                return it
+            }
+        }
+    }
+    return null
+}

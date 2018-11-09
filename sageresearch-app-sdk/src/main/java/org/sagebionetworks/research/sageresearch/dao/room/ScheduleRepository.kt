@@ -1,6 +1,7 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.annotation.SuppressLint
+import android.arch.lifecycle.MutableLiveData
 import android.content.Context
 import android.content.SharedPreferences
 import android.support.annotation.RestrictTo
@@ -10,7 +11,10 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
 import io.reactivex.Observable
+import io.reactivex.Scheduler
 import io.reactivex.Single
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.joda.time.Days
@@ -154,19 +158,47 @@ open class ScheduleRepository constructor(
         }
 
     /**
+     * @property asyncScheduler for performing network and database operations
+     */
+    @VisibleForTesting
+    protected open val asyncScheduler: Scheduler get() = Schedulers.io()
+
+    /**
+     * @property scheduleRepoErrorLiveData for monitoring error messages from the schedule repository
+     */
+    val scheduleRepoErrorLiveData = MutableLiveData<String>()
+
+    protected val compositeDispose = CompositeDisposable()
+    /**
+     * Subscribes to the completable using the CompositeDisposable
+     * This is open for unit testing purposes to to run a blockingGet() instead of an asynchronous subscribe
+     */
+    @VisibleForTesting
+    protected open fun subscribeCompletable(completable: Completable, successMsg: String, errorMsg: String) {
+        compositeDispose.add(completable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    logger.info(successMsg)
+                    scheduleRepoErrorLiveData.postValue(null)
+                }, {
+                    val msg = "$errorMsg ${it.localizedMessage}"
+                    logger.warn(msg)
+                    scheduleRepoErrorLiveData.postValue(msg)
+                }))
+    }
+
+    /**
      * Makes sure the schedules we have cached are synced with the bridge server.
      * This function only operates if we are not currently syncing or have successfully synced
      */
-    @CheckReturnValue
-    fun syncSchedules(): Completable {
+    fun syncSchedules() {
         if (isSynced.get() || isSyncing.get()) {
-            // TODO @liujoshua 2018/10/03 should we return active completable so caller can wait on real sync?
-            return Completable.complete() // we are already retrieving the study's schedules
+            return // we are already retrieving the study's schedules
         }
 
         isSyncing.set(true)
 
-        val startDate = syncStartDate ?: return Completable.complete() // return if we aren't signed in yet
+        val startDate = syncStartDate ?: return // return if we aren't signed in yet
         val endDate = syncEndDate
         val requestMap = ScheduleRepositoryHelper.buildRequestMap(
                 startDate, endDate, maxRequestDays)
@@ -176,8 +208,9 @@ open class ScheduleRepository constructor(
         val requestCounter = AtomicInteger(requestMap.keys.size)
 
         // Run all the requests, and join the results for the user
-
-        return Observable.fromIterable(requestMap.keys)
+        subscribeCompletable(
+            Observable.fromIterable(requestMap.keys)
+                .observeOn(asyncScheduler)
                 .filter { requestMap[it] != null }
                 .flatMapSingle {
                     toV2Single(activityManager.getActivities(it, requestMap[it]!!))
@@ -203,7 +236,8 @@ open class ScheduleRepository constructor(
                         requestHasFailed.set(true)
                     }
                     logger.warn("Sync failed", it)
-                }
+                },
+                "Sync schedules succeed", "Sync schedules failed")
     }
 
     /**
@@ -213,8 +247,8 @@ open class ScheduleRepository constructor(
     @CheckReturnValue
     fun syncFailedSchedules(): Completable {
         return Single.fromCallable{scheduleDao.activitiesThatNeedSyncedToBridge()}
-                .subscribeOn(Schedulers.io())
-                .flatMapCompletable { updateSchedulesToBridge(it) }
+                .observeOn(asyncScheduler)
+                .flatMapCompletable { updateSchedulesToBridgeCompletable(it) }
                 .doOnError { logger.warn(it.localizedMessage) }
     }
 
@@ -247,9 +281,17 @@ open class ScheduleRepository constructor(
                     return schedule
                 })
                 .flatMapCompletable { schedule ->
-                    updateSchedulesToBridge(Collections.singletonList(schedule))
+                    updateSchedulesToBridgeCompletable(Collections.singletonList(schedule))
                 }
                 .doOnError { it.localizedMessage }
+    }
+
+    /**
+     * @param schedules to update on bridge
+     */
+    fun updateSchedulesToBridge(schedules: List<ScheduledActivityEntity>) {
+        subscribeCompletable(updateSchedulesToBridgeCompletable(schedules),
+                "Update schedule on bridge succeeded", "Update schedule on bridge failed")
     }
 
     /**
@@ -257,7 +299,8 @@ open class ScheduleRepository constructor(
      * schedules on bridge.
      */
     @CheckReturnValue
-    open fun updateSchedulesToBridge(schedules: List<ScheduledActivityEntity>): Completable {
+    @VisibleForTesting
+    protected open fun updateSchedulesToBridgeCompletable(schedules: List<ScheduledActivityEntity>): Completable {
         val bridgeSchedules = schedules.map { it.clientWritableCopy() }
 
         schedules.forEach {
@@ -265,6 +308,7 @@ open class ScheduleRepository constructor(
         }
 
         return cacheSchedules(schedules)
+                .observeOn(asyncScheduler)
                 .andThen(toV2Single(activityManager
                         .updateActivities(bridgeSchedules))
                         .flatMapCompletable { _ ->
@@ -277,7 +321,7 @@ open class ScheduleRepository constructor(
                                 // we have multiple schedules which failed, try to update them individually to identify which
                                 // one(s) are unrecoverable
                                 Completable.mergeDelayError(schedules.map {
-                                    updateScheduleToBridge(it)
+                                    updateScheduleToBridgeCompletable(it)
                                 })
                             } else {
                                 Completable.complete()
@@ -286,14 +330,24 @@ open class ScheduleRepository constructor(
                 )
     }
 
+    /**
+     * @param schedule to update on bridge
+     */
+    fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
+        subscribeCompletable(updateScheduleToBridgeCompletable(schedule),
+                "Update schedule on bridge succeeded", "Update schedule on bridge failed")
+    }
+
     @CheckReturnValue
     @RestrictTo(RestrictTo.Scope.LIBRARY)
-    fun updateScheduleToBridge(schedule: ScheduledActivityEntity): Completable {
+    @VisibleForTesting
+    protected open fun updateScheduleToBridgeCompletable(schedule: ScheduledActivityEntity): Completable {
         val bridgeSchedule = schedule.clientWritableCopy()
 
         schedule.needsSyncedToBridge = true
 
         return cacheSchedule(schedule)
+                .observeOn(asyncScheduler)
                 .andThen(
                         RxJavaInterop.toV2Single(
                                 activityManager
@@ -339,7 +393,7 @@ open class ScheduleRepository constructor(
             Single.fromCallable {
                 scheduleDao.activity(guid).first() // NoSuchElementException
             }
-                    .subscribeOn(Schedulers.io())
+                    .observeOn(asyncScheduler)
                     .onErrorResumeNext {
                         Single.error<ScheduledActivityEntity>(Throwable("No schedule found in DB with guid $guid"))
                     }
@@ -379,7 +433,8 @@ open class ScheduleRepository constructor(
         return Completable.fromAction {
                 scheduleDao.upsert(schedules)
             }
-            .subscribeOn(Schedulers.io())
+            .observeOn(asyncScheduler)
+            .subscribeOn(asyncScheduler)
             .doOnError {
                 logger.warn(it.localizedMessage)
             }
@@ -412,6 +467,12 @@ open class ScheduleRepository constructor(
      * @param taskResult for creating the answers map
      */
     fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
+            taskResult: org.researchstack.backbone.result.TaskResult) {
+        subscribeCompletable(uploadResearchStackTaskResultToS3Completable(schedule, taskResult),
+                "Upload to S3 succeed", "Upload to S3 failed")
+    }
+
+    protected fun uploadResearchStackTaskResultToS3Completable(schedule: ScheduledActivityEntity?,
             taskResult: org.researchstack.backbone.result.TaskResult): Completable {
 
         // Attempt to build the archive to upload, if successful, upload to bridge
@@ -443,6 +504,14 @@ open class ScheduleRepository constructor(
     protected fun userDataGroups(): ImmutableList<String> {
         return ImmutableList.copyOf(
                 authenticationManager.userSessionInfo?.dataGroups ?: ArrayList())
+    }
+
+    /**
+     * Updates the live data error message
+     * @param error message to publish, should be null for success
+     */
+    protected fun updateErrorLiveData(error: String?) {
+        scheduleRepoErrorLiveData.postValue(error)
     }
 }
 

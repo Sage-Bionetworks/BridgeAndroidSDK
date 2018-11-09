@@ -278,7 +278,7 @@ class ReportRepositoryTests: RoomTestHelper() {
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "3")
 
-        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        reportRepository.fetchMostRecentReport(reportIdentifier)
         // The first page should still save to the database correctly
         val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("4"), mostRecent)
@@ -309,7 +309,7 @@ class ReportRepositoryTests: RoomTestHelper() {
                 .`when`<ParticipantRecordManager>(participantManager)
                 .getReportsV4(reportIdentifier, start, end, reportRepository.reportPageSizeV4, "3")
 
-        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        reportRepository.fetchMostRecentReport(reportIdentifier)
         // The fetch request should never happen, and therefore, the "4" guid should not be the newest
         // even though it would be the newest if the fetch went through
         val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
@@ -329,7 +329,7 @@ class ReportRepositoryTests: RoomTestHelper() {
                         reportRepository.reportSingletonJodaLocalDate,
                         reportRepository.reportSingletonJodaLocalDate)
 
-        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        reportRepository.fetchMostRecentReport(reportIdentifier)
         // The first page should still save to the database correctly
         val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("4"), mostRecent)
@@ -351,7 +351,7 @@ class ReportRepositoryTests: RoomTestHelper() {
                         reportRepository.reportSingletonJodaLocalDate,
                         reportRepository.reportSingletonJodaLocalDate)
 
-        reportRepository.fetchMostRecentReportIfNotCached(reportIdentifier)
+        reportRepository.fetchMostRecentReport(reportIdentifier)
         // The fetch request should never happen, and therefore, the "4" guid should not be the newest
         // even though it would be the newest if the fetch went through
         val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))

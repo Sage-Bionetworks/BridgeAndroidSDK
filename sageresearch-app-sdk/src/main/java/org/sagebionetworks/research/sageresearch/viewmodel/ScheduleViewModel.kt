@@ -4,9 +4,7 @@ import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
 import android.support.annotation.VisibleForTesting
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
 import org.joda.time.DateTime
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
@@ -50,12 +48,19 @@ import java.util.UUID
 /**
  * Abstract base class for ScheduleViewModel that simply uses the application to create the dao
  */
-abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntityDao,
+abstract class ScheduleViewModel(
+        protected var scheduleDao: ScheduledActivityEntityDao,
         protected var scheduleRepo: ScheduleRepository) : ViewModel() {
 
+    /**
+     * @property compositeDispose used to hold on to any subscriptions
+     */
     protected val compositeDispose = CompositeDisposable()
 
-    val scheduleSyncErrorMessageLiveData = MutableLiveData<String>()
+    /**
+     * @property scheduleErrorLiveData for monitoring error messages from the schedule repository
+     */
+    val scheduleErrorLiveData: MutableLiveData<String> get() = scheduleRepo.scheduleRepoErrorLiveData
 
     @VisibleForTesting
     protected open val timezone: ZoneId get() = ZoneId.systemDefault()
@@ -84,12 +89,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
 
     init {
         // This will make sure the schedules are synced with the server
-        compositeDispose.add(
-                scheduleRepo.syncSchedules().subscribe({
-                    scheduleSyncErrorMessageLiveData.postValue(null)
-                }, { t ->
-                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
-                }))
+        scheduleRepo.syncSchedules()
     }
 
     /**
@@ -110,12 +110,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
      * @param schedule to update on bridge
      */
     fun updateScheduleToBridge(schedule: ScheduledActivityEntity) {
-        compositeDispose.add(
-                scheduleRepo.updateScheduleToBridge(schedule).subscribe({
-                    scheduleSyncErrorMessageLiveData.postValue(null)
-                }, { t ->
-                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
-                }))
+        scheduleRepo.updateScheduleToBridge(schedule)
     }
 
     /**
@@ -125,16 +120,7 @@ abstract class ScheduleViewModel(private var scheduleDao: ScheduledActivityEntit
      */
     fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
             taskResult: org.researchstack.backbone.result.TaskResult) {
-
-        compositeDispose.add(
-                scheduleRepo.uploadResearchStackTaskResultToS3(schedule, taskResult)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({
-                    scheduleSyncErrorMessageLiveData.postValue(null)
-                }, { t ->
-                    scheduleSyncErrorMessageLiveData.postValue(t.localizedMessage)
-                }))
+        scheduleRepo.uploadResearchStackTaskResultToS3(schedule, taskResult)
     }
 
     /**

@@ -120,7 +120,7 @@ internal class RoomSql {
         /**
          * ORDER BY constants do sorting on queries
          */
-
+        private const val ORDER_BY_SCHEDULED_ON_OLDEST = " ORDER BY scheduledOn ASC"
         private const val ORDER_BY_FINISHED = " ORDER BY finishedOn DESC"
         private const val ORDER_BY_REPORT_DATE = " ORDER BY localDate, dateTime DESC"
 
@@ -232,6 +232,10 @@ internal class RoomSql {
         const val SCHEDULE_MOST_RECENT_FINISHED_ACTIVITY =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID + OP_AND +
                         SCHEDULE_CONDITION_FINISHED + ORDER_BY_FINISHED + LIMIT_1
+
+        const val SCHEDULE_OLDEST_ACTIVITY =
+                SCHEDULE_SELECT + SCHEDULE_CONDITION_ACTIVITY_GROUP_ID +
+                        ORDER_BY_SCHEDULED_ON_OLDEST + LIMIT_1
 
         const val SCHEDULE_ACTIVITIES_THAT_NEED_SYNCED =
                 SCHEDULE_SELECT + SCHEDULE_CONDITION_NEEDS_SYNCED_TO_BRIDGE

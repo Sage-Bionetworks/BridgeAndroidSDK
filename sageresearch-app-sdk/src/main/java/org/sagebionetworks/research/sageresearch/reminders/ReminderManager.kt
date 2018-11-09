@@ -94,6 +94,16 @@ open class ReminderManager(context: Context) {
     }
 
     /**
+     * @param guid to check for
+     * @return true if the reminder with the guid is scheduled, false otherwise
+     */
+    fun isReminderScheduled(guid: String): Boolean {
+        return allActiveReminders().any {
+            it.guid == guid
+        }
+    }
+
+    /**
      * Converts a reminder json string to a Reminder
      * @param reminderJson formed by serializing a Reminder object with Gson
      * @return reminder formed from reminderJson using Gson

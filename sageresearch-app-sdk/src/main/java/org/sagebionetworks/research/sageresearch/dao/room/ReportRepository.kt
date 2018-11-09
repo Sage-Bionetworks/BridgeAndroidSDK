@@ -32,6 +32,7 @@
 
 package org.sagebionetworks.research.sageresearch.dao.room
 
+import android.arch.lifecycle.LiveData
 import android.support.annotation.VisibleForTesting
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
@@ -141,9 +142,22 @@ open class ReportRepository constructor(
      * @param start of the time window for grabbing reports
      * @param end of the time window for grabbing reports
      */
-    fun fetchReports(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime) {
+    fun fetchReports(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime): LiveData<List<ReportEntity>> {
+        // Fetch the reports from bridge
         subscribeCompletable(fetchCompletable(reportIdentifier, start, end),
                 "fetch reports succeeded", "fetch reports failed")
+        // return the live data link to the database query that will update again when reports return from bridge
+        return when(reportCategory(reportIdentifier)) {
+            TIMESTAMP ->
+                reportDao.reports(reportIdentifier,
+                        start.toInstant(defaultTimeZone()), end.toInstant(defaultTimeZone()))
+            GROUP_BY_DAY ->
+                reportDao.reports(reportIdentifier,
+                        start.toLocalDate(), end.toLocalDate())
+            SINGLETON ->
+                reportDao.reports(reportIdentifier,
+                        reportSingletonLocalDate, reportSingletonLocalDate)
+        }
     }
 
     /**
@@ -254,7 +268,9 @@ open class ReportRepository constructor(
      * If it is, no fetch from bridge is needed. If not, we need to query for all reports in the study duration.
      * @param reportIdentifier of the report
      */
-    fun fetchMostRecentReportIfNotCached(reportIdentifier: String) {
+    fun fetchMostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
+        // Unless there is at least one cached report with this identifier
+        // Fetch the entire study's worth of reports from bridge to find the most recent
         subscribeCompletable(
             Observable.just(reportDao)
                     .observeOn(asyncScheduler)
@@ -270,6 +286,9 @@ open class ReportRepository constructor(
                     .flatMapCompletable {
                         Completable.complete()
                     }, "Fetch most recent finished", "Fetch most recent failed")
+
+        // return the live data link to the database query for the most recent report
+        return reportDao.mostRecentReport(reportIdentifier)
     }
 
     /**
@@ -297,6 +316,8 @@ open class ReportRepository constructor(
      */
     protected fun saveReports(reports: List<ReportEntity>) {
         reports.forEach { it ->
+            val reportIdentifier = it.identifier
+            val category = reportCategory(it.identifier)
             // Let's add a subscription for each one so that we know which reports synced with bridge properly
             subscribeCompletable(
                     toV2Single(participantManager
@@ -304,15 +325,33 @@ open class ReportRepository constructor(
                     .observeOn(asyncScheduler)
                     .flatMapCompletable { _ ->
                         it.needsSyncedToBridge = false
-                        writeReportToRoom(it)
+                        appendReportToRoom(it)
                     }
                     .onErrorResumeNext { throwable ->
                         // TODO: mdephillips 11/6/18 are there any errors that mean we shouldn't try to re-sync later?
                         logger.warn(throwable.localizedMessage)
                         it.needsSyncedToBridge = true
-                        writeReportToRoom(it)
+                        appendReportToRoom(it)
                     }, "Save report succeeded for $it", "Save report failed for $it")
         }
+    }
+
+    /**
+     * This function should only be called when we are positive this will be a new report append to the database
+     * The main scenario this is needed is when we complete a task and save the task result as new reports in Room
+     * @param the report to append
+     * @return the completable to determine when the operation(s) are done
+     */
+    private fun appendReportToRoom(report: ReportEntity): Completable {
+        val reportIdentifier = report.identifier
+        val category = reportCategory(reportIdentifier)
+        if (category == SINGLETON && reportIdentifier != null) {
+            // SINGLETON types are a special case, because we need to replace the existing
+            // one because otherwise there will duplicates with no way of knowing the most recent
+            return replaceReportsInRoom(reportIdentifier,
+                    reportSingletonLocalDate, reportSingletonLocalDate, listOf(report))
+        }
+        return writeReportToRoom(report)
     }
 
     /**
@@ -397,9 +436,10 @@ open class ReportRepository constructor(
      * @return the report category (if any defined) for the given identifier. Default calls through to
      *         `BridgeConfiguration`, then the member var categoryMapping, then defaults to timestamp
      */
-    open fun reportCategory(reportIdentifier: String): ReportCategory {
-        bridgeConfig.taskToReportCategoryMap[reportIdentifier]?.let { return it }
-        categoryMapping[reportIdentifier]?.let { return it }
+    open fun reportCategory(reportIdentifier: String?): ReportCategory {
+        val identifier = reportIdentifier ?: return TIMESTAMP
+        bridgeConfig.taskToReportCategoryMap[identifier]?.let { return it }
+        categoryMapping[identifier]?.let { return it }
         return TIMESTAMP
     }
 
