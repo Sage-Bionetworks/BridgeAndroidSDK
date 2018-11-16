@@ -93,6 +93,13 @@ open class ReportRepository constructor(
     open val reportPageSizeV4: Int get() = 50
 
     /**
+     * @property resultExclusionList Allows for excluding a specific result identifier from the
+     *                               clientDataAnswerMap so it will not show up in a report.
+     *
+     */
+    open val resultExclusionList: MutableList<String> = mutableListOf()
+
+    /**
      * @property reportSingletonDate used when doing read/write on singleton category reports
      */
     val reportSingletonDate: Instant = Instant.EPOCH
@@ -449,7 +456,11 @@ open class ReportRepository constructor(
      * @return the client data built for this task result as a json string
      */
     open fun buildClientData(taskResult: TaskResult): Map<String, Any>? {
-        return taskResult.clientDataAnswerMap()
+        val clientData = taskResult.clientDataAnswerMap()
+        // Exclude any results that should not make it into a report
+        return clientData.filter {
+            !resultExclusionList.contains(it.key)
+        }
     }
 
     /**
@@ -458,7 +469,11 @@ open class ReportRepository constructor(
      * @return the client data built for this task result as a json string
      */
     open fun buildClientData(rsTaskResult: org.researchstack.backbone.result.TaskResult): Map<String, Any>? {
-        return rsTaskResult.clientDataAnswerMap()
+        val clientData = rsTaskResult.clientDataAnswerMap()
+        // Exclude any results that should not make it into a report
+        return clientData.filter {
+            !resultExclusionList.contains(it.key)
+        }
     }
 
     /**

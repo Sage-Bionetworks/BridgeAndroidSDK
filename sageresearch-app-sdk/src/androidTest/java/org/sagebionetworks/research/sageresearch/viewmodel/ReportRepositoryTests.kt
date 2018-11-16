@@ -38,6 +38,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import org.joda.time.DateTimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
 import org.junit.Before
@@ -55,6 +56,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.entityCopy
 import org.sagebionetworks.research.sageresearch.dao.room.mapValue
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
+import org.sagebionetworks.research.sageresearch.viewmodel.TaskResultHelper.Companion
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
@@ -117,6 +119,21 @@ class ReportRepositoryTests: RoomTestHelper() {
         assertNotNull(clientData)
         clientData?.let {
             assertMapEquals(TaskResultHelper.expectedSurveyClientDataMap, it)
+        }
+    }
+
+    @Test
+    fun test_buildClientDataExclusions() {
+        reportRepository.resultExclusionList.add(TaskResultHelper.intAnswerResultId)
+        val clientData = reportRepository.buildClientData(TaskResultHelper.surveyTaskResult())
+        assertNotNull(clientData)
+        clientData?.let {
+            assertNull(it[TaskResultHelper.intAnswerResultId])
+        }
+        val clientDataRs = reportRepository.buildClientData(TaskResultHelper.researchStackSurveyTaskResult())
+        assertNotNull(clientDataRs)
+        clientDataRs?.let {
+            assertNull(it[TaskResultHelper.intAnswerResultId])
         }
     }
 
