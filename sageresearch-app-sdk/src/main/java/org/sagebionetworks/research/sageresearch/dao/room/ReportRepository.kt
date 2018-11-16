@@ -95,7 +95,8 @@ open class ReportRepository constructor(
     /**
      * @property resultExclusionList Allows for excluding a specific result identifier from the
      *                               clientDataAnswerMap so it will not show up in a report.
-     *
+     *                               This can be used to make sure sensitive information isn't stored in a report
+     *                               Or to simply make the size of the report smaller.
      */
     open val resultExclusionList: MutableList<String> = mutableListOf()
 
