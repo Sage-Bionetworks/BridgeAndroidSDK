@@ -172,7 +172,6 @@ open class ReminderAlarmReceiver: BroadcastReceiver() {
         }
     }
 
-    @VisibleForTesting
     open protected fun createReminderManager(context: Context): ReminderManager {
         return ReminderManager(context)
     }
