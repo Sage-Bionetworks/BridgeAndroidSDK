@@ -142,26 +142,39 @@ public class TaskResultUploader implements TaskResultProcessor {
     @NonNull
     protected Completable metadataCompletable(@NonNull Archive.Builder builder, @NonNull TaskResult taskResult) {
         return scheduleRepo.findSchedule(taskResult.getTaskUUID())
-                .map(scheduledActivityEntity -> {
-                    ScheduledActivity sa = new ScheduledActivity();
-                    if (scheduledActivityEntity != null) {
-                        sa = EntityTypeConverters.bridgeMetaDataSchedule(scheduledActivityEntity);
-                    }
+                .map(scheduleEntity -> {
+                    ScheduledActivity sa = createScheduledActivityForMetadata(taskResult, scheduleEntity);
                     JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
                             sa, getUserDataGroups(), getUserExternalId());
                     builder.addDataFile(metadataFile);
                     return Completable.complete();
                 })
                 .onErrorReturn(throwable -> {
-                    ScheduledActivity sa = new ScheduledActivity();
-                    sa.activity(new Activity()
-                            .task(new TaskReference().identifier(taskResult.getIdentifier())));
+                    ScheduledActivity sa = createScheduledActivityForMetadata(taskResult, null);
                     JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
                             sa, getUserDataGroups(), getUserExternalId());
                     builder.addDataFile(metadataFile);
                     return Completable.complete();
                 })
                 .flatMapCompletable(completable -> Completable.complete());
+    }
+
+    /**
+     * @param taskResult uses the identifier which should be the identifier of the ScheduledActivity
+     * @param scheduleEntity used to create the ScheduledActivity, if null, only task identifier will be set.
+     * @return a ScheduledActivity used for metadata archive construction.
+     */
+    @NonNull
+    private ScheduledActivity createScheduledActivityForMetadata(
+            @NonNull TaskResult taskResult, @Nullable ScheduledActivityEntity scheduleEntity) {
+
+        ScheduledActivity sa = new ScheduledActivity();
+        sa.activity(new Activity()
+                .task(new TaskReference().identifier(taskResult.getIdentifier())));
+        if (scheduleEntity != null) {
+            sa = EntityTypeConverters.bridgeMetaDataSchedule(scheduleEntity);
+        }
+        return sa;
     }
 
     /**
