@@ -128,13 +128,9 @@ open class ResearchStackUploadArchiveFactory: ArchiveFileFactory() {
             externalId: String?): JsonArchiveFile {
 
         val scheduledActivity = scheduledActivityEntity.bridgeMetadataCopy()
-        val metaDataMap = ArchiveUtil.createMetaDataInfoMap(scheduledActivity, dataGroups)
+        val metaDataMap = ArchiveUtil.createMetaDataInfoMap(scheduledActivity, dataGroups, externalId)
 
         // Here we can add some of our own additional metadata to the uplaod
-        externalId?.let {
-            metaDataMap["externalId"] = it
-        }
-
         scheduledActivity.activity?.survey?.identifier?.let {
             // Add survey identifier as taskIdentifier even though it's a survey
             // (base implementation doesn't do this)

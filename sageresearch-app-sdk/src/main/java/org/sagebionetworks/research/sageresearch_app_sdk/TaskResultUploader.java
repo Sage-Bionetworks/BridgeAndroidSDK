@@ -35,10 +35,12 @@ package org.sagebionetworks.research.sageresearch_app_sdk;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
@@ -49,18 +51,26 @@ import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.bridge.rest.model.TaskReference;
+import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import javax.inject.Inject;
 
 import io.reactivex.Completable;
+import io.reactivex.CompletableSource;
+import io.reactivex.Single;
+import io.reactivex.functions.Function;
 import io.reactivex.subjects.CompletableSubject;
 
 public class TaskResultUploader implements TaskResultProcessor {
@@ -70,9 +80,9 @@ public class TaskResultUploader implements TaskResultProcessor {
 
     private AbstractResultArchiveFactory abstractResultArchiveFactory;
 
-    private AccountDAO accountDAO;
-
     private UploadManager uploadManager;
+
+    private AuthenticationManager authManager;
 
     private ScheduleRepository scheduleRepo;
 
@@ -80,30 +90,24 @@ public class TaskResultUploader implements TaskResultProcessor {
     public TaskResultUploader(@NonNull final BridgeConfig bridgeConfig,
             @NonNull final AbstractResultArchiveFactory abstractResultArchiveFactory,
             @NonNull final UploadManager uploadManager,
-            @NonNull final AccountDAO accountDAO,
+            @NonNull final AuthenticationManager authManager,
             @NonNull final ScheduleRepository scheduleRepo) {
         this.bridgeConfig = checkNotNull(bridgeConfig);
         this.abstractResultArchiveFactory = checkNotNull(abstractResultArchiveFactory);
         this.uploadManager = checkNotNull(uploadManager);
-        this.accountDAO = checkNotNull(accountDAO);
         this.scheduleRepo = checkNotNull(scheduleRepo);
+        this.authManager = checkNotNull(authManager);
     }
 
     @Override
     public Completable processTaskResult(final TaskResult taskResult) {
         LOGGER.info("Uploading task result: {}", taskResult);
 
-        // TODO: mdephillips 10/2/18 integrate into this flow to create metadata
-//        scheduleRepo.findSchedule(taskResult.getTaskUUID());
-
-        // TODO: wrap operations in completable
         SchemaKey sk = bridgeConfig.getTaskToSchemaMap().get(taskResult.getIdentifier());
 
         if (sk == null) {
-            LOGGER.info("No schema key found for task with identifier: {}, skipping upload",
-                    taskResult.getIdentifier());
-            // TODO: use taskId/1 as default for schema/revision?
-            return Completable.complete();
+            LOGGER.warn("No schema found for task " + taskResult.getIdentifier() +  ". Revision 1 will be used.");
+            sk = new SchemaKey(taskResult.getIdentifier(), 1);
         }
 
         Archive.Builder builder = Archive.Builder.forActivity(sk.getId(), sk.getRevision());
@@ -114,29 +118,73 @@ public class TaskResultUploader implements TaskResultProcessor {
         builder.withAppVersionName(appVersionString)
                 .withPhoneInfo(bridgeConfig.getDeviceName());
 
-        //TODO: load scheduled activity
-        ScheduledActivity sa = new ScheduledActivity();
-        sa.activity(new Activity()
-                .task(new TaskReference().identifier(taskResult.getIdentifier())));
-        JsonArchiveFile metadataFile = ArchiveUtil
-                .createMetaDataFile(sa, ImmutableList.copyOf(accountDAO.getDataGroups()));
-
-        builder.addDataFile(metadataFile);
-
         for (ArchiveFile resultArchiveFile : abstractResultArchiveFactory.toArchiveFiles(taskResult)) {
             builder.addDataFile(resultArchiveFile);
         }
 
         String archiveFilename = sk.getId() + sk.getRevision() + taskResult.getTaskUUID();
 
-        CompletableSubject completableSubject = CompletableSubject.create();
-
-        // convert from io.reactivex to io.reactivex.rxjava2
-        return Completable.fromAction(() ->
+        Completable uploadToS3Completable = Completable.fromAction(() ->
                 uploadManager.queueUpload(archiveFilename, builder.build())
-                        .flatMapCompletable(uploadFile -> {
-                            return uploadManager.processUploadFile(uploadFile);
-                        }).await()
-        );
+                        .flatMapCompletable(uploadFile ->
+                                uploadManager.processUploadFile(uploadFile)));
+
+        return metadataCompletable(builder, taskResult)
+                .concatWith(uploadToS3Completable);
+    }
+
+    /**
+     * Builds a metadata file from the TaskResult info.
+     * @param builder to add the metadata file to.
+     * @param taskResult for the task, used to find the associated schedule.
+     * @return a completable that, when invoked, will add the metadata file to the builder.
+     */
+    @NonNull
+    protected Completable metadataCompletable(@NonNull Archive.Builder builder, @NonNull TaskResult taskResult) {
+        return scheduleRepo.findSchedule(taskResult.getTaskUUID())
+                .map(scheduledActivityEntity -> {
+                    ScheduledActivity sa = new ScheduledActivity();
+                    if (scheduledActivityEntity != null) {
+                        sa = EntityTypeConverters.bridgeMetaDataSchedule(scheduledActivityEntity);
+                    }
+                    JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
+                            sa, getUserDataGroups(), getUserExternalId());
+                    builder.addDataFile(metadataFile);
+                    return Completable.complete();
+                })
+                .onErrorReturn(throwable -> {
+                    ScheduledActivity sa = new ScheduledActivity();
+                    sa.activity(new Activity()
+                            .task(new TaskReference().identifier(taskResult.getIdentifier())));
+                    JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
+                            sa, getUserDataGroups(), getUserExternalId());
+                    builder.addDataFile(metadataFile);
+                    return Completable.complete();
+                })
+                .flatMapCompletable(completable -> Completable.complete());
+    }
+
+    /**
+     * @return the current status of the user's data groups, empty list of user is not signed in
+     */
+    @NonNull
+    ImmutableList<String> getUserDataGroups() {
+        UserSessionInfo sessionInfo = authManager.getUserSessionInfo();
+        if (sessionInfo == null || sessionInfo.getDataGroups() == null) {
+            return ImmutableList.of();
+        }
+        return ImmutableList.copyOf(sessionInfo.getDataGroups());
+    }
+
+    /**
+     * @return the current status of the user's data groups, empty list of user is not signed in
+     */
+    @Nullable
+    String getUserExternalId() {
+        UserSessionInfo sessionInfo = authManager.getUserSessionInfo();
+        if (sessionInfo == null) {
+            return null;
+        }
+        return sessionInfo.getExternalId();
     }
 }

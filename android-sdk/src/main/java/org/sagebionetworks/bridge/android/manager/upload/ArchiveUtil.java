@@ -3,6 +3,7 @@ package org.sagebionetworks.bridge.android.manager.upload;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -29,10 +30,17 @@ public class ArchiveUtil {
     @NonNull
     public static JsonArchiveFile createMetaDataFile(@NonNull ScheduledActivity scheduledActivity,
             @NonNull ImmutableList<String> dataGroups) {
+        return createMetaDataFile(scheduledActivity, dataGroups, null);
+    }
+
+    @NonNull
+    public static JsonArchiveFile createMetaDataFile(@NonNull ScheduledActivity scheduledActivity,
+            @NonNull ImmutableList<String> dataGroups, @Nullable String userExternalId) {
         checkNotNull(scheduledActivity);
         checkNotNull(dataGroups);
 
-        Map<String, Object> metaDataMap = createMetaDataInfoMap(scheduledActivity, dataGroups);
+        Map<String, Object> metaDataMap = createMetaDataInfoMap(
+                scheduledActivity, dataGroups, userExternalId);
 
         // Grab the end date
         DateTime endDate = DateTime.now();
@@ -48,11 +56,13 @@ public class ArchiveUtil {
      * Creates a metadata info map for archive file containing information about the schedule and user
      * @param scheduledActivity used for metadata info map
      * @param dataGroups to include in the metadata info map
+     * @param externalId for the user, null if user signed up with email/pw or phone.
      * @return map to be used in JsonArchiveFile for metadata
      */
     public static Map<String, Object> createMetaDataInfoMap(
             @NonNull ScheduledActivity scheduledActivity,
-            @NonNull ImmutableList<String> dataGroups) {
+            @NonNull ImmutableList<String> dataGroups,
+            @Nullable String externalId) {
 
         Map<String, Object> metaDataMap = new HashMap<>();
 
@@ -98,6 +108,10 @@ public class ArchiveUtil {
 
         if (scheduledActivity.getSchedulePlanGuid() != null) {
             metaDataMap.put("scheduleIdentifier", scheduledActivity.getSchedulePlanGuid());
+        }
+
+        if (externalId != null) {
+            metaDataMap.put("externalId", externalId);
         }
 
         metaDataMap.put("dataGroups", TextUtils.join(",", dataGroups));
