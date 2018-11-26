@@ -376,7 +376,7 @@ open class ScheduleRepository constructor(
      * and also to remove redundant threading code throughout the class.
      */
     @CheckReturnValue
-    internal fun findSchedule(taskRunUuid: UUID): Single<ScheduledActivityEntity> {
+    fun findSchedule(taskRunUuid: UUID): Single<ScheduledActivityEntity> {
         logger.debug("findScheduled called for taskRunUuid: {}", taskRunUuid)
 
         // Null schedule usually means that the developer forgot to call createScheduleTaskRunUuid before launching

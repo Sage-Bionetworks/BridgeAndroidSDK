@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSet;
 
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.research.domain.result.interfaces.Result;
+import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +18,20 @@ public class SageResearchResultArchiveFactory implements AbstractResultArchiveFa
 
     private final ImmutableList<ResultArchiveFactory> archiveFactories;
 
+    /**
+     * @param taskResultArchiveFactory every sage result archive factory needs a root task result archive factory
+     *                                 to handle the root TaskResult that is created from completing a task.
+     * @param archiveFactories here we can customize the list of archive factories to control how a custom result
+     *                         is archived and uploaded to bridge.
+     */
     @Inject
-    public SageResearchResultArchiveFactory(ImmutableList<ResultArchiveFactory> archiveFactories) {
+    public SageResearchResultArchiveFactory(
+            TaskResultArchiveFactory taskResultArchiveFactory,
+            ImmutableList<ResultArchiveFactory> archiveFactories) {
+
+        taskResultArchiveFactory.setAbstractResultArchiveFactory(this);
         this.archiveFactories = new ImmutableList.Builder<ResultArchiveFactory>()
-                .add(new TaskResultArchiveFactory(this))
+                .add(taskResultArchiveFactory)
                 .addAll(archiveFactories)
                 .build();
     }
