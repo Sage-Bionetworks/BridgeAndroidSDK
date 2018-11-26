@@ -114,6 +114,17 @@ class ReportRepositoryTests: RoomTestHelper() {
     }
 
     @Test
+    fun test_buildClientDataCompound() {
+        val taskResult = TaskResultHelper.compoundTaskResult()
+        val clientData = reportRepository.buildClientData(taskResult)
+        assertNotNull(clientData)
+        clientData?.let {
+            assertMapContainsAll(TaskResultHelper.expectedSurveyClientDataMapSubtask1, it)
+            assertMapContainsAll(TaskResultHelper.expectedSurveyClientDataMapSubtask2, it)
+        }
+    }
+
+    @Test
     fun test_buildClientDataResearchStackSurvey() {
         val clientData = reportRepository.buildClientData(TaskResultHelper.researchStackSurveyTaskResult())
         assertNotNull(clientData)
@@ -387,6 +398,13 @@ class ReportRepositoryTests: RoomTestHelper() {
 
     fun assertMapEquals(expected: Map<String, Any>, actual: Map<String, Any>) {
         assertEquals(expected.size, actual.size)
+        expected.forEach {
+            assertTrue(actual.containsKey(it.key))
+            assertEquals(expected[it.key], actual[it.key])
+        }
+    }
+
+    fun assertMapContainsAll(expected: Map<String, Any>, actual: Map<String, Any>) {
         expected.forEach {
             assertTrue(actual.containsKey(it.key))
             assertEquals(expected[it.key], actual[it.key])

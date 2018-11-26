@@ -44,6 +44,17 @@ import java.util.ArrayList
 import java.util.HashMap
 import java.util.TreeMap
 
+class ResultExtensions {
+    companion object {
+        /**
+         * Helper function to use extension functions from Java.
+         */
+        @JvmStatic fun clientDataAnswerMap(taskResult: TaskResult): Map<String, Any> {
+            return taskResult.clientDataAnswerMap()
+        }
+    }
+}
+
 /**
  * @return the flattened results of all StepResults
  */
@@ -110,6 +121,12 @@ private fun addResultsRecursively(result: Result?, resultList: MutableList<Resul
         (it as? CollectionResult)?.let { collectionResult ->
             wentDeeper = true
             collectionResult.inputResults.forEach {
+                addResultsRecursively(it, resultList)
+            }
+        }
+        (it as? TaskResult)?.let { taskResult ->
+            wentDeeper = true
+            taskResult.stepHistory.forEach {
                 addResultsRecursively(it, resultList)
             }
         }
