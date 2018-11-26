@@ -38,6 +38,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import org.joda.time.DateTimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
 import org.junit.Before
@@ -55,6 +56,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.entityCopy
 import org.sagebionetworks.research.sageresearch.dao.room.mapValue
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
+import org.sagebionetworks.research.sageresearch.viewmodel.TaskResultHelper.Companion
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
@@ -112,11 +114,37 @@ class ReportRepositoryTests: RoomTestHelper() {
     }
 
     @Test
+    fun test_buildClientDataCompound() {
+        val taskResult = TaskResultHelper.compoundTaskResult()
+        val clientData = reportRepository.buildClientData(taskResult)
+        assertNotNull(clientData)
+        clientData?.let {
+            assertMapContainsAll(TaskResultHelper.expectedSurveyClientDataMapSubtask1, it)
+            assertMapContainsAll(TaskResultHelper.expectedSurveyClientDataMapSubtask2, it)
+        }
+    }
+
+    @Test
     fun test_buildClientDataResearchStackSurvey() {
         val clientData = reportRepository.buildClientData(TaskResultHelper.researchStackSurveyTaskResult())
         assertNotNull(clientData)
         clientData?.let {
             assertMapEquals(TaskResultHelper.expectedSurveyClientDataMap, it)
+        }
+    }
+
+    @Test
+    fun test_buildClientDataExclusions() {
+        reportRepository.resultExclusionList.add(TaskResultHelper.intAnswerResultId)
+        val clientData = reportRepository.buildClientData(TaskResultHelper.surveyTaskResult())
+        assertNotNull(clientData)
+        clientData?.let {
+            assertNull(it[TaskResultHelper.intAnswerResultId])
+        }
+        val clientDataRs = reportRepository.buildClientData(TaskResultHelper.researchStackSurveyTaskResult())
+        assertNotNull(clientDataRs)
+        clientDataRs?.let {
+            assertNull(it[TaskResultHelper.intAnswerResultId])
         }
     }
 
@@ -370,6 +398,13 @@ class ReportRepositoryTests: RoomTestHelper() {
 
     fun assertMapEquals(expected: Map<String, Any>, actual: Map<String, Any>) {
         assertEquals(expected.size, actual.size)
+        expected.forEach {
+            assertTrue(actual.containsKey(it.key))
+            assertEquals(expected[it.key], actual[it.key])
+        }
+    }
+
+    fun assertMapContainsAll(expected: Map<String, Any>, actual: Map<String, Any>) {
         expected.forEach {
             assertTrue(actual.containsKey(it.key))
             assertEquals(expected[it.key], actual[it.key])

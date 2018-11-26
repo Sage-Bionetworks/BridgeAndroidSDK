@@ -85,6 +85,22 @@ class TaskResultHelper {
                 Pair(TaskResultHelper.dateAnswerResultId, TaskResultHelper.dateAnswer),
                 Pair(TaskResultHelper.jsonAnswerResultId, TaskResultHelper.jsonAnswer))
 
+        val expectedSurveyClientDataMapSubtask1 = mapOf(
+                Pair(subtaskIdentifier1+TaskResultHelper.booleanAnswerResultId, TaskResultHelper.booleanAnswer),
+                Pair(subtaskIdentifier1+TaskResultHelper.intAnswerResultId, TaskResultHelper.intAnswer),
+                Pair(subtaskIdentifier1+TaskResultHelper.decimalAnswerResultId, TaskResultHelper.decimalAnswer),
+                Pair(subtaskIdentifier1+TaskResultHelper.strAnswerResultId, TaskResultHelper.strAnswer),
+                Pair(subtaskIdentifier1+TaskResultHelper.dateAnswerResultId, TaskResultHelper.dateAnswer),
+                Pair(subtaskIdentifier1+TaskResultHelper.jsonAnswerResultId, TaskResultHelper.jsonAnswer))
+
+        val expectedSurveyClientDataMapSubtask2 = mapOf(
+                Pair(subtaskIdentifier2+TaskResultHelper.booleanAnswerResultId, TaskResultHelper.booleanAnswer),
+                Pair(subtaskIdentifier2+TaskResultHelper.intAnswerResultId, TaskResultHelper.intAnswer),
+                Pair(subtaskIdentifier2+TaskResultHelper.decimalAnswerResultId, TaskResultHelper.decimalAnswer),
+                Pair(subtaskIdentifier2+TaskResultHelper.strAnswerResultId, TaskResultHelper.strAnswer),
+                Pair(subtaskIdentifier2+TaskResultHelper.dateAnswerResultId, TaskResultHelper.dateAnswer),
+                Pair(subtaskIdentifier2+TaskResultHelper.jsonAnswerResultId, TaskResultHelper.jsonAnswer))
+
         fun researchStackSurveyTaskResult(): org.researchstack.backbone.result.TaskResult {
             return researchStackSurveyTaskResult(taskIdentifier)
         }
@@ -94,26 +110,32 @@ class TaskResultHelper {
         }
 
         fun compoundTaskResult(): TaskResult {
-            val taskResult = TaskResultBase(taskIdentifier, UUID.randomUUID())
-            taskResult.addStepHistory(surveyTaskResult(subtaskIdentifier1))
-            taskResult.addStepHistory(surveyTaskResult(subtaskIdentifier2))
+            var taskResult = TaskResultBase(taskIdentifier, UUID.randomUUID())
+            val subTaskResult1 = surveyTaskResult(subtaskIdentifier1, subtaskIdentifier1)
+            taskResult = taskResult.addStepHistory(subTaskResult1)
+            val subTaskResult2 = surveyTaskResult(subtaskIdentifier2, subtaskIdentifier2)
+            taskResult = taskResult.addStepHistory(subTaskResult2)
             return taskResult
         }
 
-        private fun surveyTaskResult(identifier: String): TaskResult {
+        private fun surveyTaskResult(identifier: String, subTaskId: String): TaskResult {
             return TaskResultBase(identifier, UUID.randomUUID())
-                .addStepHistory(AnswerResultBase(
-                    booleanAnswerResultId, Instant.now(), Instant.now(), booleanAnswer, BOOLEAN))
-                .addStepHistory(AnswerResultBase(
-                    intAnswerResultId, Instant.now(), Instant.now(), intAnswer, INTEGER))
-                .addStepHistory(AnswerResultBase(
-                    decimalAnswerResultId, Instant.now(), Instant.now(), decimalAnswer, DECIMAL))
-                .addStepHistory(AnswerResultBase(
-                    strAnswerResultId, Instant.now(), Instant.now(), strAnswer, STRING))
-                .addStepHistory(AnswerResultBase(
-                    dateAnswerResultId, Instant.now(), Instant.now(), dateAnswer, DATE))
-                .addStepHistory(AnswerResultBase(
-                    jsonAnswerResultId, Instant.now(), Instant.now(), jsonAnswer, JSON))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + booleanAnswerResultId, Instant.now(), Instant.now(), booleanAnswer, BOOLEAN))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + intAnswerResultId, Instant.now(), Instant.now(), intAnswer, INTEGER))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + decimalAnswerResultId, Instant.now(), Instant.now(), decimalAnswer, DECIMAL))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + strAnswerResultId, Instant.now(), Instant.now(), strAnswer, STRING))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + dateAnswerResultId, Instant.now(), Instant.now(), dateAnswer, DATE))
+                    .addStepHistory(AnswerResultBase(
+                            subTaskId + jsonAnswerResultId, Instant.now(), Instant.now(), jsonAnswer, JSON))
+        }
+
+        private fun surveyTaskResult(identifier: String): TaskResult {
+            return surveyTaskResult(identifier, "")
         }
 
         private fun researchStackSurveyTaskResult(identifier: String): org.researchstack.backbone.result.TaskResult {

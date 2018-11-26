@@ -26,6 +26,7 @@ import org.sagebionetworks.research.sageresearch_app_sdk.TaskResultUploader;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.SageResearchResultArchiveFactory;
+import org.sagebionetworks.research.sageresearch_app_sdk.archive.TaskResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,9 @@ public abstract class SageResearchAppSDKModule {
 
     @Provides
     static AbstractResultArchiveFactory provideAbstractResultArchiveFactory(
+            TaskResultArchiveFactory taskResultArchiveFactory,
             ImmutableList<ResultArchiveFactory> resultArchiveFactories) {
-        return new SageResearchResultArchiveFactory(resultArchiveFactories);
+        return new SageResearchResultArchiveFactory(taskResultArchiveFactory, resultArchiveFactories);
     }
 
     /**
