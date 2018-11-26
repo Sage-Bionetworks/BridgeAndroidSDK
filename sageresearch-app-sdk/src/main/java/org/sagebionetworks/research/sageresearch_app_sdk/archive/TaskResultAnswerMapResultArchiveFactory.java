@@ -43,6 +43,7 @@ import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.research.domain.result.interfaces.AnswerResult;
 import org.sagebionetworks.research.domain.result.interfaces.Result;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
+import org.sagebionetworks.research.sageresearch.extensions.ResultExtensions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,27 +78,31 @@ public class TaskResultAnswerMapResultArchiveFactory extends TaskResultArchiveFa
             @NonNull ImmutableSet.Builder<ArchiveFile> builder,
             @NonNull final TaskResult taskResult) {
 
-        super.addArchives(builder, taskResult);
-
-        Map<String, Object> answerMap = new HashMap<>();
-        for (Result result: taskResult.getStepHistory()) {
-            if (result instanceof AnswerResult) {
-                AnswerResult answerResult = (AnswerResult)result;
-                answerMap.put(answerResult.getIdentifier(), answerResult.getAnswer());
+        // Check for existing answer map archive, so that we do not overwrite the top-level one.
+        boolean alreadyContainsAnswerMapArchive = false;
+        ImmutableSet<ArchiveFile> currentArchiveSet = builder.build();
+        for (ArchiveFile archiveFile: currentArchiveSet) {
+            if (ANSWERS_JSON_FILENAME.equals(archiveFile.getFilename())) {
+                alreadyContainsAnswerMapArchive = true;
             }
         }
-        if (!answerMap.isEmpty()) {
-            // If we need the archive to include start/end dates, we need to include them
-            // as keys in the answer map, like "answers.[resultId]EndDate, etc.
-            DateTime answersArchiveDate = DateTime.now();
-            JsonArchiveFile answersArchive =
-                    new JsonArchiveFile(ANSWERS_JSON_FILENAME,
-                            answersArchiveDate,
-                            answerMap);
-            // TODO: medphillips 11/26/18 when we start nesting TaskResults within TaskResults,
-            // we will have to check here if the builder has an existing "answers" json archive,
-            // and merge in all the existing key/values of it with our new "answers" map.
-            builder.add(answersArchive);
+
+        if (!alreadyContainsAnswerMapArchive) {
+            Map<String, Object> answerMap = ResultExtensions.clientDataAnswerMap(taskResult);
+            if (!answerMap.isEmpty()) {
+                // If we need the archive to include start/end dates, we need to include them
+                // as keys in the answer map, like "answers.[resultId]EndDate, etc.
+                DateTime answersArchiveDate = DateTime.now();
+                JsonArchiveFile answersArchive =
+                        new JsonArchiveFile(ANSWERS_JSON_FILENAME,
+                                answersArchiveDate,
+                                answerMap);
+                builder.add(answersArchive);
+            }
         }
+
+        // Call last so that we know the top-level TaskResult creates the first answer map.
+        // This will make sure that no lower-level TaskResults overwrite top-level one.
+        super.addArchives(builder, taskResult);
     }
 }
