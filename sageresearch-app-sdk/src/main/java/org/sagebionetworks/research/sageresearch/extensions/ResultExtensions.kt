@@ -40,6 +40,7 @@ import org.sagebionetworks.research.domain.result.interfaces.AnswerResult
 import org.sagebionetworks.research.domain.result.interfaces.CollectionResult
 import org.sagebionetworks.research.domain.result.interfaces.Result
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
+import org.sagebionetworks.research.sageresearch.dao.room.ReportResultDataMap
 import java.util.ArrayList
 import java.util.HashMap
 import java.util.TreeMap
@@ -74,9 +75,15 @@ fun org.researchstack.backbone.result.TaskResult.clientDataAnswerMap(): Map< Str
 fun TaskResult.clientDataAnswerMap(): Map<String, Any> {
     val answerMap = TreeMap<String, Any>()
     this.flattenResult().forEach { result ->
-        (result as? AnswerResult<*>)?.let { answerResult ->
-            answerResult.answer?.let {
-                answerMap.put(answerResult.identifier, it)
+        (result as? ReportResultDataMap)?.let { customDataMap ->
+            customDataMap.toDataMap()?.forEach {
+                answerMap[it.key] = it.value
+            }
+        } ?: run {
+            (result as? AnswerResult<*>)?.let { answerResult ->
+                answerResult.answer?.let {
+                    answerMap.put(answerResult.identifier, it)
+                }
             }
         }
     }
