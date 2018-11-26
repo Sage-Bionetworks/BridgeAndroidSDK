@@ -333,7 +333,7 @@ public class UploadManager implements AuthenticationManager.AuthenticationEventL
                     // call upload complete on a computation thread
                     // noinspection RxLeakedSubscription,RxSubscribeOnError
                     RxUtils.toBodySingle(authenticatedSafeAtomicReference.get().forConsentedUsersApi
-                            .completeUploadSession(session.getId(), false))
+                            .completeUploadSession(session.getId(), false, false))
                             .doOnSuccess(val -> {
                                 LOG.info("Call to upload complete succeeded");
                             })
