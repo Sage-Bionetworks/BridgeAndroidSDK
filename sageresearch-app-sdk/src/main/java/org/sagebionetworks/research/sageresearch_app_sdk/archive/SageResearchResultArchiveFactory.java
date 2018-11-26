@@ -13,15 +13,25 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 
-public class SageResearchResultArchiveFactory implements AbstractResultListArchiveFactory {
+public class SageResearchResultArchiveFactory implements AbstractResultArchiveFactory {
     private static Logger LOGGER = LoggerFactory.getLogger(SageResearchResultArchiveFactory.class);
 
     private final ImmutableList<ResultArchiveFactory> archiveFactories;
 
+    /**
+     * @param taskResultArchiveFactory every sage result archive factory needs a root task result archive factory
+     *                                 to handle the root TaskResult that is created from completing a task.
+     * @param archiveFactories here we can customize the list of archive factories to control how a custom result
+     *                         is archived and uploaded to bridge.
+     */
     @Inject
-    public SageResearchResultArchiveFactory(ImmutableList<ResultArchiveFactory> archiveFactories) {
+    public SageResearchResultArchiveFactory(
+            TaskResultArchiveFactory taskResultArchiveFactory,
+            ImmutableList<ResultArchiveFactory> archiveFactories) {
+
+        taskResultArchiveFactory.setAbstractResultArchiveFactory(this);
         this.archiveFactories = new ImmutableList.Builder<ResultArchiveFactory>()
-                .add(new TaskResultArchiveFactory(this))
+                .add(taskResultArchiveFactory)
                 .addAll(archiveFactories)
                 .build();
     }
@@ -38,24 +48,5 @@ public class SageResearchResultArchiveFactory implements AbstractResultListArchi
         }
         LOGGER.warn("Result archive factory not found for result: {}, skipping", result);
         return ImmutableSet.of();
-    }
-
-    @NonNull
-    @Override
-    public ImmutableSet<? extends ArchiveFile> toArchiveFiles(@NonNull final ImmutableList<Result> resultList) {
-        ImmutableSet.Builder<ArchiveFile> builder = new ImmutableSet.Builder<>();
-        for (ResultArchiveFactory archiveFactory: archiveFactories) {
-            // Check both interface options for archives
-            if (archiveFactory instanceof AbstractResultListArchiveFactory) {
-                AbstractResultListArchiveFactory factory =
-                        (AbstractResultListArchiveFactory)archiveFactory;
-                builder.addAll(factory.toArchiveFiles(resultList));
-            } else if (archiveFactory instanceof AbstractResultListArchiveFactory.ResultListArchiveFactory) {
-                AbstractResultListArchiveFactory.ResultListArchiveFactory factory =
-                        (AbstractResultListArchiveFactory.ResultListArchiveFactory)archiveFactory;
-                builder.addAll(factory.toArchiveFiles(resultList));
-            }
-        }
-        return builder.build();
     }
 }

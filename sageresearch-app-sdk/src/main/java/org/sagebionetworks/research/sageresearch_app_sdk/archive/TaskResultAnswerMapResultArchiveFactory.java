@@ -32,9 +32,9 @@
 
 package org.sagebionetworks.research.sageresearch_app_sdk.archive;
 
+import android.support.annotation.CallSuper;
 import android.support.annotation.NonNull;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.joda.time.DateTime;
@@ -42,42 +42,45 @@ import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.research.domain.result.interfaces.AnswerResult;
 import org.sagebionetworks.research.domain.result.interfaces.Result;
+import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.inject.Inject;
-
-/**
- * The AnswerMapResultListArchiveFactory combined all AnswerResult type results
- * into a single JSON archive file map.
- * Upload schemas on bridge will have the key "answers.[resultId]".
- */
-public class AnswerMapResultListArchiveFactory implements AbstractResultListArchiveFactory.ResultListArchiveFactory {
-
+public class TaskResultAnswerMapResultArchiveFactory extends TaskResultArchiveFactory {
+    /**
+     * By setting the json archive name without an extension,
+     * the bridge upload schema can map fields using dot notation.
+     *
+     * For example, say our json looked like this...
+     * {
+     *     "a" = 1,
+     *     "b" = 2,
+     *     "c" = {
+     *         "a" = 1
+     *     }
+     * }
+     * Then we could set up these fields in the bridge upload schema...
+     * answers.a
+     * answers.b
+     * answers.c.a
+     */
     public static final String ANSWERS_JSON_FILENAME = "answers";
 
-    @Inject
-    public AnswerMapResultListArchiveFactory() {
-        // Default constructor for Dagger injection
+    public TaskResultAnswerMapResultArchiveFactory() {
+        super();
     }
 
+    @CallSuper
     @Override
-    public boolean isSupported(@NonNull final Result result) {
-        return result instanceof AnswerResult;
-    }
+    protected void addArchives(
+            @NonNull ImmutableSet.Builder<ArchiveFile> builder,
+            @NonNull final TaskResult taskResult) {
 
-    @NonNull
-    @Override
-    public ImmutableSet<? extends ArchiveFile> toArchiveFiles(@NonNull final Result result) {
-        return ImmutableSet.of(); // This class only creates archives for the result list function.
-    }
+        super.addArchives(builder, taskResult);
 
-    @NonNull
-    @Override
-    public ImmutableSet<? extends ArchiveFile> toArchiveFiles(@NonNull final ImmutableList<Result> resultList) {
         Map<String, Object> answerMap = new HashMap<>();
-        for (Result result: resultList) {
+        for (Result result: taskResult.getStepHistory()) {
             if (result instanceof AnswerResult) {
                 AnswerResult answerResult = (AnswerResult)result;
                 answerMap.put(answerResult.getIdentifier(), answerResult.getAnswer());
@@ -89,10 +92,9 @@ public class AnswerMapResultListArchiveFactory implements AbstractResultListArch
             DateTime answersArchiveDate = DateTime.now();
             JsonArchiveFile answersArchive =
                     new JsonArchiveFile(ANSWERS_JSON_FILENAME,
-                    answersArchiveDate,
-                    answerMap);
-            return ImmutableSet.of(answersArchive);
+                            answersArchiveDate,
+                            answerMap);
+            builder.add(answersArchive);
         }
-        return ImmutableSet.of();
     }
 }

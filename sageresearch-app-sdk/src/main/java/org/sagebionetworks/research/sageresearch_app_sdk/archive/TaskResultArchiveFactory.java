@@ -1,6 +1,8 @@
 package org.sagebionetworks.research.sageresearch_app_sdk.archive;
 
+import android.support.annotation.CallSuper;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -18,11 +20,13 @@ public class TaskResultArchiveFactory implements AbstractResultArchiveFactory.Re
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultArchiveFactory.class);
 
-    AbstractResultArchiveFactory abstractResultArchiveFactory;
-
-    // cannot inject since this is a circular dependency
-    public TaskResultArchiveFactory(AbstractResultArchiveFactory abstractResultArchiveFactory) {
+    @Nullable AbstractResultArchiveFactory abstractResultArchiveFactory;
+    void setAbstractResultArchiveFactory(AbstractResultArchiveFactory abstractResultArchiveFactory) {
         this.abstractResultArchiveFactory = abstractResultArchiveFactory;
+    }
+
+    public TaskResultArchiveFactory() {
+        // default constructor
     }
 
     @Override
@@ -41,6 +45,26 @@ public class TaskResultArchiveFactory implements AbstractResultArchiveFactory.Re
         }
         TaskResult taskResult = (TaskResult)result;
 
+        addArchives(builder, taskResult);
+        return builder.build();
+    }
+
+    /**
+     * Can be overridden by sub-classes to add custom archives.
+     * @param builder to add the archives to.
+     * @param taskResult contains results that should be converted into archives.
+     */
+    @CallSuper
+    protected void addArchives(
+            @NonNull ImmutableSet.Builder<ArchiveFile> builder,
+            @NonNull final TaskResult taskResult) {
+
+        if (abstractResultArchiveFactory == null) {
+            LOGGER.error("abstractResultArchiveFactory is null.  "
+                    + "The ArchiveFactory that owns this class must set abstractResultArchiveFactory");
+            return;
+        }
+
         // Create archives for the step history
         List<Result> stepHistory = taskResult.getStepHistory();
         for (Result stepResult: stepHistory) {
@@ -52,18 +76,5 @@ public class TaskResultArchiveFactory implements AbstractResultArchiveFactory.Re
         for (Result asynResult : asyncResults) {
             builder.add(abstractResultArchiveFactory.toArchiveFiles(asynResult).toArray(new ArchiveFile[]{}));
         }
-
-        // Create the archives for the result list archive factories
-        if (abstractResultArchiveFactory instanceof AbstractResultListArchiveFactory) {
-            AbstractResultListArchiveFactory resultListArchiveFactory =
-                    (AbstractResultListArchiveFactory)abstractResultArchiveFactory;
-            builder.addAll(resultListArchiveFactory.toArchiveFiles(
-                    new ImmutableList.Builder<Result>()
-                        .addAll(stepHistory)
-                        .addAll(asyncResults)
-                        .build()));
-        }
-
-        return builder.build();
     }
 }
