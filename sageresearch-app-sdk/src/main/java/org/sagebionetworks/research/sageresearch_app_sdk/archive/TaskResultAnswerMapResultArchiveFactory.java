@@ -94,6 +94,9 @@ public class TaskResultAnswerMapResultArchiveFactory extends TaskResultArchiveFa
                     new JsonArchiveFile(ANSWERS_JSON_FILENAME,
                             answersArchiveDate,
                             answerMap);
+            // TODO: medphillips 11/26/18 when we start nesting TaskResults within TaskResults,
+            // we will have to check here if the builder has an existing "answers" json archive,
+            // and merge in all the existing key/values of it with our new "answers" map.
             builder.add(answersArchive);
         }
     }
