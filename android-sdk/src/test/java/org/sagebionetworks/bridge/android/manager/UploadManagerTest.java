@@ -221,7 +221,7 @@ public class UploadManagerTest {
         doReturn(s3Service).when(spyUploadManager).getS3Service(freshSession);
         doReturn(successCall).when(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5), eq(UPLOAD_CONTENT_TYPE));
 
-        doReturn(successCall).when(api).completeUploadSession(eq(UPLOAD_ID), any());
+        doReturn(successCall).when(api).completeUploadSession(eq(UPLOAD_ID), any(), any());
 
         Completable completable = spyUploadManager.uploadToS3(uploadFile, uploadSession);
         completable.test().awaitTerminalEvent().assertCompleted();
@@ -229,6 +229,6 @@ public class UploadManagerTest {
         verify(spyUploadManager).getUploadSession(uploadFile);
         verify(spyUploadManager).getS3Service(freshSession);
         verify(s3Service).uploadToS3(eq(UPLOAD_URL), any(), eq(UPLOAD_MD5), any());
-        verify(api).completeUploadSession(UPLOAD_ID, false);
+        verify(api).completeUploadSession(UPLOAD_ID, false,false);
     }
 }

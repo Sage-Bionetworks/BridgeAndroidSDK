@@ -371,7 +371,7 @@ public abstract class BridgeDataProvider extends DataProvider {
         logger.debug("Called signUp using phone");
 
         return authenticationManager
-                .requestPhoneSignIn(phone.getRegionCode(), phone.getNumber())
+                .signUp(phone)
                 .andThen(SUCCESS_DATA_RESPONSE);
     }
 
