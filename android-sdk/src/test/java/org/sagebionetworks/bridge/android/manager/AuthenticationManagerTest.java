@@ -77,7 +77,6 @@ public class AuthenticationManagerTest {
     private static final String PASSWORD = "P4ssw0rd";
     private static final String SUBPOPULATION_GUID = "subpopulationGuid";
 
-
     @Mock
     private BridgeConfig config;
     @Mock
@@ -745,8 +744,8 @@ public class AuthenticationManagerTest {
 //        authStateHolderAtomicReference.set(mockApi);
 
         // Result from withdraw call is discarded. Just set a null.
-        Call<UserSessionInfo> mockCall = BridgeApiTestUtils.mockCallWithValue(null);
-        when(mockApi.withdrawAllConsents(any())).thenReturn(mockCall);
+        Call<Message> mockCall = BridgeApiTestUtils.mockCallWithValue(null);
+        when(mockApi.withdrawFromStudy(any())).thenReturn(mockCall);
 
         // execute and validate
         String reason = "because";
@@ -754,7 +753,7 @@ public class AuthenticationManagerTest {
         completable.test().awaitTerminalEvent().assertNoErrors().assertCompleted();
 
         ArgumentCaptor<Withdrawal> withdrawalCaptor = ArgumentCaptor.forClass(Withdrawal.class);
-        verify(mockApi).withdrawAllConsents(withdrawalCaptor.capture());
+        verify(mockApi).withdrawFromStudy(withdrawalCaptor.capture());
         assertEquals(reason, withdrawalCaptor.getValue().getReason());
     }
 

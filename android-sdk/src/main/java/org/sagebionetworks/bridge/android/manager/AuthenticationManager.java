@@ -816,7 +816,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
     @NonNull
     public Single<UserSessionInfo> giveConsent(@NonNull String subpopulationGuid, @NonNull String
             name,
-                                               @NonNull LocalDate birthdate,
+                                               @Nullable LocalDate birthdate,
                                                @Nullable String base64Image, @Nullable String
                                                        imageMimeType,
                                                @NonNull SharingScope sharingScope) {
@@ -839,6 +839,13 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                                 .createConsentSignature(
                                         subpopulationGuid,
                                         consentSignature))
+                        .doOnSuccess(userSessionInfo -> {
+                            // remove from local consent once synced, so userSession info because authoritative source
+                            // on consent state for this subpopulationGuid. if this is not done, a consent which is
+                            // withdrawn may still be cached locally and treated as valid. local store should only
+                            // consents pending upload
+                            consentDAO.removeConsent(subpopulationGuid);
+                        })
                         // Make sure the consent info from the user session is updated
                         .doOnError(e ->
                                 logger.info("Couldn't upload consent to Bridge, " +
@@ -869,13 +876,12 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      */
     public ConsentSignature storeLocalConsent(@NonNull String subpopulationGuid, @NonNull String
             name,
-                                              @NonNull LocalDate birthdate,
+                                              @Nullable LocalDate birthdate,
                                               @Nullable String base64Image,
                                               @Nullable String imageMimeType,
                                               @NonNull SharingScope sharingScope) {
         checkNotNull(subpopulationGuid);
         checkNotNull(name);
-        checkNotNull(birthdate);
         checkNotNull(sharingScope);
 
         final ConsentSignature consentSignature = new ConsentSignature()
@@ -948,7 +954,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         return RxUtils.toBodySingle(
                 getAuthStateReference().get().forConsentedUsersApi
-                        .withdrawAllConsents(
+                        .withdrawFromStudy(
                                 new Withdrawal().reason(reason)
                         ))
                 .toCompletable();
