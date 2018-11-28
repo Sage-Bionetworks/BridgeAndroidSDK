@@ -36,15 +36,14 @@ import io.reactivex.Completable
 import io.reactivex.Scheduler
 import io.reactivex.android.schedulers.AndroidSchedulers
 import org.joda.time.DateTimeZone
+import org.junit.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
-import org.junit.Before
-import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory
@@ -90,6 +89,10 @@ class ReportRepositoryTests: RoomTestHelper() {
 
         val bridgeGson = EntityTypeConverters().bridgeGson
     }
+
+    @Rule
+    @JvmField
+    var testSchedulerRule = TestSchedulerRule()
 
     lateinit var reportRepository: MockReportRepository
     @Mock
@@ -201,6 +204,9 @@ class ReportRepositoryTests: RoomTestHelper() {
         reportRepository.fetchReports(reportIdentifier, start, end)
         // The first page should still save to the database correctly
         assertEquals(2, getValue(reportDao.reports(reportIdentifier, startInstant, endInstant)).size)
+
+        verify(participantManager).getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, null)
+        verify(participantManager).getReportsV4(reportIdentifier, startJodaDateTime, endJodaDateTime, reportRepository.reportPageSizeV4, "2")
     }
 
     @Test

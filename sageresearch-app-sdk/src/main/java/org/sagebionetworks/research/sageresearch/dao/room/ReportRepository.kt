@@ -222,7 +222,7 @@ open class ReportRepository constructor(
 
         return getReportPageAndNextRecursive(firstPage)
                 .observeOn(asyncScheduler)
-                .concatMap {
+                .doOnNext {
                     logger.info("getReports concat " +
                             "with reports ${it.allReports.size} and next page ${it.nextOffsetPageKey}")
                     Observable.just(it)
