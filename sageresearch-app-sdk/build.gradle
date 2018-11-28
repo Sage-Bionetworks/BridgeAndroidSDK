@@ -80,7 +80,7 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-simple:1.7.21'
 
     // A dev at linkedin made a mock maker that works with mockito 2X
-    androidTestCompile 'com.linkedin.dexmaker:dexmaker-mockito:2.2.0'
+    androidTestImplementation 'com.linkedin.dexmaker:dexmaker-mockito:2.2.0'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
