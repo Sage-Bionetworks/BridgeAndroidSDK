@@ -155,6 +155,7 @@ public class PhoneAuthViewModel extends ViewModel {
 
     @Override
     protected void onCleared() {
+        super.onCleared();
         compositeSubscription.clear();
     }
 
