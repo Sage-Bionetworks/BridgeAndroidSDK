@@ -372,7 +372,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                         new PhoneSignInRequest()
                                 .phone(phone)
                                 .study(config.getStudyId())))
-                .doOnSuccess(m -> logger.debug("Phone sign in request success: " + m.getMessage()))
+                .doOnSuccess(m -> {
+                    logger.debug("Phone sign in request success: " + m.getMessage());
+                    accountDAO.setPhoneRegion(regionCode);
+                    accountDAO.setPhoneNumber(phoneNumber);
+                })
                 .doOnError(t -> logger.debug("Phone sign in request failure", t))
                 .toCompletable();
     }
@@ -844,6 +848,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             // on consent state for this subpopulationGuid. if this is not done, a consent which is
                             // withdrawn may still be cached locally and treated as valid. local store should only
                             // consents pending upload
+                            accountDAO.setUserSessionInfo(userSessionInfo);
                             consentDAO.removeConsent(subpopulationGuid);
                         })
                         // Make sure the consent info from the user session is updated
