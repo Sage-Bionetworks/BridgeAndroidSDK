@@ -95,16 +95,8 @@ public class PhoneAuthViewModel extends ViewModel {
 
     @VisibleForTesting
     void refreshSessionOrSignIn(String token, String phoneRegion, String phoneNumber) {
-        compositeSubscription.add(
-                authenticationManager.getLatestUserSessionInfo()
-                        .subscribe(session -> {
-                            LOGGER.debug("Session renewal succeeded.");
-                            // current session is still useable
-                            signInStateLiveData.postValue(Resource.success(new Object()));
-                        }, t -> {
-                            LOGGER.debug("Session renewal failed, signing in.");
-                            doPhoneSignIn(token, phoneRegion, phoneNumber);
-                        }));
+        // TODO: refresh session and sign in only on failure 2018/11/29 @liujoshua
+        doPhoneSignIn(token, phoneRegion, phoneNumber);
     }
 
     @VisibleForTesting

@@ -45,6 +45,7 @@ import android.arch.core.executor.testing.InstantTaskExecutorRule;
 import android.arch.lifecycle.LiveData;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -127,27 +128,13 @@ public class PhoneAuthViewModelTest {
     }
 
     @Test
-    public void refreshSessionOrSignIn_refreshSuccess() {
-        when(authenticationManager.getLatestUserSessionInfo()).thenReturn(Single.just(new UserSessionInfo()));
-
-        phoneAuthViewModel.refreshSessionOrSignIn(token, region, number);
-
-        verify(authenticationManager).getLatestUserSessionInfo();
-
-        assertEquals(Status.SUCCESS, signInStateLiveData.getValue().status);
-    }
-
-    @Test
-    public void refreshSessionOrSignIn_refreshFail() {
-        when(authenticationManager.getLatestUserSessionInfo()).thenReturn(Single.error(new Throwable()));
-
+    public void refreshSessionOrSignIn_alwaysSignIn() {
         PhoneAuthViewModel spyVM = spy(phoneAuthViewModel);
 
         doNothing().when(spyVM).doPhoneSignIn(token, region, number);
 
         spyVM.refreshSessionOrSignIn(token, region, number);
 
-        verify(authenticationManager).getLatestUserSessionInfo();
         verify(spyVM).doPhoneSignIn(token, region, number);
     }
 
