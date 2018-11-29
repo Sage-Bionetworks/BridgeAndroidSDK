@@ -94,7 +94,7 @@ class EntityTypeConverters {
         }
     }
 
-    val bridgeGson = GsonBuilder()
+    val bridgeGsonBuilder = GsonBuilder()
             .registerTypeAdapter(ByteArray::class.java, ByteArrayToBase64TypeAdapter())
             .registerTypeAdapter(org.joda.time.LocalDate::class.java, LocalDateTypeAdapter())
             .registerTypeAdapter(DateTime::class.java, DateTimeTypeAdapter())
@@ -102,7 +102,8 @@ class EntityTypeConverters {
             .registerTypeAdapter(ZonedDateTime::class.java, ZonedDateTimeAdapter())
             .registerTypeAdapter(LocalDate::class.java, LocalDateAdapter())
             .registerTypeAdapter(Instant::class.java, InstantAdapter())
-            .create()
+
+    val bridgeGson = bridgeGsonBuilder.create()
 
     private val schemaRefListType = object : TypeToken<List<RoomSchemaReference>>() {}.type
     private val surveyRefListType = object : TypeToken<List<RoomSurveyReference>>() {}.type
