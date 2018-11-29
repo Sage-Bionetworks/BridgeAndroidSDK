@@ -844,6 +844,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             // on consent state for this subpopulationGuid. if this is not done, a consent which is
                             // withdrawn may still be cached locally and treated as valid. local store should only
                             // consents pending upload
+                            accountDAO.setUserSessionInfo(userSessionInfo);
                             consentDAO.removeConsent(subpopulationGuid);
                         })
                         // Make sure the consent info from the user session is updated
