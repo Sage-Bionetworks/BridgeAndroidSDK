@@ -372,7 +372,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                         new PhoneSignInRequest()
                                 .phone(phone)
                                 .study(config.getStudyId())))
-                .doOnSuccess(m -> logger.debug("Phone sign in request success: " + m.getMessage()))
+                .doOnSuccess(m -> {
+                    logger.debug("Phone sign in request success: " + m.getMessage());
+                    accountDAO.setPhoneRegion(regionCode);
+                    accountDAO.setPhoneNumber(phoneNumber);
+                })
                 .doOnError(t -> logger.debug("Phone sign in request failure", t))
                 .toCompletable();
     }
