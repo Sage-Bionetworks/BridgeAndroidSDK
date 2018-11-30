@@ -89,11 +89,7 @@ class ReportRepositoryTests: RoomTestHelper() {
 
         val bridgeGson = EntityTypeConverters().bridgeGson
     }
-
-    @Rule
-    @JvmField
-    var testSchedulerRule = TestSchedulerRule()
-
+    
     lateinit var reportRepository: MockReportRepository
     @Mock
     lateinit var participantManager: ParticipantRecordManager
@@ -459,5 +455,8 @@ class ReportRepositoryTests: RoomTestHelper() {
 
         // Make sure that even the async scheduler runs on the main threads
         override val asyncScheduler: Scheduler get() = AndroidSchedulers.mainThread()
+
+        // Make sure that even the async scheduler runs on the main threads
+        override val asyncSchedulerV1: rx.Scheduler get() = rx.android.schedulers.AndroidSchedulers.mainThread()
     }
 }

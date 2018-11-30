@@ -38,6 +38,7 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.Scheduler
+import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -142,6 +143,8 @@ open class ReportRepository constructor(
      */
     @VisibleForTesting
     protected open val asyncScheduler: Scheduler get() = Schedulers.io()
+    @VisibleForTesting
+    protected open val asyncSchedulerV1: rx.Scheduler get() = rx.schedulers.Schedulers.io()
 
     /**
      * This function may end up calling different APIs depending on what the ReportCategory is
@@ -199,8 +202,7 @@ open class ReportRepository constructor(
      */
     protected fun fetchReportsV3(reportIdentifier: String,
             start: org.joda.time.LocalDate, end: org.joda.time.LocalDate): Completable {
-        return toV2Single(participantManager
-                .getReportsV3(reportIdentifier, start, end))
+        return toV2SingleAsync(participantManager.getReportsV3(reportIdentifier, start, end))
                 .observeOn(asyncScheduler)
                 .flatMapCompletable {
                     val reports = it.items.map { reportData ->
@@ -222,7 +224,7 @@ open class ReportRepository constructor(
 
         return getReportPageAndNextRecursive(firstPage)
                 .observeOn(asyncScheduler)
-                .doOnNext {
+                .concatMap {
                     logger.info("getReports concat " +
                             "with reports ${it.allReports.size} and next page ${it.nextOffsetPageKey}")
                     Observable.just(it)
@@ -249,7 +251,7 @@ open class ReportRepository constructor(
         val pageOffsetKey = if (progress.isFirstPage) null else progress.nextOffsetPageKey
         val startDateTime =  DateTime(progress.start.toEpochMilli())
         val endDateTime = DateTime(progress.end.toEpochMilli())
-        val reportSingle = toV2Single(participantManager.getReportsV4(
+        val reportSingle = toV2SingleAsync(participantManager.getReportsV4(
                 progress.reportIdentifier, startDateTime, endDateTime, progress.pageSize, pageOffsetKey))
 
         return reportSingle.toObservable()
@@ -328,7 +330,7 @@ open class ReportRepository constructor(
             val category = reportCategory(it.identifier)
             // Let's add a subscription for each one so that we know which reports synced with bridge properly
             subscribeCompletable(
-                    toV2Single(participantManager
+                    toV2SingleAsync(participantManager
                     .saveReportJSON(it.identifier, it.bridgeCopy()))
                     .observeOn(asyncScheduler)
                     .flatMapCompletable { _ ->
@@ -542,6 +544,13 @@ open class ReportRepository constructor(
             .doOnError {
                 logger.warn(it.localizedMessage)
             }
+    }
+
+    /**
+     * toV2SingleAsync makes sure that the v1 Single happens on the async scheduler
+     */
+    protected fun <T>toV2SingleAsync(single: rx.Single<T>): Single<T> {
+        return toV2Single(single.observeOn(asyncSchedulerV1))
     }
 
     /**
