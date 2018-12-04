@@ -32,13 +32,93 @@
 
 package org.sagebionetworks.research.sageresearch_app_sdk;
 
-import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.sagebionetworks.bridge.android.BridgeConfig;
+import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
+import org.sagebionetworks.bridge.android.manager.UploadManager;
+import org.sagebionetworks.bridge.android.manager.UploadManager.UploadFile;
+import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
+import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import io.reactivex.Single;
 
 public class TaskResultUploaderTest {
 
+    @Mock
+    BridgeConfig bridgeConfig;
+
+    @Mock
+    AbstractResultArchiveFactory abstractResultArchiveFactory;
+
+    @Mock
+    UploadManager uploadManager;
+
+    @Mock
+    AuthenticationManager authManager;
+
+    @Mock
+    ScheduleRepository scheduleRepo;
+
+    TaskResultUploader taskResultUploader;
+
+    @Before
+    public void beforeTest() {
+        MockitoAnnotations.initMocks(this);
+
+        taskResultUploader = new TaskResultUploader(bridgeConfig, abstractResultArchiveFactory, uploadManager,
+                authManager, scheduleRepo);
+    }
+
     @Test
     public void processTaskResult() {
+        TaskResultUploader spyTaskResultUploader = spy(taskResultUploader);
+
+        String taskIdentifier = "taskId";
+        UUID taskUUID = UUID.randomUUID();
+        int schemaVersion = 4;
+
+        TaskResult taskResult = mock(TaskResult.class);
+        when(taskResult.getIdentifier()).thenReturn(taskIdentifier);
+        when(taskResult.getTaskUUID()).thenReturn(taskUUID);
+
+        SchemaKey schemaKey = mock(SchemaKey.class);
+        when(schemaKey.getId()).thenReturn(taskIdentifier);
+        when(schemaKey.getRevision()).thenReturn(schemaVersion);
+
+        Map<String, SchemaKey> taskToSchema = new HashMap<>();
+        taskToSchema.put(taskIdentifier, schemaKey);
+
+        when(bridgeConfig.getTaskToSchemaMap()).thenReturn(taskToSchema);
+
+        Archive archive = mock(Archive.class);
+
+        UploadFile uploadFile = mock(UploadFile.class);
+        when(uploadManager.queueUpload(any(), eq(archive))).thenReturn(rx.Single.just(uploadFile));
+        when(uploadManager.processUploadFile(uploadFile)).thenReturn(rx.Completable.complete());
+
+        doReturn(Single.just(archive)).when(spyTaskResultUploader).archiveSingle(schemaKey, taskResult);
+
+        spyTaskResultUploader.processTaskResult(taskResult).blockingAwait();
+
+        verify(uploadManager).queueUpload(any(), eq(archive));
+        verify(uploadManager).processUploadFile(uploadFile);
     }
 }

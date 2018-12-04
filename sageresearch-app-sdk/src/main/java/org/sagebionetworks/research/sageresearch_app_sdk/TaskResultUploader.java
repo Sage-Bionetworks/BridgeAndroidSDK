@@ -35,9 +35,11 @@ package org.sagebionetworks.research.sageresearch_app_sdk;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import static hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Completable;
+import static hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.VisibleForTesting;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,6 +49,7 @@ import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.data.Archive.Builder;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.rest.model.Activity;
@@ -67,19 +70,20 @@ import java.util.Locale;
 import javax.inject.Inject;
 
 import io.reactivex.Completable;
+import io.reactivex.Single;
 
 public class TaskResultUploader implements TaskResultProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultUploader.class);
 
     private final BridgeConfig bridgeConfig;
 
-    private AbstractResultArchiveFactory abstractResultArchiveFactory;
+    private final AbstractResultArchiveFactory abstractResultArchiveFactory;
 
-    private UploadManager uploadManager;
+    private final UploadManager uploadManager;
 
-    private AuthenticationManager authManager;
+    private final AuthenticationManager authManager;
 
-    private ScheduleRepository scheduleRepo;
+    private final ScheduleRepository scheduleRepo;
 
     @Inject
     public TaskResultUploader(@NonNull final BridgeConfig bridgeConfig,
@@ -98,63 +102,78 @@ public class TaskResultUploader implements TaskResultProcessor {
     public Completable processTaskResult(final TaskResult taskResult) {
         LOGGER.info("Uploading task result: {}", taskResult);
 
-        SchemaKey sk = bridgeConfig.getTaskToSchemaMap().get(taskResult.getIdentifier());
+        SchemaKey schemaKey = bridgeConfig.getTaskToSchemaMap().get(taskResult.getIdentifier());
 
-        if (sk == null) {
+        if (schemaKey == null) {
             LOGGER.warn("No schema found for task " + taskResult.getIdentifier() + ". Revision 1 will be used.");
-            sk = new SchemaKey(taskResult.getIdentifier(), 1);
+            schemaKey = new SchemaKey(taskResult.getIdentifier(), 1);
         }
 
-        Archive.Builder builder = Archive.Builder.forActivity(sk.getId(), sk.getRevision());
-        String appVersionString = String.format(Locale.ENGLISH, "version %s, build %d",
-                bridgeConfig.getAppVersionName(),
-                bridgeConfig.getAppVersion());
+        String archiveFilename = schemaKey.getId() + schemaKey.getRevision() + taskResult.getTaskUUID();
 
-        builder.withAppVersionName(appVersionString)
-                .withPhoneInfo(bridgeConfig.getDeviceName());
-
-        for (ArchiveFile resultArchiveFile : abstractResultArchiveFactory.toArchiveFiles(taskResult)) {
-            builder.addDataFile(resultArchiveFile);
-        }
-
-        String archiveFilename = sk.getId() + sk.getRevision() + taskResult.getTaskUUID();
-
-        Completable uploadToS3Completable =
-                toV2Completable(uploadManager.queueUpload(archiveFilename, builder.build())
-                        .flatMapCompletable(uploadFile ->
-                                uploadManager.processUploadFile(uploadFile)));
-
-        return metadataCompletable(builder, taskResult)
-                .concatWith(uploadToS3Completable);
+        return archiveSingle(schemaKey, taskResult)
+                .flatMap(archive -> toV2Single(uploadManager.queueUpload(archiveFilename, archive)))
+                .flatMapCompletable(uploadFile -> toV2Completable(uploadManager.processUploadFile(uploadFile)));
     }
 
     /**
-     * Builds a metadata file from the TaskResult info.
+     * Builds archive file from the TaskResult and schema.
      *
-     * @param builder
-     *         to add the metadata file to.
+     * @param schemaKey
+     *         schema for the task associated with the TaskResult
      * @param taskResult
      *         for the task, used to find the associated schedule.
-     * @return a completable that, when invoked, will add the metadata file to the builder.
+     * @return a single that, when invoked, will return an archive for a task result
      */
     @NonNull
-    protected Completable metadataCompletable(@NonNull Archive.Builder builder, @NonNull TaskResult taskResult) {
+    @VisibleForTesting
+    Single<Archive> archiveSingle(@NonNull SchemaKey schemaKey, @NonNull TaskResult taskResult) {
+
+        Single<JsonArchiveFile> metadataSingle = metadataSingle(taskResult);
+
+        Single<Archive.Builder> builderSingle = Single.fromCallable(() -> {
+            Archive.Builder builder = Archive.Builder.forActivity(schemaKey.getId(), schemaKey.getRevision());
+            String appVersionString = String.format(Locale.ENGLISH, "version %s, build %d",
+                    bridgeConfig.getAppVersionName(),
+                    bridgeConfig.getAppVersion());
+
+            builder.withAppVersionName(appVersionString)
+                    .withPhoneInfo(bridgeConfig.getDeviceName());
+            for (ArchiveFile resultArchiveFile : abstractResultArchiveFactory.toArchiveFiles(taskResult)) {
+                builder.addDataFile(resultArchiveFile);
+            }
+            return builder;
+        });
+
+        return builderSingle
+                .zipWith(metadataSingle, (builder, metadataFile) -> {
+                    builder.addDataFile(metadataFile);
+                    return builder;
+                })
+                .map(Builder::build);
+    }
+
+    /**
+     * Builds a JSON metadata file for a TaskResult
+     *
+     * @param taskResult
+     *         result for the task
+     * @return single of a JsonArchiveFile for the TaskResult
+     */
+    @NonNull
+    @VisibleForTesting
+    Single<JsonArchiveFile> metadataSingle(@NonNull TaskResult taskResult) {
         return scheduleRepo.findSchedule(taskResult.getTaskUUID())
                 .map(scheduleEntity -> {
                     ScheduledActivity sa = createScheduledActivityForMetadata(taskResult, scheduleEntity);
-                    JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
+                    return ArchiveUtil.createMetaDataFile(
                             sa, getUserDataGroups(), getUserExternalId());
-                    builder.addDataFile(metadataFile);
-                    return Completable.complete();
                 })
                 .onErrorReturn(throwable -> {
                     ScheduledActivity sa = createScheduledActivityForMetadata(taskResult, null);
-                    JsonArchiveFile metadataFile = ArchiveUtil.createMetaDataFile(
+                    return ArchiveUtil.createMetaDataFile(
                             sa, getUserDataGroups(), getUserExternalId());
-                    builder.addDataFile(metadataFile);
-                    return Completable.complete();
-                })
-                .flatMapCompletable(completable -> Completable.complete());
+                });
     }
 
     /**
