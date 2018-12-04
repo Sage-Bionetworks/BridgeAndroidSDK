@@ -34,6 +34,8 @@ package org.sagebionetworks.research.sageresearch_app_sdk;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import static hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Completable;
+
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -42,7 +44,6 @@ import com.google.common.collect.ImmutableList;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
-import org.sagebionetworks.bridge.android.manager.dao.AccountDAO;
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.Archive;
@@ -61,17 +62,11 @@ import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultA
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 import javax.inject.Inject;
 
 import io.reactivex.Completable;
-import io.reactivex.CompletableSource;
-import io.reactivex.Single;
-import io.reactivex.functions.Function;
-import io.reactivex.subjects.CompletableSubject;
 
 public class TaskResultUploader implements TaskResultProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskResultUploader.class);
@@ -106,7 +101,7 @@ public class TaskResultUploader implements TaskResultProcessor {
         SchemaKey sk = bridgeConfig.getTaskToSchemaMap().get(taskResult.getIdentifier());
 
         if (sk == null) {
-            LOGGER.warn("No schema found for task " + taskResult.getIdentifier() +  ". Revision 1 will be used.");
+            LOGGER.warn("No schema found for task " + taskResult.getIdentifier() + ". Revision 1 will be used.");
             sk = new SchemaKey(taskResult.getIdentifier(), 1);
         }
 
@@ -124,8 +119,8 @@ public class TaskResultUploader implements TaskResultProcessor {
 
         String archiveFilename = sk.getId() + sk.getRevision() + taskResult.getTaskUUID();
 
-        Completable uploadToS3Completable = Completable.fromAction(() ->
-                uploadManager.queueUpload(archiveFilename, builder.build())
+        Completable uploadToS3Completable =
+                toV2Completable(uploadManager.queueUpload(archiveFilename, builder.build())
                         .flatMapCompletable(uploadFile ->
                                 uploadManager.processUploadFile(uploadFile)));
 
@@ -135,8 +130,11 @@ public class TaskResultUploader implements TaskResultProcessor {
 
     /**
      * Builds a metadata file from the TaskResult info.
-     * @param builder to add the metadata file to.
-     * @param taskResult for the task, used to find the associated schedule.
+     *
+     * @param builder
+     *         to add the metadata file to.
+     * @param taskResult
+     *         for the task, used to find the associated schedule.
      * @return a completable that, when invoked, will add the metadata file to the builder.
      */
     @NonNull
@@ -160,8 +158,10 @@ public class TaskResultUploader implements TaskResultProcessor {
     }
 
     /**
-     * @param taskResult uses the identifier which should be the identifier of the ScheduledActivity
-     * @param scheduleEntity used to create the ScheduledActivity, if null, only task identifier will be set.
+     * @param taskResult
+     *         uses the identifier which should be the identifier of the ScheduledActivity
+     * @param scheduleEntity
+     *         used to create the ScheduledActivity, if null, only task identifier will be set.
      * @return a ScheduledActivity used for metadata archive construction.
      */
     @NonNull
