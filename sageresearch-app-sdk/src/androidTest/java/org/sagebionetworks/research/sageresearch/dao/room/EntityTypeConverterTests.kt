@@ -30,21 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sagebionetworks.research.sageresearch.viewmodel
+package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.app.Application
 import android.support.test.InstrumentationRegistry
 import com.jakewharton.threetenabp.AndroidThreeTen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.BeforeClass
 import org.junit.Test
-import org.sagebionetworks.research.sageresearch.dao.room.ClientData
-import org.sagebionetworks.research.sageresearch.dao.room.RoomActivity
-import org.sagebionetworks.research.sageresearch.dao.room.RoomTaskReference
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
-import org.sagebionetworks.research.sageresearch.dao.room.bridgeMetadataCopy
-import org.sagebionetworks.research.sageresearch.dao.room.clientWritableCopy
+
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 

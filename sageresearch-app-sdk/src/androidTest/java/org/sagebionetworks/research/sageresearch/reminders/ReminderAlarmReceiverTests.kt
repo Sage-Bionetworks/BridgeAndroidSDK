@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sagebionetworks.research.sageresearch.viewmodel
+package org.sagebionetworks.research.sageresearch.reminders
 
 import android.app.AlarmManager.INTERVAL_DAY
 import android.content.Context
@@ -39,12 +39,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.sagebionetworks.research.sageresearch.reminders.Reminder
-import org.sagebionetworks.research.sageresearch.reminders.ReminderAlarmReceiver
-import org.sagebionetworks.research.sageresearch.reminders.ReminderManager
-import org.sagebionetworks.research.sageresearch.reminders.ReminderScheduleIgnoreRule
-import org.sagebionetworks.research.sageresearch.reminders.ReminderScheduleRules
-import org.sagebionetworks.research.sageresearch.reminders.isOneShotAlarm
 import org.threeten.bp.LocalDateTime
 
 class ReminderAlarmReceiverTests {
@@ -52,7 +46,9 @@ class ReminderAlarmReceiverTests {
     @Test
     fun test_ignoreAlarmRules() {
         val context = InstrumentationRegistry.getTargetContext()
-        val receiver = MockAlarmReceiver(MockReminderManager(context))
+        val receiver = MockAlarmReceiver(
+                MockReminderManager(
+                        context))
 
         val ignoreRules = ReminderScheduleIgnoreRule(
                 LocalDateTime.of(2018, 10, 25, 0, 0), // start
@@ -113,8 +109,10 @@ class ReminderAlarmReceiverTests {
     @Test
     fun test_rescheduleDailyReminder() {
         val context = InstrumentationRegistry.getTargetContext()
-        val reminderManager = MockReminderManager(context)
-        val receiver = MockAlarmReceiver(reminderManager)
+        val reminderManager = MockReminderManager(
+                context)
+        val receiver = MockAlarmReceiver(
+                reminderManager)
 
         val ignoreRules = ReminderScheduleIgnoreRule(
                 LocalDateTime.of(2018, 10, 25, 0, 0), // start
