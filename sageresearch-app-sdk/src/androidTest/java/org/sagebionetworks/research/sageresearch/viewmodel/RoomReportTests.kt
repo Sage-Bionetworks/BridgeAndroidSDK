@@ -110,7 +110,7 @@ class RoomReportTests: RoomTestHelper() {
         val start = LocalDate.parse("2018-11-07")
         val end = LocalDate.parse("2018-11-09")
         val allReports = getValue(reportDao.reports(reportIdentifierV3, start, end))
-        assertReportsContain(listOf("0", "1", "2", "3"), allReports)
+        assertReportsContain(listOf("0", "1", "2"), allReports)
     }
 
     @Test
@@ -141,14 +141,14 @@ class RoomReportTests: RoomTestHelper() {
     @Test
     fun query_testMostRecentLocalDate() {
         reportDao.upsert(reportEntityList)
-        val mosRecent = getValue(reportDao.mostRecentReport(reportIdentifierV3))
-        assertReportsContain(listOf("4"), mosRecent)
+        val mosRecent = getValue(reportDao.mostRecentReportLocalDate(reportIdentifierV3))
+        assertReportsContain(listOf("3"), mosRecent)
     }
 
     @Test
     fun query_testMostRecentDateTime() {
         reportDao.upsert(reportEntityList)
-        val mosRecent = getValue(reportDao.mostRecentReport(reportIdentifierV4))
+        val mosRecent = getValue(reportDao.mostRecentReportDateTime(reportIdentifierV4))
         assertReportsContain(listOf("9"), mosRecent)
     }
 
@@ -159,7 +159,7 @@ class RoomReportTests: RoomTestHelper() {
         val end = LocalDate.parse("2018-11-09")
         reportDao.delete(reportIdentifierV3, start, end)
         val allReports = reportDao.all()
-        assertReportsContain(listOf("4", "5", "6", "7", "8", "9"), allReports)
+        assertReportsContain(listOf("3", "4", "5", "6", "7", "8", "9"), allReports)
     }
 
     @Test

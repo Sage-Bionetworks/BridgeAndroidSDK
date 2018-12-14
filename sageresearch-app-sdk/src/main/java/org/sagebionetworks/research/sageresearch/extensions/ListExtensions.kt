@@ -105,3 +105,45 @@ private fun List<String>.localizedAndOrJoin(context: Context, or: Boolean): Stri
         }
     }
 }
+
+/**
+ * Join the list of text strings using a localized "and".
+ *
+ * - example:
+ * ````
+ *     let groceryList1 = ["apples", "oranges"]
+ *     print (localizedJoin(groceryList1))  // "apples and oranges"
+ *
+ *     let groceryList2 = ["apples", "oranges", "bananas", "grapes"]
+ *     print (localizedJoin(groceryList2))  // "apples, oranges, bananas, and grapes"
+ * ````
+ *
+ * - note: This function is currently written to support US English. Any other language is untested.
+ *
+ * @param context can be any type, used to get string resources
+ * @return A localized [String] with the joined values.
+ */
+fun Set<String>.localizedAndJoin(context: Context): String {
+    return toList().localizedAndOrJoin(context, false)
+}
+
+/**
+ * Join the list of text strings using a localized "or".
+ *
+ * - example:
+ * ````
+ *     let groceryList1 = ["apples", "oranges"]
+ *     print (localizedJoin(groceryList1))  // "apples or oranges"
+ *
+ *     let groceryList2 = ["apples", "oranges", "bananas", "grapes"]
+ *     print (localizedJoin(groceryList2))  // "apples, oranges, bananas, or grapes"
+ * ````
+ *
+ * - note: This function is currently written to support US English. Any other language is untested.
+ *
+ * @param context can be any type, used to get string resources
+ * @return A localized [String] with the joined values.
+ */
+fun Set<String>.localizedOrJoin(context: Context): String {
+    return toList().localizedAndOrJoin(context, true)
+}

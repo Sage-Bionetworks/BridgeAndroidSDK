@@ -279,13 +279,19 @@ open class ReportRepository constructor(
      * @param reportIdentifier of the report
      */
     fun fetchMostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
+        // Different report categories track the "most recent" reports differently
+        val reportCategory = reportCategory(reportIdentifier)
         // Unless there is at least one cached report with this identifier
         // Fetch the entire study's worth of reports from bridge to find the most recent
         subscribeCompletable(
             Observable.just(reportDao)
                     .observeOn(asyncScheduler)
                     .concatMap {
-                        if (it.mostRecentReportInternal(reportIdentifier).isEmpty()) {
+                        val internalQuery = when (reportCategory) {
+                            TIMESTAMP -> it.mostRecentReportDateTimeInternal(reportIdentifier)
+                            else -> it.mostRecentReportLocalDateInternal(reportIdentifier)
+                        }
+                        if (internalQuery.isEmpty()) {
                             val end = now().toThreeTenLocalDateTime()
                             val start = studyStartDate()?.toThreeTenLocalDateTime() ?: end
                             return@concatMap fetchCompletable(reportIdentifier, start, end)
@@ -298,7 +304,10 @@ open class ReportRepository constructor(
                     }, "Fetch most recent finished", "Fetch most recent failed")
 
         // return the live data link to the database query for the most recent report
-        return reportDao.mostRecentReport(reportIdentifier)
+        return when(reportCategory) {
+            TIMESTAMP -> reportDao.mostRecentReportDateTime(reportIdentifier)
+            else -> reportDao.mostRecentReportLocalDate(reportIdentifier)
+        }
     }
 
     /**

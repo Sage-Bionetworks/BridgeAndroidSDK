@@ -30,7 +30,7 @@
 },
 {
   "identifier": "reportV3",
-  "localDate": "2018-11-09",
+  "localDate": "2018-12-14",
   "data": {
     "data": {
       "guid": "3"
@@ -40,7 +40,7 @@
 },
 {
   "identifier": "reportV3",
-  "localDate": "2018-11-10",
+  "localDate": "2018-12-12",
   "data": {
     "data": {
       "guid": "4"
@@ -80,16 +80,6 @@
 },
 {
   "identifier": "reportV4",
-  "dateTime": "2018-11-09T1:34:24.886Z",
-  "data": {
-    "data": {
-      "guid": "8"
-    }
-  },
-  "type": "string"
-},
-{
-  "identifier": "reportV4",
   "dateTime": "2018-11-10T5:34:24.886Z",
   "data": {
     "data": {
@@ -97,4 +87,14 @@
     }
   },
   "type": "type"
+},
+{
+  "identifier": "reportV4",
+  "dateTime": "2018-11-09T1:34:24.886Z",
+  "data": {
+    "data": {
+      "guid": "8"
+    }
+  },
+  "type": "string"
 }]
