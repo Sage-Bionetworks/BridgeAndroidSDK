@@ -83,36 +83,20 @@ interface ReportEntityDao {
     fun reportsTODOREMOVE(reportIdentifier: String, start: LocalDate, end: LocalDate): LiveData<List<ReportEntity>>
 
     /**
-     * Get the most recent report for a reportIdentifier based on the localDate field
+     * Get the most recent report for a reportIdentifier based on the dateTime field
      * @param reportIdentifier reports returned will all have this report identifier
      * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
      */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_LOCAL_DATE_IDENTIFIER)
-    fun mostRecentReportLocalDate(reportIdentifier: String): LiveData<List<ReportEntity>>
-
-    /**
-     * Get the most recent report for a reportIdentifier based on the localDate field
-     * @param reportIdentifier reports returned will all have this report identifier
-     * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
-     */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_LOCAL_DATE_IDENTIFIER)
-    fun mostRecentReportLocalDateInternal(reportIdentifier: String): List<ReportEntity>
+    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER)
+    fun mostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>>
 
     /**
      * Get the most recent report for a reportIdentifier based on the dateTime field
      * @param reportIdentifier reports returned will all have this report identifier
      * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
      */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_TIME_IDENTIFIER)
-    fun mostRecentReportDateTime(reportIdentifier: String): LiveData<List<ReportEntity>>
-
-    /**
-     * Get the most recent report for a reportIdentifier based on the dateTime field
-     * @param reportIdentifier reports returned will all have this report identifier
-     * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
-     */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_TIME_IDENTIFIER)
-    fun mostRecentReportDateTimeInternal(reportIdentifier: String): List<ReportEntity>
+    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER)
+    fun mostRecentReportInternal(reportIdentifier: String): List<ReportEntity>
 
     /**
      * Deletes all rows that match the query
