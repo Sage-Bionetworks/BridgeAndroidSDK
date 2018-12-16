@@ -122,6 +122,7 @@ internal class RoomSql {
          */
         private const val ORDER_BY_SCHEDULED_ON_OLDEST = " ORDER BY scheduledOn ASC"
         private const val ORDER_BY_FINISHED = " ORDER BY finishedOn DESC"
+        // Multiple order bys will first sort by date, and then if any date is equal, then by primary key (most recently saved)
         private const val ORDER_BY_REPORT_DATE = " ORDER BY localDate DESC, dateTime DESC, primaryKey DESC"
 
         /**

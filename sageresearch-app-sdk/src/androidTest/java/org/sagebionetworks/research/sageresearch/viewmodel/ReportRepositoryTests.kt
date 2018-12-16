@@ -290,7 +290,7 @@ class ReportRepositoryTests: RoomTestHelper() {
     fun test_fetchReportsMostRecentV4() {
         // the MockReportRepository will map this to the timestamp category
         val reportIdentifier = MockReportRepository.reportIdentifierV4
-        assertEquals(0, getValue(reportDao.mostRecentReportDateTime(reportIdentifier)).size)
+        assertEquals(0, getValue(reportDao.mostRecentReport(reportIdentifier)).size)
 
         val end = reportRepository.nowVal
         val start = reportRepository.studyStartDate() ?: end
@@ -310,7 +310,7 @@ class ReportRepositoryTests: RoomTestHelper() {
 
         reportRepository.fetchMostRecentReport(reportIdentifier)
         // The first page should still save to the database correctly
-        val mostRecent = getValue(reportDao.mostRecentReportDateTime(reportIdentifier))
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("4"), mostRecent)
     }
 
@@ -321,7 +321,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         reportDao.upsert(listOf(ReportEntity(identifier = reportIdentifier,
                 data = ClientData("5"),
                 localDate = reportRepository.reportSingletonLocalDate)))
-        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReportLocalDate(reportIdentifier)))
+        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReport(reportIdentifier)))
 
         val end = reportRepository.nowVal
         val start = reportRepository.studyStartDate() ?: end
@@ -342,7 +342,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         reportRepository.fetchMostRecentReport(reportIdentifier)
         // The fetch request should never happen, and therefore, the "4" guid should not be the newest
         // even though it would be the newest if the fetch went through
-        val mostRecent = getValue(reportDao.mostRecentReportLocalDate(reportIdentifier))
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("5"), mostRecent)
     }
 
@@ -350,7 +350,7 @@ class ReportRepositoryTests: RoomTestHelper() {
     fun test_fetchReportsMostRecentV3() {
         // the MockReportRepository will map this to the groupByDay
         val reportIdentifier = MockReportRepository.reportIdentifierV3Singleton
-        assertEquals(0, getValue(reportDao.mostRecentReportLocalDate(reportIdentifier)).size)
+        assertEquals(0, getValue(reportDao.mostRecentReport(reportIdentifier)).size)
 
         // Set up the participantManager to return the correct report page sequence
         doReturn(Single.just(reportDataListSingletonV3)) // contains 5 reports
@@ -361,7 +361,7 @@ class ReportRepositoryTests: RoomTestHelper() {
 
         reportRepository.fetchMostRecentReport(reportIdentifier)
         // The first page should still save to the database correctly
-        val mostRecent = getValue(reportDao.mostRecentReportLocalDate(reportIdentifier))
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("4"), mostRecent)
     }
 
@@ -372,7 +372,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         reportDao.upsert(listOf(ReportEntity(identifier = reportIdentifier,
                 data = ClientData("5"),
                 localDate = reportRepository.reportSingletonLocalDate)))
-        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReportLocalDate(reportIdentifier)))
+        assertReportsContain(listOf("5"), getValue(reportDao.mostRecentReport(reportIdentifier)))
 
         // Set up the participantManager to return the correct report page sequence
         doReturn(Single.just(reportDataListSingletonV3)) // contains 5 reports
@@ -384,7 +384,7 @@ class ReportRepositoryTests: RoomTestHelper() {
         reportRepository.fetchMostRecentReport(reportIdentifier)
         // The fetch request should never happen, and therefore, the "4" guid should not be the newest
         // even though it would be the newest if the fetch went through
-        val mostRecent = getValue(reportDao.mostRecentReportLocalDate(reportIdentifier))
+        val mostRecent = getValue(reportDao.mostRecentReport(reportIdentifier))
         assertReportsContain(listOf("5"), mostRecent)
     }
 
