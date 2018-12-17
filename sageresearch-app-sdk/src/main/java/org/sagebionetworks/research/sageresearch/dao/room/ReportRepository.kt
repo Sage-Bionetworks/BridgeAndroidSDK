@@ -351,13 +351,15 @@ open class ReportRepository constructor(
      * @return the completable to determine when the operation(s) are done
      */
     private fun appendReportToRoom(report: ReportEntity): Completable {
-        val reportIdentifier = report.identifier
-        val category = reportCategory(reportIdentifier)
-        if (category == SINGLETON && reportIdentifier != null) {
-            // SINGLETON types are a special case, because we need to replace the existing
-            // one because otherwise there will duplicates with no way of knowing the most recent
-            return replaceReportsInRoom(reportIdentifier,
-                    reportSingletonLocalDate, reportSingletonLocalDate, listOf(report))
+        report.identifier?.let { reportIdentifier ->
+            val category = reportCategory(reportIdentifier)
+            if ((category == SINGLETON || category == GROUP_BY_DAY)) {
+                report.localDate?.let {
+                    // SINGLETON and GROUP_BY_DAY types are a special case, because we need to replace the existing
+                    // one because otherwise there will duplicates with no way of knowing the most recent
+                    return replaceReportsInRoom(reportIdentifier, it, it, listOf(report))
+                }
+            }
         }
         return writeReportToRoom(report)
     }
