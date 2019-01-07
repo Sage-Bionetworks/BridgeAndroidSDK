@@ -6,4 +6,10 @@
     <string name="reminder_notification_channel_title">Sage Research Reminders</string>
     <string name="reminder_notification_channel_desc">SageResearch reminders help you remember to log your data</string>
 
+    <!-- Joining items -->
+    <string name="two_item_list_or_format">%1$s or %2$s</string> <!-- Format of a list with two items (For example, 'apples or oranges') -->
+    <string name="three_item_list_or_format">%1$s, %2$s, or %3$s</string> <!-- Format of a list with three items (For example, 'apples, oranges, or bananas') -->
+    <string name="two_item_list_and_format">%1$s and %2$s</string> <!-- Format of a list with two items (For example, 'apples and oranges') -->
+    <string name="three_item_list_and_format">%1$s, %2$s, and %3$s</string> <!-- Format of a list with three items (For example, 'apples, oranges, and bananas') -->
+    <string name="list_format_delimiter">,\u0020</string> <!-- Delimiter for a list of more than 3 items. Include whitespace as appropriate. (For example, 'foo, bar, goo, or boo') -->
 </resources>

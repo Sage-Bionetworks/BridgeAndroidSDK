@@ -101,7 +101,7 @@ class RoomReportTests: RoomTestHelper() {
     @Test
     fun test_insert() {
         reportDao.upsert(reportEntityList)
-        assertReportsContain(listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"), reportDao.all())
+        assertReportsContain(listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), reportDao.all())
     }
 
     @Test
@@ -110,7 +110,7 @@ class RoomReportTests: RoomTestHelper() {
         val start = LocalDate.parse("2018-11-07")
         val end = LocalDate.parse("2018-11-09")
         val allReports = getValue(reportDao.reports(reportIdentifierV3, start, end))
-        assertReportsContain(listOf("0", "1", "2", "3"), allReports)
+        assertReportsContain(listOf("0", "1", "2"), allReports)
     }
 
     @Test
@@ -142,7 +142,7 @@ class RoomReportTests: RoomTestHelper() {
     fun query_testMostRecentLocalDate() {
         reportDao.upsert(reportEntityList)
         val mosRecent = getValue(reportDao.mostRecentReport(reportIdentifierV3))
-        assertReportsContain(listOf("4"), mosRecent)
+        assertReportsContain(listOf("10"), mosRecent)
     }
 
     @Test
@@ -159,7 +159,7 @@ class RoomReportTests: RoomTestHelper() {
         val end = LocalDate.parse("2018-11-09")
         reportDao.delete(reportIdentifierV3, start, end)
         val allReports = reportDao.all()
-        assertReportsContain(listOf("4", "5", "6", "7", "8", "9"), allReports)
+        assertReportsContain(listOf("3", "4", "5", "6", "7", "8", "9", "10"), allReports)
     }
 
     @Test
@@ -169,16 +169,16 @@ class RoomReportTests: RoomTestHelper() {
         val end = ZonedDateTime.parse("2018-11-10T00:00:00.000Z").toInstant()
         reportDao.delete(reportIdentifierV4, start, end)
         val allReports = reportDao.all()
-        assertReportsContain(listOf("0", "1", "2", "3", "4", "9"), allReports)
+        assertReportsContain(listOf("0", "1", "2", "3", "4", "9", "10"), allReports)
     }
 
     fun assertReportsContain(clientDataGuid: List<String>, reportList: List<ReportEntity>) {
         assertEquals(clientDataGuid.size, reportList.size)
         assertEquals(0, reportList.filter { report ->
             report.data?.mapValue("guid")?.let {
-                clientDataGuid.contains(it)
+                return@filter !clientDataGuid.contains(it)
             }
-            false
+            return@filter false
         }.size)
     }
 }

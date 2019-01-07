@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sagebionetworks.research.sageresearch.viewmodel
+package org.sagebionetworks.research.sageresearch.reminders
 
 import android.content.Context
 import android.support.test.InstrumentationRegistry
@@ -38,16 +38,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.sagebionetworks.research.sageresearch.reminders.Reminder
-import org.sagebionetworks.research.sageresearch.reminders.ReminderManager
-import org.sagebionetworks.research.sageresearch.reminders.ReminderScheduleRules
 import org.threeten.bp.LocalDateTime
 
 class ReminderManagerTests {
     @Test
     fun scheduleReminder() {
         val context = InstrumentationRegistry.getTargetContext()
-        val reminderManager = MockReminderManager(context)
+        val reminderManager = MockReminderManager(
+                context)
         val reminder1 = Reminder("guid1", "action", 1,
                 ReminderScheduleRules(LocalDateTime.now()), "title")
 
