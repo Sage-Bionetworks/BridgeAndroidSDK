@@ -279,8 +279,6 @@ open class ReportRepository constructor(
      * @param reportIdentifier of the report
      */
     fun fetchMostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
-        // Unless there is at least one cached report with this identifier
-        // Fetch the entire study's worth of reports from bridge to find the most recent
         subscribeCompletable(
             Observable.just(reportDao)
                     .observeOn(asyncScheduler)
@@ -353,13 +351,15 @@ open class ReportRepository constructor(
      * @return the completable to determine when the operation(s) are done
      */
     private fun appendReportToRoom(report: ReportEntity): Completable {
-        val reportIdentifier = report.identifier
-        val category = reportCategory(reportIdentifier)
-        if (category == SINGLETON && reportIdentifier != null) {
-            // SINGLETON types are a special case, because we need to replace the existing
-            // one because otherwise there will duplicates with no way of knowing the most recent
-            return replaceReportsInRoom(reportIdentifier,
-                    reportSingletonLocalDate, reportSingletonLocalDate, listOf(report))
+        report.identifier?.let { reportIdentifier ->
+            val category = reportCategory(reportIdentifier)
+            if ((category == SINGLETON || category == GROUP_BY_DAY)) {
+                report.localDate?.let {
+                    // SINGLETON and GROUP_BY_DAY types are a special case, because we need to replace the existing
+                    // one because otherwise there will duplicates with no way of knowing the most recent
+                    return replaceReportsInRoom(reportIdentifier, it, it, listOf(report))
+                }
+            }
         }
         return writeReportToRoom(report)
     }

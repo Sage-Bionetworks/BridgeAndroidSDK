@@ -79,20 +79,23 @@ interface ReportEntityDao {
     @Query(RoomSql.SELECT_REPORTS_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER)
     fun reports(reportIdentifier: String, start: LocalDate, end: LocalDate): LiveData<List<ReportEntity>>
 
+    @Query(RoomSql.SELECT_REPORTS_BETWEEN_LOCAL_DATE_WITH_IDENTIFIER_REMOVE)
+    fun reportsTODOREMOVE(reportIdentifier: String, start: LocalDate, end: LocalDate): LiveData<List<ReportEntity>>
+
     /**
-     * Get the most recent report for a reportIdentifier
+     * Get the most recent report for a reportIdentifier based on the dateTime field
      * @param reportIdentifier reports returned will all have this report identifier
      * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
      */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_IDENTIFIER)
+    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER)
     fun mostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>>
 
     /**
-     * Get the most recent report for a reportIdentifier
+     * Get the most recent report for a reportIdentifier based on the dateTime field
      * @param reportIdentifier reports returned will all have this report identifier
      * @return the most recent report report with reportIdentifier or none if there aren't any saved yet
      */
-    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_IDENTIFIER)
+    @Query(RoomSql.SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER)
     fun mostRecentReportInternal(reportIdentifier: String): List<ReportEntity>
 
     /**
