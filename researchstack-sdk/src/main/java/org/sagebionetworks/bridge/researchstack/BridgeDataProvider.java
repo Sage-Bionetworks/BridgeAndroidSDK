@@ -229,7 +229,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     @Override
     public ConsentSignatureBody loadLocalConsent(Context context) {
         ConsentSignatureBody consent = createConsentSignatureBody(
-                authenticationManager.retrieveLocalConsent(bridgeConfig.getStudyId()));
+                authenticationManager.retrieveLocalConsent(getDefaultConsentSubpopulationGuid()));
         logger.debug("loadLocalConsent called, got: " + consent);
         return consent;
     }
@@ -302,8 +302,17 @@ public abstract class BridgeDataProvider extends DataProvider {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @return the default consent subpopulation guid. The first one made on bridge will
+     *         be the study id, but any other ones created after that will have a unique id.
+     */
+    protected String getDefaultConsentSubpopulationGuid() {
+        return bridgeConfig.getStudyId();
+    }
+
     private void saveLocalConsent(@NonNull ConsentSignature consentSignature) {
-        authenticationManager.storeLocalConsent(bridgeConfig.getStudyId(),
+        authenticationManager.storeLocalConsent(
+                getDefaultConsentSubpopulationGuid(),
                 consentSignature.getName(),
                 consentSignature.getBirthdate(),
                 consentSignature.getImageData(),
@@ -317,9 +326,8 @@ public abstract class BridgeDataProvider extends DataProvider {
         return uploadConsent(bridgeConfig.getStudyId(), createConsentSignature(signature));
     }
 
-    private Observable<DataResponse> uploadConsent(@NonNull String subpopulationGuid, @NonNull
-            ConsentSignature
-            consent) {
+    protected Observable<DataResponse> uploadConsent(@NonNull String subpopulationGuid,
+                                                     @NonNull ConsentSignature consent) {
         return giveConsent(
                 subpopulationGuid,
                 consent.getName(),
