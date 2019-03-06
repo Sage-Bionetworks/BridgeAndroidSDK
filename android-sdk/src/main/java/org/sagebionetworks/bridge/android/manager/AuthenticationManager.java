@@ -488,6 +488,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      *
      * @param signIn
      *         signIn credentials
+     *         
+     * @return a Single.just(Session) success when already consented,
+     *         a Single.just(UploadConsentCall) when the local consent matches the required consent,
+     *         and a Single.error(ConsentRequiredException) when we don't have the required
+     *         consent saved locally.
      */
     Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn) {
         final String email = signIn.getEmail();
