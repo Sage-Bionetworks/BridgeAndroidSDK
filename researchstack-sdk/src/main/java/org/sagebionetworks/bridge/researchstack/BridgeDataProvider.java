@@ -474,6 +474,15 @@ public abstract class BridgeDataProvider extends DataProvider {
         return authenticationManager.getUserSessionInfo() != null;
     }
 
+    /**
+     *
+     * @return the user session info stored in the AccountDAO
+     */
+    @Nullable
+    protected UserSessionInfo getAccountDaoUserSessionInfo() {
+        return authenticationManager.getUserSessionInfo();
+    }
+
     @Deprecated
     @Override
     public boolean isSignedIn(Context context) {
