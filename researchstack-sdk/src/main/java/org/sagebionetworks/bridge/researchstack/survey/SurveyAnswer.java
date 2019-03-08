@@ -91,4 +91,19 @@ public class SurveyAnswer {
           dateResult == null ? null : FormatHelper.DEFAULT_FORMAT.format(new Date(dateResult));
     }
   }
+
+  public static class TimeSurveyAnswer extends SurveyAnswer {
+
+    private final String dateAnswer;
+    public String getTimeAnswer() {
+      return dateAnswer;
+    }
+
+    public TimeSurveyAnswer(StepResult result) {
+      super(result);
+      Long dateResult = (Long) result.getResult();
+      dateAnswer =
+          dateResult == null ? null : FormatHelper.SIMPLE_FORMAT_TIME.format(new Date(dateResult));
+    }
+  }
 }
