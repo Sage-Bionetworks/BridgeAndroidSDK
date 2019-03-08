@@ -164,6 +164,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         String password = accountDAO.getPassword();
         UserSessionInfo session = accountDAO.getUserSessionInfo();
 
+        if (session != null) {
+            // Force auth on app re-launch
+            session.setSessionToken("");
+        }
+
         // need either password or session to authenticate
         if (Strings.isNullOrEmpty(password) && session == null) {
             return null;
