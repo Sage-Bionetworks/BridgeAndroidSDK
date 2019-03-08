@@ -145,8 +145,7 @@ public class ArchiveFileFactory {
                 answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
                 break;
             case TimeOfDay:
-                // TODO: implement time of day only sending the hour/min/sec
-                answer = new SurveyAnswer.DateSurveyAnswer(stepResult);
+                answer = new SurveyAnswer.TimeSurveyAnswer(stepResult);
                 break;
             case None:
             case Scale:
