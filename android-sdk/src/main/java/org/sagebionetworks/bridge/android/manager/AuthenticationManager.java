@@ -851,6 +851,8 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                                         subpopulationGuid,
                                         consentSignature))
                         .doOnSuccess(userSessionInfo -> {
+                            String email = userSessionInfo.getEmail();
+                            accountDAO.setEmail(email);
                             // remove from local consent once synced, so userSession info because authoritative source
                             // on consent state for this subpopulationGuid. if this is not done, a consent which is
                             // withdrawn may still be cached locally and treated as valid. local store should only
