@@ -52,7 +52,7 @@ dependencies {
     implementation 'com.squareup.okio:okio:1.14.0'
     implementation 'com.google.code.findbugs:jsr305:2.0.1'
 
-    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.5', {
+    api 'org.sagebionetworks:BridgeDataUploadUtils:0.2.6', {
         exclude group: 'joda-time', module: 'joda-time'
         exclude group: 'org.bouncycastle'
         exclude group: 'com.madgag.spongycastle' //pkix renamed to bcpkix-jdk15on, causes dupes
