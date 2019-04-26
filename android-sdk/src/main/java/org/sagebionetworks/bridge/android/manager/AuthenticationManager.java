@@ -51,6 +51,7 @@ import javax.inject.Inject;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
+import rx.functions.Action1;
 import rx.functions.Func1;
 
 /**
@@ -118,18 +119,21 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         this.authenticationApi = apiClientProvider.getAuthenticationApi();
 
         this.authStateHolderAtomicReference = new AtomicReference<>
-                (createAuthStateFromStoredCredentials());
+                (createAuthStateFromStoredCredentials(false));
         listeners = Lists.newArrayList();
     }
 
     @VisibleForTesting
     @NonNull
-    AuthStateHolder createAuthStateFromStoredCredentials() {
+    /**
+     * @param isSignInResult true if these are being created after a sign in or sign up response
+     */
+    AuthStateHolder createAuthStateFromStoredCredentials(boolean isSignInResult) {
         ForConsentedUsersApi forConsentedUsersApi;
         UserSessionInfoProvider userSessionInfoProvider = null;
 
         ApiClientProvider.AuthenticatedClientProvider provider =
-                createAuthenticatedClientProviderFromStoredCredentials();
+                createAuthenticatedClientProviderFromStoredCredentials(isSignInResult);
         if (provider != null) {
             forConsentedUsersApi = provider.getClient(ForConsentedUsersApi.class);
             userSessionInfoProvider = provider.getUserSessionInfoProvider();
@@ -143,8 +147,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
     @VisibleForTesting
     @Nullable
+    /**
+     * @param isSignInResult true if these are being created after a sign in or sign up response
+     */
     ApiClientProvider.AuthenticatedClientProvider
-    createAuthenticatedClientProviderFromStoredCredentials() {
+    createAuthenticatedClientProviderFromStoredCredentials(boolean isSignInResult) {
         String email = accountDAO.getEmail();
 
         String phoneRegion = accountDAO.getPhoneRegion();
@@ -164,7 +171,10 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
         String password = accountDAO.getPassword();
         UserSessionInfo session = accountDAO.getUserSessionInfo();
 
-        if (session != null) {
+        // This function is called after a successful sign up or sign in,
+        // In that case, we don't want to overwrite the session token, so check isSignIn state.
+        // We only want this to occur when the app re-launches
+        if (!isSignInResult && session != null) {
             // Force auth on app re-launch
             session.setSessionToken("");
         }
@@ -255,7 +265,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     }
 
                     authStateHolderAtomicReference.set(
-                            createAuthStateFromStoredCredentials()
+                            createAuthStateFromStoredCredentials(true)
                     );
 
                     StudyParticipant participant = new StudyParticipant();
@@ -527,7 +537,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     accountDAO.setUserSessionInfo(session);
 
                     authStateHolderAtomicReference.set(
-                            createAuthStateFromStoredCredentials()
+                            createAuthStateFromStoredCredentials(true)
                     );
 
                     accountDAO.setStudyParticipant(
@@ -620,7 +630,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
 
         // once signOut method is called, prevent usage of API, regardless of success of bridge call
         authStateHolderAtomicReference.set(
-                createAuthStateFromStoredCredentials()
+                createAuthStateFromStoredCredentials(false)
         );
 
         return completable;
@@ -864,6 +874,12 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             // consents pending upload
                             accountDAO.setUserSessionInfo(userSessionInfo);
                             consentDAO.removeConsent(subpopulationGuid);
+
+                            // Signing a consent can update the user's session token
+                            // So make sure we refresh the credentials now
+                            authStateHolderAtomicReference.set(
+                                    createAuthStateFromStoredCredentials(true)
+                            );
                         })
                         // Make sure the consent info from the user session is updated
                         .doOnError(e ->
