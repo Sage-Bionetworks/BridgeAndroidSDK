@@ -522,7 +522,27 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                     return Single.error(t);
                 })
                 .doOnSuccess(session -> {
-                    setSessionAfterSignIn(signIn, email, session);
+                    accountDAO.setEmail(email);
+                    accountDAO.setPassword(signIn.getPassword());
+                    accountDAO.setExternalId(signIn.getExternalId());
+
+                    Phone phone = signIn.getPhone();
+                    if (phone != null) {
+                        accountDAO.setPhoneRegion(phone.getRegionCode());
+                        accountDAO.setPhoneNumber(phone.getNumber());
+                    }
+
+                    // we must set here, since we're not receiving session change callbacks until we create an
+                    // authenticated retrofit/okhttp client
+                    accountDAO.setUserSessionInfo(session);
+
+                    authStateHolderAtomicReference.set(
+                            createAuthStateFromStoredCredentials(true)
+                    );
+
+                    accountDAO.setStudyParticipant(
+                            new StudyParticipant()
+                                    .email(signIn.getEmail()));
                 })
                 .flatMap(session -> {
                     if (!session.isConsented()) {
@@ -536,9 +556,7 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             if (consentStatus.isRequired() && !consentStatus.isConsented()) {
                                 if (isConsentedInLocal(subpopulationGuid)) {
                                     // upload local consents, fail this sign in if consent upload fails
-                                    return uploadLocalConsents().toSingle()
-                                            .doOnSuccess(newestSession ->
-                                                    setSessionAfterSignIn(signIn, email, newestSession));
+                                    return uploadLocalConsents().toSingle();
                                 } else {
                                     // No saved consents for the required guid, propagate the error
                                     return Single.error(new ConsentRequiredException
@@ -553,30 +571,6 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                 .doOnError(t -> {
                     accountDAO.clear();
                 });
-    }
-
-    private void setSessionAfterSignIn(SignIn signIn, String email, UserSessionInfo session) {
-        accountDAO.setEmail(email);
-        accountDAO.setPassword(signIn.getPassword());
-        accountDAO.setExternalId(signIn.getExternalId());
-
-        Phone phone = signIn.getPhone();
-        if (phone != null) {
-            accountDAO.setPhoneRegion(phone.getRegionCode());
-            accountDAO.setPhoneNumber(phone.getNumber());
-        }
-
-        // we must set here, since we're not receiving session change callbacks until we create an
-        // authenticated retrofit/okhttp client
-        accountDAO.setUserSessionInfo(session);
-
-        authStateHolderAtomicReference.set(
-                createAuthStateFromStoredCredentials(true)
-        );
-
-        accountDAO.setStudyParticipant(
-                new StudyParticipant()
-                        .email(signIn.getEmail()));
     }
 
     /**
@@ -880,6 +874,12 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             // consents pending upload
                             accountDAO.setUserSessionInfo(userSessionInfo);
                             consentDAO.removeConsent(subpopulationGuid);
+
+                            // Signing a consent can update the user's session token
+                            // So make sure we refresh the credentials now
+                            authStateHolderAtomicReference.set(
+                                    createAuthStateFromStoredCredentials(true)
+                            );
                         })
                         // Make sure the consent info from the user session is updated
                         .doOnError(e ->
