@@ -488,6 +488,11 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
      *
      * @param signIn
      *         signIn credentials
+     *         
+     * @return a Single.just(Session) success when already consented,
+     *         a Single.just(UploadConsentCall) when the local consent matches the required consent,
+     *         and a Single.error(ConsentRequiredException) when we don't have the required
+     *         consent saved locally.
      */
     Single.Transformer<UserSessionInfo, UserSessionInfo> signInHelper(SignIn signIn) {
         final String email = signIn.getEmail();
@@ -533,13 +538,15 @@ public class AuthenticationManager implements UserSessionInfoProvider.UserSessio
                             ConsentStatus consentStatus = consentStatusEntry.getValue();
 
                             // required consent missing on Bridge and present locally
-                            if (consentStatus.isRequired()
-                                    && !consentStatus.isConsented()
-                                    && isConsentedInLocal(subpopulationGuid)) {
-
-                                // upload local consents, fail this sign in if consent upload fails
-                                return uploadLocalConsents()
-                                        .toSingle();
+                            if (consentStatus.isRequired() && !consentStatus.isConsented()) {
+                                if (isConsentedInLocal(subpopulationGuid)) {
+                                    // upload local consents, fail this sign in if consent upload fails
+                                    return uploadLocalConsents().toSingle();
+                                } else {
+                                    // No saved consents for the required guid, propagate the error
+                                    return Single.error(new ConsentRequiredException
+                                            ("Consent required.", "signIn", session));
+                                }
                             }
                         }
                     }
