@@ -14,7 +14,6 @@ android:
     # RS components
     - extra-android-m2repository
     - extra-google-m2repository
-before_script: .travis/setup.sh
 script:
     - ./gradlew clean build
 deploy:
