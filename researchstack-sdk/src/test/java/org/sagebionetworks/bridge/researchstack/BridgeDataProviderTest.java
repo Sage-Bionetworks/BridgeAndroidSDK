@@ -1,5 +1,17 @@
 package org.sagebionetworks.bridge.researchstack;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.same;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import android.content.Context;
 import android.os.Looper;
 import android.preference.PreferenceManager;
@@ -8,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
+
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.junit.Before;
@@ -19,6 +32,7 @@ import org.mockito.MockitoAnnotations;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.researchstack.backbone.AppPrefs;
 import org.researchstack.backbone.DataProvider;
 import org.researchstack.backbone.DataResponse;
 import org.researchstack.backbone.model.ConsentSignatureBody;
@@ -30,7 +44,6 @@ import org.researchstack.backbone.storage.file.PinCodeConfig;
 import org.researchstack.backbone.task.OrderedTask;
 import org.researchstack.backbone.task.Task;
 import org.researchstack.backbone.ui.ActiveTaskActivity;
-import org.researchstack.backbone.AppPrefs;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
 import org.sagebionetworks.bridge.android.manager.AppConfigManager;
@@ -65,18 +78,6 @@ import java.util.List;
 import rx.Completable;
 import rx.Observable;
 import rx.Single;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.same;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Created by liujoshua on 9/12/16.
@@ -128,7 +129,7 @@ public class BridgeDataProviderTest {
     @Before
     public void setupTest() {
         MockitoAnnotations.initMocks(this);
-        
+
 
         when(bridgeManagerProvider.getApplicationContext()).thenReturn(context);
         when(bridgeManagerProvider.getBridgeConfig()).thenReturn(bridgeConfig);
@@ -475,8 +476,9 @@ public class BridgeDataProviderTest {
         ScheduledActivity taskScheduledActivity2 = makeScheduledActivity(day2, taskActivity2,
                 true);
 
-        ScheduledActivityListV4 scheduledActivityList = new ScheduledActivityListV4()
-                .items(ImmutableList.of(surveyScheduledActivity2, surveyScheduledActivity1,
+        ScheduledActivityListV4 scheduledActivityList = mock(ScheduledActivityListV4.class);
+        when(scheduledActivityList.getItems()).thenReturn(
+                ImmutableList.of(surveyScheduledActivity2, surveyScheduledActivity1,
                         taskScheduledActivity2, taskScheduledActivity1));
 
         // Mock Bridge call
@@ -600,7 +602,7 @@ public class BridgeDataProviderTest {
         List<String> dataGroupList = ((BridgeDataProvider) dataProvider).getLocalDataGroups();
         assertEquals(Lists.newArrayList("foo", "bar"), dataGroupList);
     }
-  
+
     public void testUpdateActivityOnUpload() throws IOException {
         // mock bridge config
         when(bridgeConfig.getTaskToSchemaMap()).thenReturn(ImmutableMap.of(TASK_ID, SCHEMA_KEY));

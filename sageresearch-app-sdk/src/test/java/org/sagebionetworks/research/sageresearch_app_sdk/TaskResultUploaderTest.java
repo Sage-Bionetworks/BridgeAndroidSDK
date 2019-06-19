@@ -32,6 +32,8 @@
 
 package org.sagebionetworks.research.sageresearch_app_sdk;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -50,6 +52,7 @@ import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager.UploadFile;
 import org.sagebionetworks.bridge.android.manager.upload.SchemaKey;
 import org.sagebionetworks.bridge.data.Archive;
+import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
@@ -120,5 +123,19 @@ public class TaskResultUploaderTest {
 
         verify(uploadManager).queueUpload(any(), eq(archive));
         verify(uploadManager).processUploadFile(uploadFile);
+    }
+
+    @Test
+    public void testCreateScheduledActivityForMetadata_NullScheduledActivityEntity() {
+        String taskIdentifier = "taskIdentifier";
+
+        TaskResult taskResult = mock(TaskResult.class);
+        when(taskResult.getIdentifier()).thenReturn(taskIdentifier);
+
+        ScheduledActivity scheduledActivity = taskResultUploader.createScheduledActivityForMetadata(taskResult, null);
+
+        assertNotNull(scheduledActivity.getActivity());
+        assertNotNull(scheduledActivity.getActivity().getTask());
+        assertEquals(taskIdentifier, scheduledActivity.getActivity().getTask().getIdentifier());
     }
 }

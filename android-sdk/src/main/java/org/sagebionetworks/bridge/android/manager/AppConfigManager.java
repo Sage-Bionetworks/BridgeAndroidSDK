@@ -66,7 +66,7 @@ public class AppConfigManager {
     /** Gets the app config from the server and caches the result. */
     public @NonNull Single<AppConfig> getRemoteAppConfig() {
         return RxUtils.toBodySingle(publicApi
-                .getAppConfig(config.getStudyId()))
+                .getAppConfigForStudy(config.getStudyId()))
                 .doOnSuccess(appConfigDAO::cacheAppConfig);
     }
 }

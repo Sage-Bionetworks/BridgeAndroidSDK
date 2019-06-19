@@ -69,7 +69,7 @@ public class ParticipantRecordManager {
     @NonNull
     public Single<StudyParticipant> getParticipantRecord() {
         return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .getUsersParticipantRecord())
+                .getUsersParticipantRecord(false))
                 .doOnSuccess(accountDAO::setStudyParticipant)
                 .doOnError(throwable -> logger.error(throwable.getLocalizedMessage()));
     }

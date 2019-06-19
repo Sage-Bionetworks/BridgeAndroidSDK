@@ -66,7 +66,7 @@ public class AppConfigManagerTest {
         assertEquals(APP_CONFIG_GUID, result.getGuid());
 
         // Verify we never call the server.
-        verify(mockApi, never()).getAppConfig(any());
+        verify(mockApi, never()).getAppConfigForStudy(any());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class AppConfigManagerTest {
         // Mock API.
         Call<AppConfig> appConfigCall = BridgeApiTestUtils.mockCallWithValue(new AppConfig().guid(
                 APP_CONFIG_GUID));
-        when(mockApi.getAppConfig(STUDY_ID)).thenReturn(appConfigCall);
+        when(mockApi.getAppConfigForStudy(STUDY_ID)).thenReturn(appConfigCall);
 
         // Execute.
         AppConfig result = manager.getAppConfig().toBlocking().value();

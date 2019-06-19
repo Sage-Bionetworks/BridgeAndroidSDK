@@ -106,7 +106,7 @@ public class AccountDAO extends SharedPreferencesJsonDAO {
             // the server is only guaranteed to send the reauth token on sign in, it is not sent in all UserSessionInfo
             // responses for security reasons. If the currently stored session contains a token and the new session
             // does not, copy over the token from the previous session
-            UserSessionInfoProvider.mergeReauthToken(getUserSessionInfo(), userSessionInfo);
+            userSessionInfo = UserSessionInfoProvider.mergeReauthToken(getUserSessionInfo(), userSessionInfo);
 
             setValue(KEY_SESSION_INFO, userSessionInfo, UserSessionInfo.class);
         } finally {

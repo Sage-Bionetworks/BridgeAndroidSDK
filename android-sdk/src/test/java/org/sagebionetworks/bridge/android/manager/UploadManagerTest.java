@@ -84,12 +84,13 @@ public class UploadManagerTest {
         uploadFile.contentType = UPLOAD_CONTENT_TYPE;
         uploadFile.md5Hash = UPLOAD_MD5;
 
-        uploadSession = new UploadSession()
-                .id(UPLOAD_ID)
-                .url(UPLOAD_URL);
+        uploadSession = mock(UploadSession.class);
+        when(uploadSession.getId()).thenReturn(UPLOAD_ID);
+        when(uploadSession.getUrl()).thenReturn(UPLOAD_URL);
 
-        uploadValidationStatus = new UploadValidationStatus()
-                .id(UPLOAD_ID);
+
+        uploadValidationStatus = mock(UploadValidationStatus.class);
+        when(uploadValidationStatus.getId()).thenReturn(UPLOAD_ID);
 
         when(archive.exists()).thenReturn(true);
     }
@@ -167,7 +168,7 @@ public class UploadManagerTest {
 
     @Test
     public void testProcessUploadForValidationStatus_Succeeeded() {
-        uploadValidationStatus.status(SUCCEEDED);
+        when(uploadValidationStatus.getStatus()).thenReturn(SUCCEEDED);
 
         doReturn(Completable.complete()).when(spyUploadManager).dequeueUpload(FILENAME);
 
@@ -180,7 +181,7 @@ public class UploadManagerTest {
 
     @Test
     public void testProcessUploadForValidationStatus_Duplicate() {
-        uploadValidationStatus.status(DUPLICATE);
+        when(uploadValidationStatus.getStatus()).thenReturn(DUPLICATE);
 
         doReturn(Completable.complete()).when(spyUploadManager).dequeueUpload(FILENAME);
 
@@ -193,7 +194,7 @@ public class UploadManagerTest {
 
     @Test
     public void testProcessUploadForValidationStatus_Requested() {
-        uploadValidationStatus.status(REQUESTED);
+        when(uploadValidationStatus.getStatus()).thenReturn(REQUESTED);
 
         doReturn(Completable.complete()).when(spyUploadManager).uploadToS3(uploadFile, uploadSession);
 
@@ -206,15 +207,15 @@ public class UploadManagerTest {
 
     @Test
     public void testUploadToS3_ExpiredSession() throws IOException {
-        uploadSession.setExpires(DateTime.now());
+        when(uploadSession.getExpires()).thenReturn(DateTime.now());
 
         Call successCall = mock(Call.class);
         when(successCall.clone()).thenReturn(successCall);
         when(successCall.execute()).thenReturn(Response.success(null));
 
-        UploadSession freshSession = new UploadSession()
-                .id(UPLOAD_ID)
-                .url(UPLOAD_URL);
+        UploadSession freshSession = mock(UploadSession.class);
+        when(freshSession.getId()).thenReturn(UPLOAD_ID);
+        when(freshSession.getUrl()).thenReturn(UPLOAD_URL);
 
         doReturn(Single.just(freshSession)).when(spyUploadManager).getUploadSession(uploadFile);
         doReturn(archive).when(spyUploadManager).getFile(FILENAME);
