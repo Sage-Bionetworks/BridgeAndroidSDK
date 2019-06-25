@@ -2,3 +2,7 @@ include ':backbone'
 project(':backbone').projectDir = file('ResearchStack/backbone')
 
 include ':sageresearch-app-sdk', ':researchstack-sdk', ':android-sdk', ':test-utils'
+
+// uncomment this for a "composite build" which substitutes SageResearch artifacts
+// for the source code in the indicated directory
+// includeBuild ('../SageResearch-Android')
