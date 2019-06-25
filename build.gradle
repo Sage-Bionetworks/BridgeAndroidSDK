@@ -12,6 +12,7 @@ allprojects {
     }
     maven { url 'http://repo-maven.sagebridge.org/' }
     maven { url "https://jitpack.io" }
+    maven{ url 'https://dl.bintray.com/sage-bionetworks/sage-research/'}
     mavenLocal()
 
     // for temp repo https://bintray.com/sage-bionetworks/bridge-maven-release/rest-client-android
@@ -20,6 +21,7 @@ allprojects {
 }
 
 buildscript {
+  ext.sage_research_version = '0.0.4'
   ext.dokka_version = '0.9.17'
   ext.kotlin_version = '1.3.11'
   ext.support_library_version = '28.0.0'

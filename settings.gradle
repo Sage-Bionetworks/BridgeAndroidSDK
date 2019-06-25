@@ -1,11 +1,4 @@
 include ':backbone'
 project(':backbone').projectDir = file('ResearchStack/backbone')
 
-include ':mpower', ':domain', ':data', ':mobile-ui', ':presentation'
-project(':mpower').projectDir = file('SageResearch-Android/mpower')
-project(':domain').projectDir = file('SageResearch-Android/domain')
-project(':data').projectDir = file('SageResearch-Android/data')
-project(':mobile-ui').projectDir = file('SageResearch-Android/mobile-ui')
-project(':presentation').projectDir = file('SageResearch-Android/presentation')
-
 include ':sageresearch-app-sdk', ':researchstack-sdk', ':android-sdk', ':test-utils'
