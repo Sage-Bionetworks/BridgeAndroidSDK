@@ -9,11 +9,6 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/ResearchStack/backbone" />
-            <option value="$PROJECT_DIR$/SageResearch-Android/data" />
-            <option value="$PROJECT_DIR$/SageResearch-Android/domain" />
-            <option value="$PROJECT_DIR$/SageResearch-Android/mobile-ui" />
-            <option value="$PROJECT_DIR$/SageResearch-Android/mpower" />
-            <option value="$PROJECT_DIR$/SageResearch-Android/presentation" />
             <option value="$PROJECT_DIR$/android-sdk" />
             <option value="$PROJECT_DIR$/researchstack-sdk" />
             <option value="$PROJECT_DIR$/sageresearch-app-sdk" />
@@ -21,6 +16,7 @@
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
+        <option name="testRunner" value="PLATFORM" />
       </GradleProjectSettings>
     </option>
   </component>

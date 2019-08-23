@@ -45,7 +45,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    api project(':mobile-ui')
+    api "org.sagebionetworks.research:mobile-ui:$sage_research_version"
     api project(':android-sdk')
     api project(':researchstack-sdk')
     implementation 'com.github.akarnokd:rxjava2-interop:0.13.2'
