@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Lists;
+import com.google.gson.JsonObject;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.sagebionetworks.bridge.rest.RestUtils;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 
 @Config
@@ -60,9 +62,7 @@ public class AccountDAOTest {
     public void testSetUserSessionInfo_MergesReauthToken() {
         String reauthToken = "reauthToken";
         String sessionToken = "sessionToken";
-        UserSessionInfo userSessionInfo = new UserSessionInfo()
-                .sessionToken(sessionToken)
-                .reauthToken(reauthToken);
+        UserSessionInfo userSessionInfo = createUserSessionInfo(sessionToken, reauthToken);
 
         accountDAO.setUserSessionInfo(userSessionInfo);
 
@@ -71,8 +71,7 @@ public class AccountDAOTest {
         assertEquals(userSessionInfo, retrievedUserSessionInfo);
 
         String newSessionToken = "newSessionToken";
-        UserSessionInfo newUserSessionInfo = new UserSessionInfo()
-                .sessionToken(newSessionToken);
+        UserSessionInfo newUserSessionInfo = createUserSessionInfo(newSessionToken, null);
 
         accountDAO.setUserSessionInfo(newUserSessionInfo);
 
@@ -84,9 +83,8 @@ public class AccountDAOTest {
 
         String newReauthToken = "newReauthToken";
         String evenNewerSessionToken = "evenNewerSessionToken";
-        UserSessionInfo evenNewerSession = new UserSessionInfo()
-                .sessionToken(evenNewerSessionToken)
-                .reauthToken(newReauthToken);
+
+        UserSessionInfo evenNewerSession = createUserSessionInfo(evenNewerSessionToken, newReauthToken);
 
         accountDAO.setUserSessionInfo(evenNewerSession);
 
@@ -94,6 +92,18 @@ public class AccountDAOTest {
 
         assertEquals(evenNewerSessionToken, retrievedUserSessionInfo.getSessionToken());
         assertEquals(newReauthToken, retrievedUserSessionInfo.getReauthToken()); // check we wrote a new reauth token
+    }
+
+    private static UserSessionInfo createUserSessionInfo(String sessionToken, String reauthToken) {
+        JsonObject o = (JsonObject) RestUtils.GSON.toJsonTree(new UserSessionInfo());
+        if (sessionToken != null) {
+            o.addProperty("sessionToken", sessionToken);
+        }
+        if (reauthToken != null) {
+            o.addProperty("reauthToken", reauthToken);
+        }
+        System.out.println(o);
+        return RestUtils.toType(o, UserSessionInfo.class);
     }
 
     @Test

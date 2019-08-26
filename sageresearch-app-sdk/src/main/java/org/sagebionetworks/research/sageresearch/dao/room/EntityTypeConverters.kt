@@ -2,6 +2,7 @@ package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.arch.persistence.room.TypeConverter
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
 import com.google.gson.TypeAdapter
 
@@ -10,7 +11,6 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
-import org.researchstack.backbone.utils.LogExt
 import org.sagebionetworks.bridge.rest.RestUtils
 
 import org.sagebionetworks.bridge.rest.gson.ByteArrayToBase64TypeAdapter
@@ -23,6 +23,7 @@ import org.sagebionetworks.bridge.rest.model.ScheduleStatus
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity
 import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
 import org.sagebionetworks.bridge.rest.model.TaskReference
+import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters.Companion.logger
 import org.sagebionetworks.research.sageresearch.extensions.toJodaDateTime
 import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
 import org.sagebionetworks.research.sageresearch.extensions.toThreeTenInstant
@@ -74,9 +75,8 @@ import java.io.Serializable
  */
 class EntityTypeConverters {
 
-    private val logger = LoggerFactory.getLogger(EntityTypeConverters::class.java)
-
     companion object {
+        val logger = LoggerFactory.getLogger(EntityTypeConverters::class.java)
         /**
          * Short-cuts to extension functionality because Java doesn't support extensions
          */
@@ -239,46 +239,47 @@ fun ScheduledActivityEntity.clientWritableCopy(): ScheduledActivity {
  */
 fun ScheduledActivityEntity.bridgeMetadataCopy(): ScheduledActivity {
     var schedule = ScheduledActivity()
-    val immutableFieldMap = HashMap<String, String>()
+    val immutableFieldMap = HashMap<String, Any>()
 
     scheduledOn?.let {
         val dateTime = it.toJodaDateTime()
-        val dateTimeStr = RestUtils.GSON.toJson(dateTime).replace("\"", "")
-        immutableFieldMap.put("scheduledOn", dateTimeStr)
+        immutableFieldMap.put("scheduledOn", dateTime)
     }
 
     schedulePlanGuid?.let {
         immutableFieldMap.put("schedulePlanGuid", it)
     }
 
+    activity?.task?.let {
+        val bridgeActivity = Activity()
+        bridgeActivity.label = activity?.label
+        bridgeActivity.task = TaskReference()
+        bridgeActivity.task?.identifier = activityIdentifier()
+        immutableFieldMap.put("activity", bridgeActivity)
+    }
+
     if (immutableFieldMap.isNotEmpty()) {
         // TODO: mdephillips 10/14/18 sync with josh or dwayne to make scheduledOn and schedulePlanGuid mutable
         // TODO: mdephillips 10/14/18 so I don't have to do this json non-sense
-        var scheduleJson = "{"
-        immutableFieldMap.keys.forEachIndexed { i, s ->
-            scheduleJson = "$scheduleJson \"$s\" : \"${immutableFieldMap[s]}\""
-            if (i < (immutableFieldMap.keys.size - 1)) {
-                scheduleJson = "$scheduleJson,"
+        val scheduleJsonTree = RestUtils.GSON.toJsonTree(ScheduledActivity()) as JsonObject
+        immutableFieldMap.forEach { e ->
+            if (e.value is String) {
+                scheduleJsonTree.addProperty(e.key, e.value as String)
+            } else {
+                scheduleJsonTree.add(e.key, RestUtils.GSON.toJsonTree(e.value))
             }
         }
-        scheduleJson = "$scheduleJson}"
+
         try {
-            schedule = RestUtils.GSON.fromJson(scheduleJson, ScheduledActivity::class.java)
+            schedule = RestUtils.toType(scheduleJsonTree, ScheduledActivity::class.java)
         } catch (e: JsonSyntaxException) {
-            LogExt.e(ScheduledActivityEntity::class.java, e)
+            logger.error("Error deserializing ScheduledActivity: $scheduleJsonTree", e)
         }
     }
 
     schedule.guid = guid
     schedule.startedOn = startedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
     schedule.finishedOn = finishedOn?.let { org.joda.time.DateTime(it.toEpochMilli()) }
-
-    activity?.task?.let {
-        val bridgeActivity = Activity()
-        bridgeActivity.label = activity?.label
-        bridgeActivity.task = TaskReference()
-        bridgeActivity.task?.identifier = activityIdentifier()
-    }
 
     return schedule
 }
@@ -313,7 +314,8 @@ fun ReportEntity.bridgeCopy(): ReportData {
  * 'LocalDateTimeAdapter' is needed when going from
  * ScheduledActivity.scheduledOn: DateTime to ScheduledActivityEntity.scheduledOn: LocalDateTime
  */
-class LocalDateTimeAdapter: TypeAdapter<LocalDateTime>() {
+class LocalDateTimeAdapter : TypeAdapter<LocalDateTime>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): LocalDateTime {
         val src = reader.nextString()
@@ -334,7 +336,8 @@ class LocalDateTimeAdapter: TypeAdapter<LocalDateTime>() {
  * 'InstantAdapter' is needed when going from
  * ScheduledActivity.finishedOn: DateTime to ScheduledActivityEntity.finishedOn: Instant
  */
-class InstantAdapter: TypeAdapter<Instant>() {
+class InstantAdapter : TypeAdapter<Instant>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): Instant {
         val src = reader.nextString()
@@ -355,7 +358,8 @@ class InstantAdapter: TypeAdapter<Instant>() {
  * 'LocalDateTimeAdapter' is needed when going from
  * ScheduledActivity.scheduledOn: DateTime to ScheduledActivityEntity.scheduledOn: LocalDateTime
  */
-class LocalDateAdapter: TypeAdapter<LocalDate>() {
+class LocalDateAdapter : TypeAdapter<LocalDate>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): LocalDate {
         val src = reader.nextString()
@@ -375,7 +379,8 @@ class LocalDateAdapter: TypeAdapter<LocalDate>() {
 /**
  * 'ZonedDateTimeAdapter' is needed when going from client data zoned date time to a iso date format
  */
-class ZonedDateTimeAdapter: TypeAdapter<ZonedDateTime>() {
+class ZonedDateTimeAdapter : TypeAdapter<ZonedDateTime>() {
+
     @Throws(IOException::class)
     override fun read(reader: JsonReader): ZonedDateTime {
         val src = reader.nextString()
@@ -395,7 +400,7 @@ class ZonedDateTimeAdapter: TypeAdapter<ZonedDateTime>() {
 /**
  * Client data wrapper class to allow for custom read/write for Room Any type objects
  */
-data class ClientData(var data: Any? = null): Serializable
+data class ClientData(var data: Any? = null) : Serializable
 
 /**
  * @param key for retrieving the value if client data is a map

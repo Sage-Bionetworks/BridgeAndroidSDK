@@ -52,13 +52,13 @@ import org.sagebionetworks.bridge.data.Archive;
 import org.sagebionetworks.bridge.data.Archive.Builder;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
-import org.sagebionetworks.bridge.rest.model.Activity;
 import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters;
+import org.sagebionetworks.research.sageresearch.dao.room.RoomActivity;
+import org.sagebionetworks.research.sageresearch.dao.room.RoomTaskReference;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity;
 import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory;
@@ -177,6 +177,9 @@ public class TaskResultUploader implements TaskResultProcessor {
     }
 
     /**
+     * Create a ScheduledActivity from a ScheduledActivityEntity containing the fields used for creating Bridge
+     * Archive metadata files.
+     *
      * @param taskResult
      *         uses the identifier which should be the identifier of the ScheduledActivity
      * @param scheduleEntity
@@ -184,16 +187,22 @@ public class TaskResultUploader implements TaskResultProcessor {
      * @return a ScheduledActivity used for metadata archive construction.
      */
     @NonNull
-    private ScheduledActivity createScheduledActivityForMetadata(
+    @VisibleForTesting
+    ScheduledActivity createScheduledActivityForMetadata(
             @NonNull TaskResult taskResult, @Nullable ScheduledActivityEntity scheduleEntity) {
-
-        ScheduledActivity sa = new ScheduledActivity();
-        sa.activity(new Activity()
-                .task(new TaskReference().identifier(taskResult.getIdentifier())));
         if (scheduleEntity != null) {
-            sa = EntityTypeConverters.bridgeMetaDataSchedule(scheduleEntity);
+           return EntityTypeConverters.bridgeMetaDataSchedule(scheduleEntity);
+        } else {
+            RoomActivity roomActivity = new RoomActivity("placeholder");
+
+            RoomTaskReference roomTaskReference = new RoomTaskReference(taskResult.getIdentifier());
+            roomActivity.setTask(roomTaskReference);
+
+            ScheduledActivityEntity sae = new ScheduledActivityEntity("placeholder");
+            sae.setActivity(roomActivity);
+
+            return EntityTypeConverters.bridgeMetaDataSchedule(sae);
         }
-        return sa;
     }
 
     /**
