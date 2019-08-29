@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sagebionetworks.bridge.android;
+package org.sagebionetworks.research.test.utils;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -51,18 +51,18 @@ public class SingleFragmentActivity extends AppCompatActivity {
         FrameLayout content = new FrameLayout(this);
         content.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-        content.setId(R.id.osb_fragment_container);
+        content.setId(R.id.test_fragment_container);
         setContentView(content);
     }
 
     public void setFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()
-                .add(R.id.osb_fragment_container, fragment, "TEST")
+                .add(R.id.test_fragment_container, fragment, "TEST")
                 .commit();
     }
 
     public void replaceFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.osb_fragment_container, fragment).commit();
+                .replace(R.id.test_fragment_container, fragment).commit();
     }
 }
