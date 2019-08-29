@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.researchstack.task.tracked.medication;
 
 import android.content.Context;
 
-import org.researchstack.backbone.step.Step;
+import org.sagebionetworks.researchstack.backbone.step.Step;
 import org.sagebionetworks.bridge.researchstack.task.tracked.TrackedMedication;
 import org.sagebionetworks.bridge.researchstack.task.tracked.TrackedObjectTask;
 import org.sagebionetworks.bridge.researchstack.task.tracked.TrackedStepHolder;

@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.researchstack;
 
-import org.researchstack.backbone.ResourceManager;
-import org.researchstack.backbone.ResourcePathManager;
+import org.sagebionetworks.researchstack.backbone.ResourceManager;
+import org.sagebionetworks.researchstack.backbone.ResourcePathManager;
 
 
 /**

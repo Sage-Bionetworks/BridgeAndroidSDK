@@ -60,7 +60,7 @@ interface ReportViewModelInterface {
     val reportRepo: ReportRepository
     fun mostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>>
     fun reportsLiveData(reportIdentifier: String, start: LocalDateTime, end: LocalDateTime): LiveData<List<ReportEntity>>
-    fun saveResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult)
+    fun saveResearchStackReports(taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult)
 }
 
 class ReportViewModelBaseImplementation(override val reportRepo: ReportRepository): ReportViewModelInterface {
@@ -85,7 +85,7 @@ class ReportViewModelBaseImplementation(override val reportRepo: ReportRepositor
     /**
      * @param taskResult from a ResearchStack task it will be turned into reports and uploaded to bridge
      */
-    override fun saveResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult) {
+    override fun saveResearchStackReports(taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult) {
         reportRepo.saveResearchStackReports(taskResult)
     }
 }

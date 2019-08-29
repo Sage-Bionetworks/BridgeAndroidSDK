@@ -45,7 +45,7 @@ import android.net.Uri
 import android.os.Build
 import android.support.annotation.VisibleForTesting
 import android.support.v4.app.NotificationCompat
-import org.researchstack.backbone.ui.MainActivity
+import org.sagebionetworks.researchstack.backbone.ui.MainActivity
 import org.sagebionetworks.research.sageresearch.extensions.isBetweenInclusive
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 

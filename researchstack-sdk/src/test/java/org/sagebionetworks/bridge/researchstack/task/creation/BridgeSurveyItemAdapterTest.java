@@ -20,8 +20,8 @@ package org.sagebionetworks.bridge.researchstack.task.creation;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.junit.Test;
-import org.researchstack.backbone.model.survey.BaseSurveyItem;
-import org.researchstack.backbone.model.survey.SurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.survey.BaseSurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.survey.SurveyItem;
 
 import java.util.Map;
 

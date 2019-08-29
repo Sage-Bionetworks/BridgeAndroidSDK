@@ -467,13 +467,13 @@ open class ScheduleRepository constructor(
      * @param taskResult for creating the answers map
      */
     fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
-            taskResult: org.researchstack.backbone.result.TaskResult) {
+            taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult) {
         subscribeCompletable(uploadResearchStackTaskResultToS3Completable(schedule, taskResult),
                 "Upload to S3 succeed", "Upload to S3 failed")
     }
 
     protected fun uploadResearchStackTaskResultToS3Completable(schedule: ScheduledActivityEntity?,
-            taskResult: org.researchstack.backbone.result.TaskResult): Completable {
+            taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult): Completable {
 
         // Attempt to build the archive to upload, if successful, upload to bridge
         researchStackUploadArchiveFactory.buildResearchStackArchive(

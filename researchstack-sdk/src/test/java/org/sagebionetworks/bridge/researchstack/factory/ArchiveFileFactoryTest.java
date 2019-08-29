@@ -1,10 +1,10 @@
 package org.sagebionetworks.bridge.researchstack.factory;
 
 import org.junit.Test;
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
-import org.researchstack.backbone.result.FileResult;
-import org.researchstack.backbone.result.StepResult;
+import org.sagebionetworks.researchstack.backbone.answerformat.AnswerFormat;
+import org.sagebionetworks.researchstack.backbone.answerformat.ChoiceAnswerFormat;
+import org.sagebionetworks.researchstack.backbone.result.FileResult;
+import org.sagebionetworks.researchstack.backbone.result.StepResult;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer;

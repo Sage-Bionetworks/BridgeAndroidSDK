@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.researchstack.survey;
 
 import org.joda.time.DateTime;
-import org.researchstack.backbone.model.SchedulesAndTasksModel;
+import org.sagebionetworks.researchstack.backbone.model.SchedulesAndTasksModel;
 
 /**
  * Subclass of TaskScheduleModel to include Bridge-specific attributes, such as surveyGuid and

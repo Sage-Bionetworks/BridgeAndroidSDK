@@ -17,8 +17,8 @@
 #}
 
 # RS
--keep public class * implements org.researchstack.backbone.ui.step.layout.StepLayout { *; }
--keep public class * implements org.researchstack.backbone.ui.step.body.StepBody { *; }
+-keep public class * implements org.sagebionetworks.researchstack.backbone.ui.step.layout.StepLayout { *; }
+-keep public class * implements org.sagebionetworks.researchstack.backbone.ui.step.body.StepBody { *; }
 
 # RS / Squeaky
 -dontwarn co.touchlab.squeaky.dao.SqueakyOpenHelper

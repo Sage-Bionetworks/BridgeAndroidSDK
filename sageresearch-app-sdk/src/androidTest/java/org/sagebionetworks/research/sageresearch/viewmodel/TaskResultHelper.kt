@@ -32,8 +32,8 @@
 
 package org.sagebionetworks.research.sageresearch.viewmodel
 
-import org.researchstack.backbone.result.StepResult
-import org.researchstack.backbone.step.Step
+import org.sagebionetworks.researchstack.backbone.result.StepResult
+import org.sagebionetworks.researchstack.backbone.step.Step
 import org.sagebionetworks.research.domain.result.AnswerResultType.BOOLEAN
 import org.sagebionetworks.research.domain.result.AnswerResultType.DATE
 import org.sagebionetworks.research.domain.result.AnswerResultType.DECIMAL
@@ -101,7 +101,7 @@ class TaskResultHelper {
                 Pair(subtaskIdentifier2+TaskResultHelper.dateAnswerResultId, TaskResultHelper.dateAnswer),
                 Pair(subtaskIdentifier2+TaskResultHelper.jsonAnswerResultId, TaskResultHelper.jsonAnswer))
 
-        fun researchStackSurveyTaskResult(): org.researchstack.backbone.result.TaskResult {
+        fun researchStackSurveyTaskResult(): org.sagebionetworks.researchstack.backbone.result.TaskResult {
             return researchStackSurveyTaskResult(taskIdentifier)
         }
 
@@ -138,8 +138,8 @@ class TaskResultHelper {
             return surveyTaskResult(identifier, "")
         }
 
-        private fun researchStackSurveyTaskResult(identifier: String): org.researchstack.backbone.result.TaskResult {
-            val taskResult = org.researchstack.backbone.result.TaskResult(identifier)
+        private fun researchStackSurveyTaskResult(identifier: String): org.sagebionetworks.researchstack.backbone.result.TaskResult {
+            val taskResult = org.sagebionetworks.researchstack.backbone.result.TaskResult(identifier)
             addResearchStackResult(booleanAnswerResultId, booleanAnswer, taskResult)
             addResearchStackResult(intAnswerResultId, intAnswer, taskResult)
             addResearchStackResult(decimalAnswerResultId, decimalAnswer, taskResult)
@@ -149,7 +149,7 @@ class TaskResultHelper {
             return taskResult
         }
 
-        fun <T>addResearchStackResult(identifier: String, answer: T, taskResult: org.researchstack.backbone.result.TaskResult) {
+        fun <T>addResearchStackResult(identifier: String, answer: T, taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult) {
             val formId = "${identifier}Form"
             val formResult = StepResult<StepResult<T>>(Step(formId))
             formResult.startDate = Date()

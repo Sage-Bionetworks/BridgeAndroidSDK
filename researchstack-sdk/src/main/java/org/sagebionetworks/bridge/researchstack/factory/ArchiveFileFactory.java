@@ -25,11 +25,11 @@ import com.google.common.io.Files;
 import com.google.gson.reflect.TypeToken;
 
 import org.joda.time.DateTime;
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.result.FileResult;
-import org.researchstack.backbone.result.Result;
-import org.researchstack.backbone.result.StepResult;
-import org.researchstack.backbone.result.TappingIntervalResult;
+import org.sagebionetworks.researchstack.backbone.answerformat.AnswerFormat;
+import org.sagebionetworks.researchstack.backbone.result.FileResult;
+import org.sagebionetworks.researchstack.backbone.result.Result;
+import org.sagebionetworks.researchstack.backbone.result.StepResult;
+import org.sagebionetworks.researchstack.backbone.result.TappingIntervalResult;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.ByteSourceArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;

@@ -19,8 +19,8 @@ package org.sagebionetworks.bridge.researchstack.survey;
 
 import android.support.annotation.VisibleForTesting;
 
-import org.researchstack.backbone.model.Choice;
-import org.researchstack.backbone.model.survey.QuestionSurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.Choice;
+import org.sagebionetworks.researchstack.backbone.model.survey.QuestionSurveyItem;
 
 import java.util.Set;
 

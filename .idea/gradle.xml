@@ -8,7 +8,6 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/ResearchStack/backbone" />
             <option value="$PROJECT_DIR$/android-sdk" />
             <option value="$PROJECT_DIR$/researchstack-sdk" />
             <option value="$PROJECT_DIR$/sageresearch-app-sdk" />

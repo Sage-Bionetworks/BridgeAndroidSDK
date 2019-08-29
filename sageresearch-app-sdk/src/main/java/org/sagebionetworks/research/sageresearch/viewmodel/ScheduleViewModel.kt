@@ -119,7 +119,7 @@ abstract class ScheduleViewModel(
      * @param taskResult to upload to S3
      */
     fun uploadResearchStackTaskResultToS3(schedule: ScheduledActivityEntity?,
-            taskResult: org.researchstack.backbone.result.TaskResult) {
+            taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult) {
         scheduleRepo.uploadResearchStackTaskResultToS3(schedule, taskResult)
     }
 

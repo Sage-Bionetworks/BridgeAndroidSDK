@@ -2,10 +2,10 @@ package org.sagebionetworks.bridge.researchstack.task;
 
 import com.google.gson.GsonBuilder;
 
-import org.researchstack.backbone.model.survey.SurveyItem;
-import org.researchstack.backbone.model.taskitem.TaskItem;
-import org.researchstack.backbone.model.taskitem.factory.TaskItemFactory;
-import org.researchstack.backbone.task.TaskCreationManager;
+import org.sagebionetworks.researchstack.backbone.model.survey.SurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.taskitem.TaskItem;
+import org.sagebionetworks.researchstack.backbone.model.taskitem.factory.TaskItemFactory;
+import org.sagebionetworks.researchstack.backbone.task.TaskCreationManager;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeSurveyItemAdapter;
 import org.sagebionetworks.bridge.researchstack.task.creation.BridgeTaskItemAdapter;
 import org.sagebionetworks.bridge.researchstack.task.tracked.TrackedTaskItemFactory;

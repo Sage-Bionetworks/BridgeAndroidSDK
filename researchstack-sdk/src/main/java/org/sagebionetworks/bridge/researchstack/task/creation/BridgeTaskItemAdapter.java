@@ -2,8 +2,8 @@ package org.sagebionetworks.bridge.researchstack.task.creation;
 
 import com.google.gson.JsonElement;
 
-import org.researchstack.backbone.model.taskitem.TaskItem;
-import org.researchstack.backbone.model.taskitem.TaskItemAdapter;
+import org.sagebionetworks.researchstack.backbone.model.taskitem.TaskItem;
+import org.sagebionetworks.researchstack.backbone.model.taskitem.TaskItemAdapter;
 import org.sagebionetworks.bridge.researchstack.task.tracked.medication.MedicationTaskItem;
 
 /**
