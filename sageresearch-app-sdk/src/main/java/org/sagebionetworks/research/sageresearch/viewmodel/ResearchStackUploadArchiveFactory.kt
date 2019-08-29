@@ -35,7 +35,7 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 import android.os.Build
 import com.google.common.collect.ImmutableList
 import org.joda.time.DateTime
-import org.researchstack.backbone.result.Result
+import org.sagebionetworks.researchstack.backbone.result.Result
 import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.manager.upload.ArchiveUtil
 import org.sagebionetworks.bridge.data.Archive
@@ -68,7 +68,7 @@ open class ResearchStackUploadArchiveFactory: ArchiveFileFactory() {
         bridgeConfig: BridgeConfig,
         userDataGroups: ImmutableList<String>,
         userExternalId: String?,
-        taskResult: org.researchstack.backbone.result.TaskResult): Pair<String, Archive.Builder>? {
+        taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult): Pair<String, Archive.Builder>? {
 
         // ResearchStack tasks don't use a UUID, so just assign a random one for naming conventions
         val rsTaskUuid = UUID.randomUUID()

@@ -7,9 +7,9 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import org.junit.Test;
-import org.researchstack.backbone.answerformat.UnknownAnswerFormat;
-import org.researchstack.backbone.result.StepResult;
-import org.researchstack.backbone.step.QuestionStep;
+import org.sagebionetworks.researchstack.backbone.answerformat.UnknownAnswerFormat;
+import org.sagebionetworks.researchstack.backbone.result.StepResult;
+import org.sagebionetworks.researchstack.backbone.step.QuestionStep;
 
 public class SurveyAnswerTest {
     @Test

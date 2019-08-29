@@ -2,7 +2,7 @@ package org.sagebionetworks.bridge.researchstack;
 
 import android.content.Context;
 
-import org.researchstack.backbone.model.User;
+import org.sagebionetworks.researchstack.backbone.model.User;
 import org.sagebionetworks.bridge.android.manager.dao.SharedPreferencesJsonDAO;
 
 /**

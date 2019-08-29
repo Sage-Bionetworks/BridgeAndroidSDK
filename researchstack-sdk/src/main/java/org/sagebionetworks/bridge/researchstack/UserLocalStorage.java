@@ -7,9 +7,9 @@ import android.support.annotation.Nullable;
 
 import com.google.gson.Gson;
 
-import org.researchstack.backbone.model.User;
-import org.researchstack.backbone.storage.file.FileAccess;
-import org.researchstack.backbone.storage.file.StorageAccessException;
+import org.sagebionetworks.researchstack.backbone.model.User;
+import org.sagebionetworks.researchstack.backbone.storage.file.FileAccess;
+import org.sagebionetworks.researchstack.backbone.storage.file.StorageAccessException;
 import org.sagebionetworks.bridge.rest.model.SignIn;
 import org.sagebionetworks.bridge.rest.model.UserSessionInfo;
 import org.slf4j.Logger;

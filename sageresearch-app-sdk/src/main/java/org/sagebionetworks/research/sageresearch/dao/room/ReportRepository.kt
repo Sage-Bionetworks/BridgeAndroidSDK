@@ -313,7 +313,7 @@ open class ReportRepository constructor(
      * Builds and saves the reports for the task result
      * @param taskResult to be analyzed and have reports made from its data
      */
-    fun saveResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult) {
+    fun saveResearchStackReports(taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult) {
         val reports = buildResearchStackReports(taskResult) ?:
         return // Exit early if there are no reports for this task.
         saveReports(reports)
@@ -392,7 +392,7 @@ open class ReportRepository constructor(
      * @param taskResult to convert into reports
      * @return the reports to return for this task result.
      */
-    open fun buildResearchStackReports(taskResult: org.researchstack.backbone.result.TaskResult): List<ReportEntity>? {
+    open fun buildResearchStackReports(taskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult): List<ReportEntity>? {
         // Recursively build a report for all the schemas in this task path.
         val schemaInfo = schema(taskResult.identifier)
         val schemaIdentifier = schemaInfo?.identifier ?: taskResult.identifier
@@ -471,7 +471,7 @@ open class ReportRepository constructor(
      * @param taskResult: The ResearchStack task result for the task which has just run.
      * @return the client data built for this task result as a json string
      */
-    open fun buildClientData(rsTaskResult: org.researchstack.backbone.result.TaskResult): Map<String, Any>? {
+    open fun buildClientData(rsTaskResult: org.sagebionetworks.researchstack.backbone.result.TaskResult): Map<String, Any>? {
         val clientData = rsTaskResult.clientDataAnswerMap()
         // Exclude any results that should not make it into a report
         return clientData.filter {

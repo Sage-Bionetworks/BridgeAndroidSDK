@@ -1,6 +1,6 @@
 package org.sagebionetworks.bridge.researchstack.task.tracked;
 
-import org.researchstack.backbone.result.StepResult;
+import org.sagebionetworks.researchstack.backbone.result.StepResult;
 
 import java.util.List;
 

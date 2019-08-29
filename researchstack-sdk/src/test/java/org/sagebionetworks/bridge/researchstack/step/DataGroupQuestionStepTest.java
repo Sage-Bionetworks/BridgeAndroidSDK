@@ -1,8 +1,8 @@
 package org.sagebionetworks.bridge.researchstack.step;
 
 import org.junit.Test;
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.answerformat.ChoiceAnswerFormat;
+import org.sagebionetworks.researchstack.backbone.answerformat.AnswerFormat;
+import org.sagebionetworks.researchstack.backbone.answerformat.ChoiceAnswerFormat;
 
 import static org.junit.Assert.*;
 

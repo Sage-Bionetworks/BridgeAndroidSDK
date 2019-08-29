@@ -2,9 +2,9 @@ package org.sagebionetworks.bridge.researchstack.survey;
 
 import com.google.common.collect.ImmutableList;
 
-import org.researchstack.backbone.answerformat.AnswerFormat;
-import org.researchstack.backbone.result.StepResult;
-import org.researchstack.backbone.utils.FormatHelper;
+import org.sagebionetworks.researchstack.backbone.answerformat.AnswerFormat;
+import org.sagebionetworks.researchstack.backbone.result.StepResult;
+import org.sagebionetworks.researchstack.backbone.utils.FormatHelper;
 
 import java.util.Date;
 import java.util.List;

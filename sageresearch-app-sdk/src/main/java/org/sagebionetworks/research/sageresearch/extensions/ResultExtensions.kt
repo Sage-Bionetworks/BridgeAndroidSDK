@@ -32,8 +32,8 @@
 
 package org.sagebionetworks.research.sageresearch.extensions
 
-import org.researchstack.backbone.result.FileResult
-import org.researchstack.backbone.result.StepResult
+import org.sagebionetworks.researchstack.backbone.result.FileResult
+import org.sagebionetworks.researchstack.backbone.result.StepResult
 import org.sagebionetworks.bridge.researchstack.TaskHelper
 import org.sagebionetworks.bridge.researchstack.survey.SurveyAnswer
 import org.sagebionetworks.research.domain.result.interfaces.AnswerResult
@@ -59,7 +59,7 @@ class ResultExtensions {
 /**
  * @return the flattened results of all StepResults
  */
-fun org.researchstack.backbone.result.TaskResult.clientDataAnswerMap(): Map< String, Any> {
+fun org.sagebionetworks.researchstack.backbone.result.TaskResult.clientDataAnswerMap(): Map< String, Any> {
     val answersMap = HashMap<String, Any>()
     val flattenedResults = TaskHelper.flattenResults(this)
     flattenedResults.forEach { result ->

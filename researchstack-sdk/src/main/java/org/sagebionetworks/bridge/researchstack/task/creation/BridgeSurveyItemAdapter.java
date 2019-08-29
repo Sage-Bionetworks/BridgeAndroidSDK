@@ -4,9 +4,9 @@ import android.support.annotation.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 
-import org.researchstack.backbone.model.survey.FormSurveyItem;
-import org.researchstack.backbone.model.survey.SurveyItem;
-import org.researchstack.backbone.model.survey.SurveyItemAdapter;
+import org.sagebionetworks.researchstack.backbone.model.survey.FormSurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.survey.SurveyItem;
+import org.sagebionetworks.researchstack.backbone.model.survey.SurveyItemAdapter;
 import org.sagebionetworks.bridge.researchstack.survey.DataGroupQuestionSurveyItem;
 
 import java.util.Map;

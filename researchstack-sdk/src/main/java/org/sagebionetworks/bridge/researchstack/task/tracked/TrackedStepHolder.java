@@ -3,7 +3,7 @@ package org.sagebionetworks.bridge.researchstack.task.tracked;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
-import org.researchstack.backbone.step.Step;
+import org.sagebionetworks.researchstack.backbone.step.Step;
 
 import java.io.Serializable;
 import java.util.ArrayList;

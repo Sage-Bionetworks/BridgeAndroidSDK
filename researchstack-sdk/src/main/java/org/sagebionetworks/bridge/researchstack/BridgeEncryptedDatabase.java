@@ -4,8 +4,8 @@ import android.content.Context;
 
 import net.sqlcipher.database.SQLiteDatabase;
 
-import org.researchstack.backbone.storage.database.sqlite.SqlCipherDatabaseHelper;
-import org.researchstack.backbone.storage.database.sqlite.UpdatablePassphraseProvider;
+import org.sagebionetworks.researchstack.backbone.storage.database.sqlite.SqlCipherDatabaseHelper;
+import org.sagebionetworks.researchstack.backbone.storage.database.sqlite.UpdatablePassphraseProvider;
 
 public class BridgeEncryptedDatabase extends SqlCipherDatabaseHelper  {
   public BridgeEncryptedDatabase(Context context, String name,

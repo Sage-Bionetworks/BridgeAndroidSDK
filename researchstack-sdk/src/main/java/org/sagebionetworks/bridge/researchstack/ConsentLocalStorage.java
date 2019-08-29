@@ -4,7 +4,7 @@ import android.content.Context;
 
 import com.google.gson.Gson;
 
-import org.researchstack.backbone.storage.file.FileAccess;
+import org.sagebionetworks.researchstack.backbone.storage.file.FileAccess;
 import org.sagebionetworks.bridge.rest.model.ConsentSignature;
 
 /**
