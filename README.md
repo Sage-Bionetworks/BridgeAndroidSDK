@@ -1,7 +1,7 @@
 # BridgeAndroidSDK [![Build Status](https://travis-ci.com/Sage-Bionetworks/BridgeAndroidSDK.svg?branch=develop)](https://travis-ci.com/Sage-Bionetworks/BridgeAndroidSDK)
 SDK for building Android research studies for the [Bridge platform](https://developer.sagebridge.org/)
 
-## android-sdk [ ![Download](https://api.bintray.com/packages/sage-bionetworks/bridge-maven-release/android-sdk/images/download.svg?version=0.2.0) ](https://bintray.com/sage-bionetworks/bridge-maven-release/android-sdk/0.2.0/link)
+## android-sdk [ ![Download](https://api.bintray.com/packages/sage-bionetworks/bridge-maven-release/android-sdk/images/download.svg) ](https://bintray.com/sage-bionetworks/bridge-maven-release/android-sdk/_latestVersion)
 Provides authentication and data managers for building a plain Android app that connects to Bridge
 
 ## researchstack-sdk [ ![Download](https://api.bintray.com/packages/sage-bionetworks/bridge-maven-release/researchstack-sdk/images/download.svg) ](https://bintray.com/sage-bionetworks/bridge-maven-release/researchstack-sdk/_latestVersion)
