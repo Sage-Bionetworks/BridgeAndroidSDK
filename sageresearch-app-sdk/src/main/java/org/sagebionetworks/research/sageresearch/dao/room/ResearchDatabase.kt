@@ -44,12 +44,14 @@ import android.arch.persistence.room.migration.Migration
 
 @Database(entities = arrayOf(
         ScheduledActivityEntity::class,
-        ReportEntity::class),
-        version = 2)
+        ReportEntity::class,
+        ResourceEntity::class),
+        version = 3)
 
 /**
  * version 1 - ScheduleActivityEntity table created and added
  * version 2 - ReportEntity table created and added
+ * version 3 - ResourceEntity table created and added
  */
 
 @TypeConverters(EntityTypeConverters::class)
@@ -75,6 +77,13 @@ abstract class ResearchDatabase : RoomDatabase() {
                         database.execSQL(migrationAddIndex(reportTable, "localDate"))
                         database.execSQL(migrationAddIndex(reportTable, "needsSyncedToBridge"))
                     }
+                },
+                object : Migration(2, 3) {
+                    override fun migrate(database: SupportSQLiteDatabase) {
+                        val reportTable = "ResourceEntity"
+                        database.execSQL("CREATE TABLE `ResourceEntity` (`identifier` TEXT NOT NULL, `type` TEXT NOT NULL, `resourceJson` TEXT, `lastUpdateTime` INTEGER NOT NULL, PRIMARY KEY(`identifier`))")
+                        database.execSQL("CREATE  INDEX `index_ResourceEntity_type` ON `ResourceEntity` (`type`)")
+                    }
                 })
         /**
          * @param tableName to add the index to
@@ -88,6 +97,7 @@ abstract class ResearchDatabase : RoomDatabase() {
 
     abstract fun scheduleDao(): ScheduledActivityEntityDao
     abstract fun reportDao(): ReportEntityDao
+    abstract fun resourceDao(): ResourceEntityDao
 }
 
 internal class RoomSql {
@@ -107,6 +117,7 @@ internal class RoomSql {
         /**
          * DELETE constants delete tables
          */
+        const val RESOURCE_DELETE = "DELETE FROM resourceentity"
         const val SCHEDULE_DELETE = "DELETE FROM scheduledactivityentity"
         const val REPORT_DELETE = "DELETE FROM reportentity"
         const val REPORT_DELETE_WHERE = "DELETE FROM reportentity WHERE "
@@ -114,6 +125,7 @@ internal class RoomSql {
         /**
          * SELECT constants start off queries
          */
+        private const val RESOURCE_SELECT = "SELECT * FROM resourceentity WHERE "
         private const val SCHEDULE_SELECT = "SELECT * FROM scheduledactivityentity WHERE "
         private const val REPORT_SELECT = "SELECT * FROM reportentity WHERE "
 
@@ -194,6 +206,8 @@ internal class RoomSql {
         private const val REPORT_CONDITION_NEEDS_SYNCED_TO_BRIDGE =
                 "(needsSyncedToBridge IS NOT NULL AND needsSyncedToBridge = 1)"
 
+        private const val RESOURCE_CONDITION_RESOURCE_IDENTIFIER = "(identifier = :resourceIdentifier)"
+
         /**
          * QUERY constants are full Room queries
          */
@@ -261,5 +275,8 @@ internal class RoomSql {
 
         const val SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER =
                 REPORT_SELECT + REPORT_CONDITION_REPORT_IDENTIFIER + ORDER_BY_REPORT_DATE + LIMIT_1
+
+        const val SELECT_RESOURCE_BY_IDENTIFIER =
+                RESOURCE_SELECT + RESOURCE_CONDITION_RESOURCE_IDENTIFIER
     }
 }

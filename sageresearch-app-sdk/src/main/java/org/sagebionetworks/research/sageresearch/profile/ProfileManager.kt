@@ -3,39 +3,39 @@ package org.sagebionetworks.research.sageresearch.profile
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.LiveDataReactiveStreams
 import android.arch.lifecycle.MediatorLiveData
+import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
+import io.reactivex.Single
 import org.sagebionetworks.bridge.android.BridgeApplication
 import org.sagebionetworks.bridge.android.manager.models.*
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
+import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.mapValue
-import rx.RxReactiveStreams
-import rx.Single
-import javax.inject.Inject
 
-class ProfileManager(val reportRepo: ReportRepository) {
+class ProfileManager(val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository) {
 
 
     fun loadProfileDataSources() : LiveData<Map<String, ProfileDataSource>> {
 
-        val profileDataSourceLiveData = LiveDataReactiveStreams.fromPublisher(RxReactiveStreams.toPublisher(BridgeApplication.getBridgeManagerProvider().appConfigManager.profileDataSources))
+        val profileDataSourceLiveData = LiveDataReactiveStreams.fromPublisher(appConfigRepo.profileDataSources.toFlowable())
         return profileDataSourceLiveData
     }
 
     private fun loadDefaultProfileDataManager() : Single<ProfileDataManager> {
-        return BridgeApplication.getBridgeManagerProvider().appConfigManager.profileDataManagers.map { it.get("ProfileManager")  }
+        return appConfigRepo.profileDataManagers.map { it.get("ProfileManager")  }
     }
 
     private fun loadDefaultProfileManagerLiveData() : LiveData<ProfileDataManager> {
-        return LiveDataReactiveStreams.fromPublisher(RxReactiveStreams.toPublisher(loadDefaultProfileDataManager()))
+        return LiveDataReactiveStreams.fromPublisher(loadDefaultProfileDataManager().toFlowable())
     }
 
     private fun loadParticipantRecord() : Single<StudyParticipant> {
-        return BridgeApplication.getBridgeManagerProvider().participantManager.participantRecord
+        return toV2Single(BridgeApplication.getBridgeManagerProvider().participantManager.participantRecord)
     }
 
     private fun loadParticipantRecordLiveData(): LiveData<StudyParticipant> {
-        return LiveDataReactiveStreams.fromPublisher(RxReactiveStreams.toPublisher(loadParticipantRecord()))
+        return LiveDataReactiveStreams.fromPublisher(loadParticipantRecord().toFlowable())
     }
 
     private fun loadReports(reportKeys: Set<String>): LiveData<Map<String, ReportEntity?>> {

@@ -8,18 +8,19 @@ import com.google.common.base.Preconditions
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
+import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import javax.inject.Inject
 
-open class ProfileViewModel(reportRepo: ReportRepository):
-        ViewModel(), ProfileViewModelInterface by ProfileViewModelBaseImplementation(reportRepo) {
+open class ProfileViewModel(reportRepo: ReportRepository, appConfigRepo: AppConfigRepository):
+        ViewModel(), ProfileViewModelInterface by ProfileViewModelBaseImplementation(reportRepo, appConfigRepo) {
 
-    class Factory @Inject constructor(private val reportRepo: ReportRepository): ViewModelProvider.Factory {
+    class Factory @Inject constructor(private val reportRepo: ReportRepository, private val appConfigRepo: AppConfigRepository): ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             Preconditions.checkArgument(modelClass.isAssignableFrom(ProfileViewModel::class.java))
-            return ProfileViewModel(reportRepo) as T
+            return ProfileViewModel(reportRepo, appConfigRepo) as T
         }
     }
 
@@ -34,9 +35,9 @@ interface ProfileViewModelInterface {
 
 }
 
-class ProfileViewModelBaseImplementation(override val reportRepo: ReportRepository): ProfileViewModelInterface {
+class ProfileViewModelBaseImplementation(override val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository): ProfileViewModelInterface {
 
-    val profileManager = ProfileManager(reportRepo)
+    val profileManager = ProfileManager(reportRepo, appConfigRepo)
 
 
     override fun profileDataLoader(): LiveData<ProfileDataLoader> {

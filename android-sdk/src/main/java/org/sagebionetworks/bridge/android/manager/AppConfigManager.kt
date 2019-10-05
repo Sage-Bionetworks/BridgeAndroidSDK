@@ -43,12 +43,12 @@ constructor(private val appConfigDAO: AppConfigDAO,
     /** Get app config from the cache, or fall back to server if there is no value in the cache.  */
     val appConfig: Single<AppConfig>
         get() {
-            val cachedAppConfig = cachedAppConfig
-            return if (cachedAppConfig != null) {
-                Single.just(cachedAppConfig)
-            } else {
-                remoteAppConfig
-            }
+//            val cachedAppConfig = cachedAppConfig
+//            return if (cachedAppConfig != null) {
+//                Single.just(cachedAppConfig)
+//            } else {
+                return remoteAppConfig
+//            }
         }
 
     /** Get the app config from the cache, null if there is no value in the cache.  */
@@ -62,19 +62,19 @@ constructor(private val appConfigDAO: AppConfigDAO,
                 .doOnSuccess(Action1<AppConfig> { appConfigDAO.cacheAppConfig(it) })
 
 
-    val profileDataSources: Single<Map<String, ProfileDataSource>>
-        get() = appConfig.map { extractProfileDataSources(it) }
-
-    val profileDataManagers: Single<Map<String, ProfileDataManager>>
-        get() = appConfig.map { extractProfileDataManagers(it) }
-
-    private fun extractProfileDataSources(appConfig: AppConfig) : Map<String, ProfileDataSource> {
-        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileDataSource"}.mapValues { ProfileDataSource(it.value as Map<String, Any>) }
-    }
-
-    private fun extractProfileDataManagers(appConfig: AppConfig) : Map<String, ProfileDataManager> {
-        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileManager"}.mapValues { ProfileDataManager(it.value as Map<String, Any>) }
-    }
+//    val profileDataSources: Single<Map<String, ProfileDataSource>>
+//        get() = appConfig.map { extractProfileDataSources(it) }
+//
+//    val profileDataManagers: Single<Map<String, ProfileDataManager>>
+//        get() = appConfig.map { extractProfileDataManagers(it) }
+//
+//    private fun extractProfileDataSources(appConfig: AppConfig) : Map<String, ProfileDataSource> {
+//        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileDataSource"}.mapValues { ProfileDataSource(it.value as Map<String, Any>) }
+//    }
+//
+//    private fun extractProfileDataManagers(appConfig: AppConfig) : Map<String, ProfileDataManager> {
+//        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileManager"}.mapValues { ProfileDataManager(it.value as Map<String, Any>) }
+//    }
 
 
 }
