@@ -6,23 +6,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import org.sagebionetworks.research.sageresearch_app_sdk.R
-
-
-import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment.OnListFragmentInteractionListener
-
 import kotlinx.android.synthetic.main.fragment_profilesettings_title_details_row.view.*
 import org.sagebionetworks.bridge.android.manager.models.*
-import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
+import org.sagebionetworks.bridge.rest.model.SurveyReference
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_ICON_TITLE
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_SECTION
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_TITLE_DETAILS
+import org.sagebionetworks.research.sageresearch_app_sdk.R
 import org.sagebionetworks.researchstack.backbone.ResourceManager
 import org.sagebionetworks.researchstack.backbone.ResourcePathManager
 
 class ProfileSettingsRecyclerViewAdapter(
         private val dataPair: Pair<ProfileDataSource?, ProfileDataLoader?>,
-        private val mListener: OnListFragmentInteractionListener?)
+        private val mListener: OnListInteractionListener)
     : RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder>() {
 
     companion object {
@@ -39,7 +35,7 @@ class ProfileSettingsRecyclerViewAdapter(
     init {
         mOnClickListener = View.OnClickListener { v ->
             val item = v.tag as ProfileRow
-            item.onClick(v.context)
+            item.onClick(mListener)
 //            // Notify the active callbacks interface (the activity, if the fragment is attached to
 //            // one) that an item has been selected.
 //            mListener?.onListFragmentInteraction(item)
@@ -105,6 +101,10 @@ class ProfileSettingsRecyclerViewAdapter(
     }
 }
 
+interface OnListInteractionListener {
+    fun launchSurvey(surveyReference: SurveyReference)
+}
+
 abstract class ProfileRow {
     enum class TYPE {
         SECTION, PROFILE_ITEM, PROFILE_VIEW
@@ -112,14 +112,21 @@ abstract class ProfileRow {
     abstract val type: TYPE
     abstract val viewType: Int
     abstract val title: String
-    abstract fun onClick(context: Context)
+    abstract fun onClick(listener: OnListInteractionListener)
 
     companion object {
 
         fun createProfileRow(profileItem: ProfileTableItem, profileDataLoader: ProfileDataLoader): ProfileRow {
             when(profileItem) {
                 is ProfileSection ->  return SectionRow(profileItem)
-                is ProfileItemProfileTableItem -> return ProfileItemRow(profileItem, profileDataLoader)
+                is ProfileItemProfileTableItem -> {
+                    val dataDef = profileDataLoader.getDataDef(profileItem.profileItemKey)
+                    when (dataDef) {
+                        is ReportProfileDataItem -> return ReportProfileItemRow(dataDef,profileItem, profileDataLoader)
+                        is ParticipantProfileDataItem -> return ParticipantProfileItemRow(profileItem, profileDataLoader)
+                        else -> return DisplayOnlyRow(profileItem)
+                    }
+                }
                 is ProfileViewProfileTableView -> return ProfileViewRow(profileItem)
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
                 else -> return DisplayOnlyRow(profileItem)
@@ -132,17 +139,17 @@ class DisplayOnlyRow(val profileItem: ProfileTableItem): ProfileRow() {
     override val type = TYPE.PROFILE_ITEM
     override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
-    override fun onClick(context: Context) {}
+    override fun onClick(listener: OnListInteractionListener) {}
 }
 
 class SectionRow(val profileItem: ProfileSection): ProfileRow() {
     override val type = TYPE.SECTION
     override val viewType = VIEW_TYPE_SECTION
     override val title = profileItem.title
-    override fun onClick(context: Context) {}
+    override fun onClick(listener: OnListInteractionListener) {}
 }
 
-class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
     override val type = TYPE.PROFILE_ITEM
     override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
@@ -153,7 +160,23 @@ class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDa
             return value.toString()
         }
 
-    override fun onClick(context: Context) {}
+}
+
+class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
+                           profileItem: ProfileItemProfileTableItem,
+                           profileDataLoader: ProfileDataLoader) : ProfileItemRow(profileItem, profileDataLoader) {
+
+    override fun onClick(listener: OnListInteractionListener) {
+        val surveyRef = reportProfileDataItem.surveyReference
+        if (surveyRef != null) {
+            listener.launchSurvey(surveyRef)
+        }
+    }
+}
+
+class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profileDataLoader: ProfileDataLoader) : ProfileItemRow(profileItem, profileDataLoader) {
+
+    override fun onClick(listener: OnListInteractionListener) {}
 }
 
 class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
@@ -168,11 +191,13 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
             }
         }
 
-    override fun onClick(context: Context) {
+    override fun onClick(listener: OnListInteractionListener) {
         val path = htmlResource?.absolutePath
-        val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(context,
+        if (listener is Context) {
+            val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(listener,
                 "", path, true)
-        context.startActivity(intent)
+            listener.startActivity(intent)
+        }
     }
 }
 
@@ -180,5 +205,5 @@ class ProfileViewRow(val profileItem: ProfileViewProfileTableView): ProfileRow()
     override val type = TYPE.PROFILE_VIEW
     override val viewType = VIEW_TYPE_ICON_TITLE
     override val title = profileItem.title
-    override fun onClick(context: Context) {}
+    override fun onClick(listener: OnListInteractionListener) {}
 }

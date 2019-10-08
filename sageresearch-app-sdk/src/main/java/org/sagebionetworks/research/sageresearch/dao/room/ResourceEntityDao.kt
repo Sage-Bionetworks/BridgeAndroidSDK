@@ -24,7 +24,7 @@ interface ResourceEntityDao {
     /**
      * Deletes all rows in the table.  To be called on sign out or a cache clear.
      */
-    @Query(RoomSql.REPORT_DELETE)
+    @Query(RoomSql.RESOURCE_DELETE)
     fun clear()
 
 }

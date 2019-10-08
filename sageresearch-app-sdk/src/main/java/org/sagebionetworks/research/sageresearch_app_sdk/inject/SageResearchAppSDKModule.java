@@ -22,6 +22,7 @@ import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
 import org.sagebionetworks.research.sageresearch.dao.room.ResourceEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository;
 import org.sagebionetworks.research.sageresearch.viewmodel.ReportTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledRepositorySyncStateDao;
@@ -121,5 +122,14 @@ public abstract class SageResearchAppSDKModule {
 
         LOGGER.debug("Providing AppConfigtRepository");
         return new AppConfigRepository(resourceDao, appConfigManager);
+    }
+
+    @Provides
+    @BridgeApplicationScope
+    static SurveyRepository provideSurveyRepository(ResourceEntityDao resourceDao,
+                                                       SurveyManager surveyManager) {
+
+        LOGGER.debug("Providing AppConfigtRepository");
+        return new SurveyRepository(resourceDao, surveyManager);
     }
 }

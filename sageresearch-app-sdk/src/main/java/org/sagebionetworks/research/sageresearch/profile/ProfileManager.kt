@@ -105,17 +105,19 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
                 val report = reports.get(profileDataItem.demographicSchema)
                 return report?.data?.mapValue(profileDataItem.sourceKey)
             }
-            is ParticipantClientDataProfileDataItem -> {
-                participantData.clientData
-                when(profileDataItem.fallbackKeyPath) {
+            is ParticipantProfileDataItem -> {
+                when(profileDataItem.profileKey) {
                     "firstName" -> return participantData.firstName
                 }
 
             }
         }
 
-
         return null
+    }
+
+    fun getDataDef(profileKey: String): ProfileDataItem? {
+        return profileDataDef.profileDataMap[profileKey]
     }
 
 }

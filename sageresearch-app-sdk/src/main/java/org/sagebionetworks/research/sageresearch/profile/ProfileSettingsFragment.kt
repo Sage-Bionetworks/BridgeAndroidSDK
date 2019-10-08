@@ -18,6 +18,7 @@ import android.view.ViewGroup
 import dagger.android.support.AndroidSupportInjection
 import kotlinx.android.synthetic.main.fragment_profilesettings_list.*
 import kotlinx.android.synthetic.main.fragment_profilesettings_list.view.*
+import org.sagebionetworks.bridge.rest.model.SurveyReference
 import org.sagebionetworks.research.mobile_ui.show_step.view.SystemWindowHelper
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_SECTION
@@ -25,20 +26,18 @@ import org.sagebionetworks.research.sageresearch_app_sdk.R
 import javax.inject.Inject
 
 
-class ProfileSettingsFragment : Fragment() {
+abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  {
 
     private var profileKey = "ProfileDataSource"
     private var isMainView = true;
 
-    private var listener: OnListFragmentInteractionListener? = null
-
-    @Inject
-    lateinit var reportRepo: ReportRepository
-
     @Inject
     lateinit var profileViewModelFactory: ProfileViewModel.Factory
 
-    private lateinit var profileViewModel: ProfileViewModel
+    protected lateinit var profileViewModel: ProfileViewModel
+
+    override abstract fun launchSurvey(surveyReference: SurveyReference)
+    abstract fun newInstance(profileKey: String, isMainView: Boolean): ProfileSettingsFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,7 +95,7 @@ class ProfileSettingsFragment : Fragment() {
             }
             profileViewModel.profileData(profileKey).observe(this, Observer { t -> val loader = t
                 val a = loader
-                view.list.adapter = ProfileSettingsRecyclerViewAdapter(loader!!, listener)
+                view.list.adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
             })
         }
         return view
@@ -123,7 +122,7 @@ class ProfileSettingsFragment : Fragment() {
 
     override fun onDetach() {
         super.onDetach()
-        listener = null
+        //listener = null
     }
 
     /**
@@ -140,34 +139,10 @@ class ProfileSettingsFragment : Fragment() {
                 .commit()
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     *
-     *
-     * See the Android Training lesson
-     * [Communicating with Other Fragments](http://developer.android.com/training/basics/fragments/communicating.html)
-     * for more information.
-     */
-    interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
-        fun onListFragmentInteraction(item: Any?)
-    }
-
     companion object {
 
         const val ARG_PROFILE_KEY = "profile_key"
         const val ARG_IS_MAIN_VIEW = "is_main_view"
 
-        @JvmStatic
-        fun newInstance(profileKey: String, isMainView: Boolean) =
-                ProfileSettingsFragment().apply {
-                    arguments = Bundle().apply {
-                        putString(ARG_PROFILE_KEY, profileKey)
-                        putBoolean(ARG_IS_MAIN_VIEW, isMainView)
-                    }
-                }
     }
 }

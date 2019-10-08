@@ -46,14 +46,19 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
         const val APP_CONFIG_ID = "AppConfigId"
     }
 
+    var cachedAppConfig: AppConfig? = null
+
     val appConfig : Single<AppConfig>
         get() {
-        return resourceDao.getResource(APP_CONFIG_ID).filter {
-            if (it.isEmpty() || it.get(0).lastUpdateTime + 60000 > System.currentTimeMillis()) {
-                subscribeCompletable(getRemoteAppConfig(), "Get app config succeeded", "Get app config failed")
-            }
-            !it.isEmpty()
-        }.map { it.get(0).loadResource(AppConfig::class.java)}.firstOrError()
+            return resourceDao.getResource(APP_CONFIG_ID).filter {
+                if (it.isEmpty() || it.get(0).lastUpdateTime + 60000 > System.currentTimeMillis()) {
+                    subscribeCompletable(getRemoteAppConfig(), "Get app config succeeded", "Get app config failed")
+                }
+                !it.isEmpty()
+            }.map {
+                cachedAppConfig = it.get(0).loadResource(AppConfig::class.java)
+                cachedAppConfig!!
+            }.firstOrError()
     }
 
     val profileDataSources: Single<Map<String, ProfileDataSource>>
@@ -82,7 +87,7 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
     }
 
     private fun extractProfileDataManagers(appConfig: AppConfig) : Map<String, ProfileDataManager> {
-        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileManager"}.mapValues { ProfileDataManager(it.value as Map<String, Any>) }
+        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileManager"}.mapValues { ProfileDataManager(it.value as Map<String, Any>, appConfig) }
     }
 
 }
