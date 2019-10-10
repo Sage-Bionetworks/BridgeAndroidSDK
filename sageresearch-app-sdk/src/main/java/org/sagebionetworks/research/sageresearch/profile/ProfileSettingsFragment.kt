@@ -31,9 +31,6 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  
     private var profileKey = "ProfileDataSource"
     private var isMainView = true;
 
-    @Inject
-    lateinit var profileViewModelFactory: ProfileViewModel.Factory
-
     protected lateinit var profileViewModel: ProfileViewModel
 
     override abstract fun launchSurvey(surveyReference: SurveyReference)
@@ -48,10 +45,12 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  
         }
     }
 
+    abstract fun loadProfileViewModel(): ProfileViewModel
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
 
-        profileViewModel = ViewModelProviders.of(this, profileViewModelFactory).get(ProfileViewModel::class.java);
+        profileViewModel = loadProfileViewModel()
 
         val view = inflater.inflate(R.layout.fragment_profilesettings_list, container, false)
 

@@ -15,38 +15,17 @@ import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository
+import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager
 import org.sagebionetworks.researchstack.backbone.task.SmartSurveyTask
 import javax.inject.Inject
 
-open class ProfileViewModel(reportRepo: ReportRepository, appConfigRepo: AppConfigRepository, surveyRepo: SurveyRepository):
-        ViewModel(), ProfileViewModelInterface by ProfileViewModelBaseImplementation(reportRepo, appConfigRepo, surveyRepo) {
 
-    class Factory @Inject constructor(private val reportRepo: ReportRepository, private val appConfigRepo: AppConfigRepository, private val surveyRepo: SurveyRepository): ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            Preconditions.checkArgument(modelClass.isAssignableFrom(ProfileViewModel::class.java))
-            return ProfileViewModel(reportRepo, appConfigRepo, surveyRepo) as T
-        }
-    }
-
-}
-
-interface ProfileViewModelInterface {
-    val reportRepo: ReportRepository
-
-    fun profileDataLoader(): LiveData<ProfileDataLoader>
-    fun defaultProfileData(): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>>
-    fun profileData(profileKey: String): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>>
-    fun loadSurvey(surveyReference: SurveyReference): Flowable<Survey>
-
-}
-
-class ProfileViewModelBaseImplementation(override val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository): ProfileViewModelInterface {
+open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository): ViewModel() {
 
     val profileManager = ProfileManager(reportRepo, appConfigRepo)
 
 
-    override fun profileDataLoader(): LiveData<ProfileDataLoader> {
+    fun profileDataLoader(): LiveData<ProfileDataLoader> {
         return profileManager.profileDataLoader()
     }
 
@@ -54,11 +33,11 @@ class ProfileViewModelBaseImplementation(override val reportRepo: ReportReposito
         return profileManager.loadProfileDataSources()
     }
 
-    override fun defaultProfileData(): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
+    fun defaultProfileData(): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
         return profileData("ProfileDataSource")
     }
 
-    override fun profileData(key: String): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
+    fun profileData(key: String): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
 
         val mediator = MediatorLiveData<Pair<ProfileDataSource?, ProfileDataLoader?>>().apply {
             var profileDataLoader: ProfileDataLoader? = null
@@ -87,7 +66,7 @@ class ProfileViewModelBaseImplementation(override val reportRepo: ReportReposito
 
     }
 
-    override fun loadSurvey(surveyReference: SurveyReference): Flowable<Survey> {
+    fun loadSurvey(surveyReference: SurveyReference): Flowable<Survey> {
         return surveyRepo.getSurvey(surveyReference)
     }
 
