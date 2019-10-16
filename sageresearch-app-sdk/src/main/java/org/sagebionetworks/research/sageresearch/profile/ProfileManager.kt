@@ -108,6 +108,7 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
             is ParticipantProfileDataItem -> {
                 when(profileDataItem.profileKey) {
                     "firstName" -> return participantData.firstName
+                    "externalId" -> return participantData.externalId
                 }
 
             }

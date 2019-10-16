@@ -1,6 +1,7 @@
 package org.sagebionetworks.research.sageresearch.profile
 
 import android.content.Context
+import android.content.Intent
 import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import kotlinx.android.synthetic.main.fragment_profilesettings_title_details_row.view.*
 import org.sagebionetworks.bridge.android.manager.models.*
+import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.SurveyReference
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_ICON_TITLE
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_SECTION
@@ -36,9 +38,6 @@ class ProfileSettingsRecyclerViewAdapter(
         mOnClickListener = View.OnClickListener { v ->
             val item = v.tag as ProfileRow
             item.onClick(mListener)
-//            // Notify the active callbacks interface (the activity, if the fragment is attached to
-//            // one) that an item has been selected.
-//            mListener?.onListFragmentInteraction(item)
         }
     }
 
@@ -61,23 +60,9 @@ class ProfileSettingsRecyclerViewAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = mValues[position]
         holder.mTitle.text = item.title
-
-        when(item.type) {
-            ProfileRow.TYPE.SECTION -> {
-                holder.mDetails.visibility = View.GONE
-                if (item.title == null) {
-                    holder.mTitle.visibility = View.GONE
-                }
-            }
-            ProfileRow.TYPE.PROFILE_ITEM -> {
-                if (item is ProfileItemRow) {
-                    holder.mDetails.text = item.detail
-                }
-            }
-            ProfileRow.TYPE.PROFILE_VIEW -> {
-                holder.mDetails.visibility = View.GONE
-            }
-        }
+        holder.mDetails.text = item.detail
+        holder.mTitle.visibility = if (item.title == null) View.GONE else View.VISIBLE
+        holder.mDetails.visibility = if (item.detail == null) View.GONE else View.VISIBLE
 
         with(holder.mView) {
             tag = item
@@ -94,15 +79,13 @@ class ProfileSettingsRecyclerViewAdapter(
     inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
         val mTitle: TextView = mView.item_text
         val mDetails: TextView = mView.item_detail
-
-//        override fun toString(): String {
-//            return super.toString() + " '" + mContentView.text + "'"
-//        }
     }
 }
 
 interface OnListInteractionListener {
     fun launchSurvey(surveyReference: SurveyReference)
+    fun startActivity(intent: Intent)
+    fun getContext(): Context?
 }
 
 abstract class ProfileRow {
@@ -112,6 +95,7 @@ abstract class ProfileRow {
     abstract val type: TYPE
     abstract val viewType: Int
     abstract val title: String
+    open val detail: String? = null
     abstract fun onClick(listener: OnListInteractionListener)
 
     companion object {
@@ -129,6 +113,7 @@ abstract class ProfileRow {
                 }
                 is ProfileViewProfileTableView -> return ProfileViewRow(profileItem)
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
+                is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem)
                 else -> return DisplayOnlyRow(profileItem)
             }
         }
@@ -149,12 +134,21 @@ class SectionRow(val profileItem: ProfileSection): ProfileRow() {
     override fun onClick(listener: OnListInteractionListener) {}
 }
 
+class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem): ProfileRow() {
+    override val type = TYPE.PROFILE_ITEM
+    override val viewType = VIEW_TYPE_TITLE_DETAILS
+    override val title = profileItem.title
+    override val detail: String?
+        get() = if (BridgeDataProvider.getInstance().isConsented) "Enrolled in mPower study" else "Rejoin mPower study"
+    override fun onClick(listener: OnListInteractionListener) {}
+}
+
 abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
     override val type = TYPE.PROFILE_ITEM
     override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
 
-    val detail: String?
+    override val detail: String?
         get() {
             val value = profileDataLoader.getValue(profileItem.profileItemKey)
             return value.toString()
@@ -183,21 +177,21 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
     override val type = TYPE.PROFILE_ITEM
     override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
+    override val detail = profileItem.detail
     val htmlResource: ResourcePathManager.Resource?
         get() {
             when(profileItem.htmlResource) {
                 "Licenses" -> return ResourceManager.getInstance().getLicense()
+                "consent" -> return ResourceManager.getInstance().consentHtml
                 else -> return null
             }
         }
 
     override fun onClick(listener: OnListInteractionListener) {
         val path = htmlResource?.absolutePath
-        if (listener is Context) {
-            val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(listener,
-                "", path, true)
-            listener.startActivity(intent)
-        }
+        val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(listener.getContext(),
+            "", path, true)
+        listener.startActivity(intent)
     }
 }
 
