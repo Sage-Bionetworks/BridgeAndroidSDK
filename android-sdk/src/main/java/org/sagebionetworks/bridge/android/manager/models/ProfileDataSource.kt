@@ -27,39 +27,44 @@ data class ProfileDataSource(val map: Map<String, Any?>) {
 data class ProfileSection(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     private val items: List<Map<String, Any?>> by map
 
     val profileTableItems: List<ProfileTableItem> = items.mapNotNull { decodeProfileItem(it) }
 
     private fun decodeProfileItem(itemMap: Map<String, Any?>): ProfileTableItem? {
         val type = itemMap.get("type")
+        val defaultMap = itemMap.withDefault { key ->  if (key == "hideOnAndroid") false else null }
         //val map = itemMap.withDefault { if ("readonly" == it) true else null }
+        var profileItem: ProfileTableItem? = null
         when (type) {
             "profileItem" -> {
-                return ProfileItemProfileTableItem(itemMap)
+                profileItem = ProfileItemProfileTableItem(defaultMap)
             }
             "profileView" -> {
-                return ProfileViewProfileTableView(itemMap)
+                profileItem =  ProfileViewProfileTableView(defaultMap)
             }
             "settings" -> {
-                return SettingsProfileTableItem(itemMap)
+                profileItem =  SettingsProfileTableItem(defaultMap)
             }
             "permissions" -> {
-                return PermissionsProfileTableItem(itemMap)
+                profileItem =  PermissionsProfileTableItem(defaultMap)
             }
             "html" -> {
-                return HtmlProfileTableItem(itemMap)
+                profileItem =  HtmlProfileTableItem(defaultMap)
             }
             "studyParticipation" -> {
-                return StudyParticipationProfileTableItem(itemMap)
+                profileItem =  StudyParticipationProfileTableItem(defaultMap)
             }
 
             else -> {
                 //Error unknown type
-                return null
+                profileItem =  null
             }
 
         }
+        if (profileItem?.hideOnAndroid == true) return null
+        return profileItem
     }
 
 }
@@ -67,11 +72,13 @@ data class ProfileSection(val map: Map<String, Any?>) : ProfileTableItem {
 interface ProfileTableItem {
     val type: String
     val title: String
+    val hideOnAndroid: Boolean
 }
 
 data class ProfileItemProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     val profileItemKey: String by map
     val notInCohorts: List<String> by map
 }
@@ -79,6 +86,8 @@ data class ProfileItemProfileTableItem(val map: Map<String, Any?>) : ProfileTabl
 data class HtmlProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
+    val detail: String? by map
     val htmlResource: String by map
     val notInCohorts: List<String> by map
 }
@@ -86,6 +95,7 @@ data class HtmlProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
 data class ProfileViewProfileTableView(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     val icon: String by map
     val profileDataSource: String by map
 }
@@ -93,17 +103,20 @@ data class ProfileViewProfileTableView(val map: Map<String, Any?>) : ProfileTabl
 data class SettingsProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     val setting: String by map
 }
 
 data class PermissionsProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     val permissionType: String by map
 }
 
 data class StudyParticipationProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
+    override val hideOnAndroid: Boolean by map
     val notInCohorts: List<String> by map
 }
