@@ -30,7 +30,8 @@ class ProfileSettingsRecyclerViewAdapter(
 
     }
 
-    private val mValues = dataPair.first?.profileItemsList?.map { ProfileRow.createProfileRow(it, dataPair.second!!) } ?: listOf()
+    private val dataGroups = dataPair.second?.participantData?.dataGroups?: listOf()
+    private val mValues = dataPair.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, dataPair.second!!) } ?: listOf()
 
     private val mOnClickListener: View.OnClickListener
 

@@ -22,12 +22,19 @@ data class ProfileDataSource(val map: Map<String, Any?>) {
             return _profileItemList as List<ProfileTableItem>
         }
 
+    fun filteredProfileItemList(userDataGroups: List<String>): List<ProfileTableItem> {
+        return profileItemsList.filter { it.shouldShow(userDataGroups) }
+
+    }
+
 }
 
 data class ProfileSection(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
     override val hideOnAndroid: Boolean by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
     private val items: List<Map<String, Any?>> by map
 
     val profileTableItems: List<ProfileTableItem> = items.mapNotNull { decodeProfileItem(it) }
@@ -73,6 +80,18 @@ interface ProfileTableItem {
     val type: String
     val title: String
     val hideOnAndroid: Boolean
+    val notInCohorts: List<String>?
+    val inCohorts: List<String>?
+    fun shouldShow(userDataGroups: List<String>) : Boolean {
+        if (notInCohorts == null && inCohorts == null) {
+            return true
+        }
+        val mustBeIn = inCohorts?.toSet()?: setOf<String>()
+        val mustNotBeIn = notInCohorts?.toSet()?: setOf<String>()
+        return (userDataGroups.containsAll(mustBeIn) &&
+                !userDataGroups.containsAll(mustNotBeIn))
+
+    }
 }
 
 data class ProfileItemProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
@@ -80,7 +99,8 @@ data class ProfileItemProfileTableItem(val map: Map<String, Any?>) : ProfileTabl
     override val title: String by map
     override val hideOnAndroid: Boolean by map
     val profileItemKey: String by map
-    val notInCohorts: List<String> by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
 
 data class HtmlProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
@@ -89,7 +109,8 @@ data class HtmlProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val hideOnAndroid: Boolean by map
     val detail: String? by map
     val htmlResource: String by map
-    val notInCohorts: List<String> by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
 
 data class ProfileViewProfileTableView(val map: Map<String, Any?>) : ProfileTableItem {
@@ -98,6 +119,8 @@ data class ProfileViewProfileTableView(val map: Map<String, Any?>) : ProfileTabl
     override val hideOnAndroid: Boolean by map
     val icon: String by map
     val profileDataSource: String by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
 
 data class SettingsProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
@@ -105,6 +128,8 @@ data class SettingsProfileTableItem(val map: Map<String, Any?>) : ProfileTableIt
     override val title: String by map
     override val hideOnAndroid: Boolean by map
     val setting: String by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
 
 data class PermissionsProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
@@ -112,11 +137,14 @@ data class PermissionsProfileTableItem(val map: Map<String, Any?>) : ProfileTabl
     override val title: String by map
     override val hideOnAndroid: Boolean by map
     val permissionType: String by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
 
 data class StudyParticipationProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
     override val type: String by map
     override val title: String by map
     override val hideOnAndroid: Boolean by map
-    val notInCohorts: List<String> by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
 }
