@@ -6,15 +6,14 @@ import android.arch.lifecycle.ViewModel
 import android.arch.lifecycle.ViewModelProvider
 import com.google.common.base.Preconditions
 import io.reactivex.Flowable
+import io.reactivex.Single
+import io.reactivex.disposables.CompositeDisposable
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.bridge.rest.model.SurveyReference
-import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
-import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
-import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
-import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository
+import org.sagebionetworks.research.sageresearch.dao.room.*
 import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager
 import org.sagebionetworks.researchstack.backbone.task.SmartSurveyTask
 import javax.inject.Inject
@@ -24,6 +23,9 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
 
     val profileManager = ProfileManager(reportRepo, appConfigRepo)
 
+    val compositeDisposable = io.reactivex.disposables.CompositeDisposable()
+
+    var currentScheduledActivity: ScheduledActivityEntity? = null
 
     fun profileDataLoader(): LiveData<ProfileDataLoader> {
         return profileManager.profileDataLoader()
@@ -66,10 +68,21 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
 
     }
 
-    fun loadSurvey(surveyReference: SurveyReference): Flowable<Survey> {
-        return surveyRepo.getSurvey(surveyReference)
+    fun loadSurvey(surveyReference: SurveyReference): Single<Survey> {
+        return surveyRepo.getSurvey(surveyReference).firstOrError().doOnSuccess { loadScheduledActivity(it.identifier) }
     }
 
+    private fun loadScheduledActivity(surveyId: String) {
+        compositeDisposable.add(bridgeRepoManager.scheduleRepo.scheduleDao.activityGroupFlowable(setOf(surveyId))
+                .firstOrError()
+                .subscribe({currentScheduledActivity = it.firstOrNull()},{"fail"})
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        compositeDisposable.dispose()
+    }
 
 
 }

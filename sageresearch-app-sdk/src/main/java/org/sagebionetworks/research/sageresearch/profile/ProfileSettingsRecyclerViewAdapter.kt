@@ -152,7 +152,7 @@ abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val 
     override val detail: String?
         get() {
             val value = profileDataLoader.getValue(profileItem.profileItemKey)
-            return value.toString()
+            return value?.toString()?: ""
         }
 
 }

@@ -103,7 +103,7 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
         when (profileDataItem) {
             is ReportProfileDataItem -> {
                 val report = reports.get(profileDataItem.demographicSchema)
-                return report?.data?.mapValue(profileDataItem.sourceKey)
+                return report?.data?.mapValue(profileDataItem.profileKey)
             }
             is ParticipantProfileDataItem -> {
                 when(profileDataItem.profileKey) {
