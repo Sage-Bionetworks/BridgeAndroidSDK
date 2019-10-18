@@ -102,8 +102,13 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
 
         when (profileDataItem) {
             is ReportProfileDataItem -> {
-                val report = reports.get(profileDataItem.demographicSchema)
-                return report?.data?.mapValue(profileDataItem.profileKey)
+                if (profileDataItem.dataGroups != null) {
+                    return profileDataItem.dataGroups?.intersect(participantData.dataGroups)?.joinToString(separator = ",")
+                } else {
+
+                    val report = reports.get(profileDataItem.demographicSchema)
+                    return report?.data?.mapValue(profileDataItem.profileKey)
+                }
             }
             is ParticipantProfileDataItem -> {
                 when(profileDataItem.profileKey) {

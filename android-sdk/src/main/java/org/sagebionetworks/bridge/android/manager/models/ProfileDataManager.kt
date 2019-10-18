@@ -27,16 +27,19 @@ data class ProfileDataManager(val map: Map<String, Any?>, val appConfig: AppConf
 
     private fun decodeProfileDataItem(itemMap: Map<String, Any?>, appConfig: AppConfig): ProfileDataItem? {
         val type = itemMap.get("type")
-        //val map = itemMap.withDefault { if ("readonly" == it) true else null }
+        val map = itemMap.withDefault {null }
         when (type) {
+            "dataGroup" -> {
+                return ReportProfileDataItem(map, appConfig)
+            }
             "report" -> {
-                return ReportProfileDataItem(itemMap, appConfig)
+                return ReportProfileDataItem(map, appConfig)
             }
             "participantClientData" -> {
-                return ParticipantClientDataProfileDataItem(itemMap)
+                return ParticipantClientDataProfileDataItem(map)
             }
             "participant" -> {
-                return ParticipantProfileDataItem(itemMap)
+                return ParticipantProfileDataItem(map)
             }
 
             else -> {
@@ -59,6 +62,7 @@ data class ReportProfileDataItem(val map: Map<String, Any?>, val appConfig: AppC
     override val type: String by map
     override val itemType: String by map
     override val profileKey: String by map
+    val dataGroups: List<String>? by map
     val readonly: Boolean by map
     val sourceKey: String by map
     val demographicSchema: String by map

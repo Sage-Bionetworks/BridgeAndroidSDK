@@ -37,6 +37,10 @@ abstract class ResourceRepository<T: Any> constructor(
         return replaceResourceInRoom(resourceEntity)
     }
 
+    companion object {
+        const val defaultUpdateFrequency = 60000 * 60
+    }
+
 
 }
 
@@ -51,7 +55,7 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
     val appConfig : Single<AppConfig>
         get() {
             return resourceDao.getResource(APP_CONFIG_ID).filter {
-                if (it.isEmpty() || it.get(0).lastUpdateTime + 60000 > System.currentTimeMillis()) {
+                if (it.isEmpty() || it.get(0).lastUpdateTime + defaultUpdateFrequency < System.currentTimeMillis()) {
                     subscribeCompletable(getRemoteAppConfig(), "Get app config succeeded", "Get app config failed")
                 }
                 !it.isEmpty()
@@ -101,7 +105,7 @@ class SurveyRepository(resourceDao: ResourceEntityDao, val surveyManager: Survey
 
     private fun getSurvey(guid: String, createdOn: DateTime): Flowable<Survey> {
             return resourceDao.getResource(guid).filter {
-                if (it.isEmpty() || it.get(0).lastUpdateTime + 60000 > System.currentTimeMillis()) {
+                if (it.isEmpty() || it.get(0).lastUpdateTime + defaultUpdateFrequency < System.currentTimeMillis()) {
                     subscribeCompletable(getRemoteSurvey(guid, createdOn), "Get survey succeeded", "Get survey failed")
                 }
                 !it.isEmpty()
