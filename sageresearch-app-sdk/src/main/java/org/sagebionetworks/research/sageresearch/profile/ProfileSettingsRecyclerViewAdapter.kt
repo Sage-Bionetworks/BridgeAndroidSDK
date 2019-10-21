@@ -87,6 +87,7 @@ interface OnListInteractionListener {
     fun launchSurvey(surveyReference: SurveyReference)
     fun startActivity(intent: Intent)
     fun getContext(): Context?
+    fun launchStudyBurstReminderTime()
 }
 
 abstract class ProfileRow {
@@ -115,6 +116,7 @@ abstract class ProfileRow {
                 is ProfileViewProfileTableView -> return ProfileViewRow(profileItem)
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
                 is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem)
+                is SettingsProfileTableItem -> return SettingsRow(profileItem,  profileDataLoader)
                 else -> return DisplayOnlyRow(profileItem)
             }
         }
@@ -173,6 +175,30 @@ class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profil
 
     override fun onClick(listener: OnListInteractionListener) {}
 }
+
+class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+    override val type = TYPE.PROFILE_ITEM
+    override val viewType = VIEW_TYPE_TITLE_DETAILS
+    override val title = profileItem.title
+
+    val setting = profileItem.setting
+
+    override fun onClick(listener: OnListInteractionListener) {
+        when (setting) {
+            "studyBurstTime" -> return listener.launchStudyBurstReminderTime()
+            else -> return
+
+        }
+    }
+
+    override val detail: String?
+        get() {
+            val value = profileDataLoader.getValue(profileItem.profileItemKey)
+            return value?.toString()?: ""
+        }
+
+}
+
 
 class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
     override val type = TYPE.PROFILE_ITEM

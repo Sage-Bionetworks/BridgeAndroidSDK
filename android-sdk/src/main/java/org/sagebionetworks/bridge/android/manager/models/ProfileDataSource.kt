@@ -127,6 +127,7 @@ data class SettingsProfileTableItem(val map: Map<String, Any?>) : ProfileTableIt
     override val type: String by map
     override val title: String by map
     override val hideOnAndroid: Boolean by map
+    val profileItemKey: String by map
     val setting: String by map
     override val notInCohorts: List<String> by map
     override val inCohorts: List<String> by map
