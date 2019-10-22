@@ -62,9 +62,10 @@ class ProfileSettingsRecyclerViewAdapter(
         val item = mValues[position]
         holder.mTitle.text = item.title
         holder.mDetails.text = item.detail
-        holder.mTitle.visibility = if (item.title == null) View.GONE else View.VISIBLE
-        holder.mDetails.visibility = if (item.detail == null) View.GONE else View.VISIBLE
-
+        holder.mTitle.visibility = if (holder.mTitle.text == null) View.GONE else View.VISIBLE
+        holder.mDetails.visibility = if (holder.mDetails.text == null) View.GONE else View.VISIBLE
+        holder.chevron?.visibility = if (item.isClickable()) View.VISIBLE else View.GONE
+        holder.mView.isClickable = item.isClickable()
         with(holder.mView) {
             tag = item
             setOnClickListener(mOnClickListener)
@@ -80,6 +81,7 @@ class ProfileSettingsRecyclerViewAdapter(
     inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
         val mTitle: TextView = mView.item_text
         val mDetails: TextView = mView.item_detail
+        val chevron: View = mView.chevron
     }
 }
 
@@ -94,11 +96,12 @@ abstract class ProfileRow {
     enum class TYPE {
         SECTION, PROFILE_ITEM, PROFILE_VIEW
     }
-    abstract val type: TYPE
-    abstract val viewType: Int
+    open val type = TYPE.PROFILE_ITEM
+    open val viewType = VIEW_TYPE_TITLE_DETAILS
     abstract val title: String
     open val detail: String? = null
-    abstract fun onClick(listener: OnListInteractionListener)
+    open fun isClickable(): Boolean {return true}
+    open fun onClick(listener: OnListInteractionListener) {}
 
     companion object {
 
@@ -124,22 +127,18 @@ abstract class ProfileRow {
 }
 
 class DisplayOnlyRow(val profileItem: ProfileTableItem): ProfileRow() {
-    override val type = TYPE.PROFILE_ITEM
-    override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
-    override fun onClick(listener: OnListInteractionListener) {}
+    override fun isClickable(): Boolean { return false }
 }
 
 class SectionRow(val profileItem: ProfileSection): ProfileRow() {
     override val type = TYPE.SECTION
     override val viewType = VIEW_TYPE_SECTION
     override val title = profileItem.title
-    override fun onClick(listener: OnListInteractionListener) {}
+    override fun isClickable(): Boolean { return false }
 }
 
 class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem): ProfileRow() {
-    override val type = TYPE.PROFILE_ITEM
-    override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
     override val detail: String?
         get() = if (BridgeDataProvider.getInstance().isConsented) "Enrolled in mPower study" else "Rejoin mPower study"
@@ -147,8 +146,6 @@ class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfil
 }
 
 abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
-    override val type = TYPE.PROFILE_ITEM
-    override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
 
     override val detail: String?
@@ -177,8 +174,6 @@ class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profil
 }
 
 class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
-    override val type = TYPE.PROFILE_ITEM
-    override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
 
     val setting = profileItem.setting
@@ -201,8 +196,6 @@ class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoad
 
 
 class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
-    override val type = TYPE.PROFILE_ITEM
-    override val viewType = VIEW_TYPE_TITLE_DETAILS
     override val title = profileItem.title
     override val detail = profileItem.detail
     val htmlResource: ResourcePathManager.Resource?
@@ -223,8 +216,6 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
 }
 
 class ProfileViewRow(val profileItem: ProfileViewProfileTableView): ProfileRow() {
-    override val type = TYPE.PROFILE_VIEW
-    override val viewType = VIEW_TYPE_ICON_TITLE
     override val title = profileItem.title
     override fun onClick(listener: OnListInteractionListener) {}
 }

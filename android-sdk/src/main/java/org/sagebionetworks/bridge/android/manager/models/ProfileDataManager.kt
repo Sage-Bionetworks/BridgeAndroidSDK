@@ -3,6 +3,10 @@ package org.sagebionetworks.bridge.android.manager.models
 import org.sagebionetworks.bridge.rest.model.AppConfig
 import org.sagebionetworks.bridge.rest.model.SurveyReference
 
+/**
+ * A ProfileDataManager is a configuration element defined in the Bridge Study Manager.  It is used
+ * to describe where and how profile data should be loaded.
+ */
 data class ProfileDataManager(val map: Map<String, Any?>, val appConfig: AppConfig) {
     val catType:    String by map
     val type:       String by map
@@ -27,7 +31,7 @@ data class ProfileDataManager(val map: Map<String, Any?>, val appConfig: AppConf
 
     private fun decodeProfileDataItem(itemMap: Map<String, Any?>, appConfig: AppConfig): ProfileDataItem? {
         val type = itemMap.get("type")
-        val map = itemMap.withDefault {null }
+        val map = itemMap.withDefault { null }
         when (type) {
             "dataGroup" -> {
                 return ReportProfileDataItem(map, appConfig)

@@ -1,15 +1,12 @@
 package org.sagebionetworks.research.sageresearch.profile
 
 import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.view.ViewCompat
 import android.support.v7.widget.DividerItemDecoration
-import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
@@ -20,15 +17,13 @@ import kotlinx.android.synthetic.main.fragment_profilesettings_list.*
 import kotlinx.android.synthetic.main.fragment_profilesettings_list.view.*
 import org.sagebionetworks.bridge.rest.model.SurveyReference
 import org.sagebionetworks.research.mobile_ui.show_step.view.SystemWindowHelper
-import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_SECTION
 import org.sagebionetworks.research.sageresearch_app_sdk.R
-import javax.inject.Inject
 
 
 abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  {
 
-    private var profileKey = "ProfileDataSource"
+    private var profileKey = "ProfileDataSource" //Initialized to the default key
     private var isMainView = true;
 
     protected lateinit var profileViewModel: ProfileViewModel
@@ -111,17 +106,6 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  
     override fun onAttach(context: Context) {
         AndroidSupportInjection.inject(this)
         super.onAttach(context)
-//        if (context is OnListFragmentInteractionListener) {
-//            listener = context
-//        } else {
-//            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
-//        }
-
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        //listener = null
     }
 
     /**

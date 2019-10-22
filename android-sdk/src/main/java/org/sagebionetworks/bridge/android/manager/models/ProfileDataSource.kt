@@ -1,5 +1,10 @@
 package org.sagebionetworks.bridge.android.manager.models
 
+/**
+ * A ProfileDatSource is a configuration element defined in the Bridge Study Manager. It is used to
+ * describe the items on a study's profile/settings screen(s). The values for each row are loaded using
+ * a ProfileDataLoader which can be retrieved from the ProfileManager.
+ */
 data class ProfileDataSource(val map: Map<String, Any?>) {
     val catType:    String by map
     val type:       String by map
@@ -41,7 +46,13 @@ data class ProfileSection(val map: Map<String, Any?>) : ProfileTableItem {
 
     private fun decodeProfileItem(itemMap: Map<String, Any?>): ProfileTableItem? {
         val type = itemMap.get("type")
-        val defaultMap = itemMap.withDefault { key ->  if (key == "hideOnAndroid") false else null }
+        val defaultMap = itemMap.withDefault {
+            key -> when(key) {
+                "hideOnAndroid" -> false
+                "readOnly" -> false
+                else -> null
+            }
+        }
         //val map = itemMap.withDefault { if ("readonly" == it) true else null }
         var profileItem: ProfileTableItem? = null
         when (type) {
@@ -82,6 +93,7 @@ interface ProfileTableItem {
     val hideOnAndroid: Boolean
     val notInCohorts: List<String>?
     val inCohorts: List<String>?
+
     fun shouldShow(userDataGroups: List<String>) : Boolean {
         if (notInCohorts == null && inCohorts == null) {
             return true

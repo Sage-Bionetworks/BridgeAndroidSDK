@@ -16,6 +16,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
 
+/**
+ * The ProfileManager loads ProfileDataSources and a ProfileDataManager from AppConfig, useing the data
+ * from these it loads the necessary Reports, StudyParticipant and returns a ProfileDataLoader.
+ */
 class ProfileManager(val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository) {
 
 

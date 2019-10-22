@@ -3,20 +3,15 @@ package org.sagebionetworks.research.sageresearch.profile
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MediatorLiveData
 import android.arch.lifecycle.ViewModel
-import android.arch.lifecycle.ViewModelProvider
-import com.google.common.base.Preconditions
-import io.reactivex.Flowable
 import io.reactivex.Single
-import io.reactivex.disposables.CompositeDisposable
-import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
-import org.sagebionetworks.bridge.rest.model.StudyParticipant
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.bridge.rest.model.SurveyReference
-import org.sagebionetworks.research.sageresearch.dao.room.*
+import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
+import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
+import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
+import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository
 import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager
-import org.sagebionetworks.researchstack.backbone.task.SmartSurveyTask
-import javax.inject.Inject
 
 
 open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository): ViewModel() {
@@ -35,10 +30,6 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
         return profileManager.loadProfileDataSources()
     }
 
-    fun defaultProfileData(): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
-        return profileData("ProfileDataSource")
-    }
-
     fun profileData(key: String): LiveData<Pair<ProfileDataSource?, ProfileDataLoader?>> {
 
         val mediator = MediatorLiveData<Pair<ProfileDataSource?, ProfileDataLoader?>>().apply {
@@ -55,7 +46,6 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
                 if (it != null) {
                     profileDataSource = it.get(key)
                 }
-                //TODO: Handle error case where profileDataSource is null
                 update()
             }
 
