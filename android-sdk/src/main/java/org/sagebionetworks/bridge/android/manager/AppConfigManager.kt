@@ -18,63 +18,26 @@
 package org.sagebionetworks.bridge.android.manager
 
 import android.support.annotation.AnyThread
-
 import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.di.BridgeStudyScope
-import org.sagebionetworks.bridge.android.manager.dao.AppConfigDAO
-import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
-import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils
 import org.sagebionetworks.bridge.rest.api.PublicApi
 import org.sagebionetworks.bridge.rest.model.AppConfig
-
+import rx.Single
 import javax.inject.Inject
 
-import rx.Single
-import rx.functions.Action1
-
-/** Handles calling Bridge server to get study app config and caching the result.  */
+/** Handles calling Bridge server to get study app config. AppConfigRepository should be used
+ * for client side access to AppConfig data */
 @AnyThread
 @BridgeStudyScope
 class AppConfigManager @Inject
-constructor(private val appConfigDAO: AppConfigDAO,
-            private val publicApi: PublicApi, private val config: BridgeConfig) {
+constructor(private val publicApi: PublicApi, private val config: BridgeConfig) {
 
-    /** Get app config from the cache, or fall back to server if there is no value in the cache.  */
+    /** Gets the app config from the server.  */
     val appConfig: Single<AppConfig>
-        get() {
-//            val cachedAppConfig = cachedAppConfig
-//            return if (cachedAppConfig != null) {
-//                Single.just(cachedAppConfig)
-//            } else {
-                return remoteAppConfig
-//            }
-        }
-
-    /** Get the app config from the cache, null if there is no value in the cache.  */
-    val cachedAppConfig: AppConfig?
-        get() = appConfigDAO.appConfig
-
-    /** Gets the app config from the server and caches the result.  */
-    val remoteAppConfig: Single<AppConfig>
         get() = RxUtils.toBodySingle(publicApi
                 .getAppConfigForStudy(config.studyId))
-                .doOnSuccess(Action1<AppConfig> { appConfigDAO.cacheAppConfig(it) })
 
-
-//    val profileDataSources: Single<Map<String, ProfileDataSource>>
-//        get() = appConfig.map { extractProfileDataSources(it) }
-//
-//    val profileDataManagers: Single<Map<String, ProfileDataManager>>
-//        get() = appConfig.map { extractProfileDataManagers(it) }
-//
-//    private fun extractProfileDataSources(appConfig: AppConfig) : Map<String, ProfileDataSource> {
-//        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileDataSource"}.mapValues { ProfileDataSource(it.value as Map<String, Any>) }
-//    }
-//
-//    private fun extractProfileDataManagers(appConfig: AppConfig) : Map<String, ProfileDataManager> {
-//        return appConfig.configElements.filter {(it.value as Map<String, Any>).get("catType") == "profileManager"}.mapValues { ProfileDataManager(it.value as Map<String, Any>) }
-//    }
 
 
 }
