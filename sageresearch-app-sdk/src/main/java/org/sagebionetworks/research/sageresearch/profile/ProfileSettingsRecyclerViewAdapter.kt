@@ -153,8 +153,8 @@ abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val 
 
     override val detail: String?
         get() {
-            val value = profileDataLoader.getValue(profileItem.profileItemKey)
-            return value?.toString()?: ""
+            val value = profileDataLoader.getValueString(profileItem.profileItemKey)
+            return value?: ""
         }
 
 }
@@ -193,8 +193,8 @@ class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoad
 
     override val detail: String?
         get() {
-            val value = profileDataLoader.getValue(profileItem.profileItemKey)
-            return value?.toString()?: ""
+            val value = profileDataLoader.getValueString(profileItem.profileItemKey)
+            return value?: ""
         }
 
 }

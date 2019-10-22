@@ -12,12 +12,14 @@ import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.mapValue
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.roundToInt
 
 class ProfileManager(val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository) {
 
 
     fun loadProfileDataSources() : LiveData<Map<String, ProfileDataSource>> {
-
         val profileDataSourceLiveData = LiveDataReactiveStreams.fromPublisher(appConfigRepo.profileDataSources.toFlowable())
         return profileDataSourceLiveData
     }
@@ -97,9 +99,35 @@ class ProfileManager(val reportRepo: ReportRepository, val appConfigRepo: AppCon
 
 class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantData: StudyParticipant, val reports: Map<String, ReportEntity?>) {
 
-    fun getValue(profileKey: String): Any? {
-        val profileDataItem: ProfileDataItem? = profileDataDef.profileDataMap.get(profileKey)
+    private val timeDisplayFormatter = SimpleDateFormat("h:mm aaa", Locale.getDefault())
+    private val dateFormatter = SimpleDateFormat("HH:mm:00.000", Locale.getDefault())
 
+    fun getValueString(profileKey: String): String? {
+        val profileDataItem: ProfileDataItem? = profileDataDef.profileDataMap.get(profileKey)
+        val value = getValue(profileDataItem)
+        when(profileDataItem?.itemType) {
+            "time" -> {
+                if (value is String) {
+                    return timeDisplayFormatter.format(dateFormatter.parse(value))
+                }
+            }
+            "year" -> {
+                if (value is Double) {
+                    return value.roundToInt().toString()
+                }
+            }
+            "multipleChoice.string" -> {
+                if (value is List<*>) {
+                    return value.joinToString(separator = ", ")
+                }
+            }
+        }
+
+        return value?.toString()
+    }
+
+
+    private fun getValue(profileDataItem: ProfileDataItem?): Any? {
         when (profileDataItem) {
             is ReportProfileDataItem -> {
                 if (profileDataItem.dataGroups != null) {
@@ -121,6 +149,7 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
 
         return null
     }
+
 
     fun getDataDef(profileKey: String): ProfileDataItem? {
         return profileDataDef.profileDataMap[profileKey]
