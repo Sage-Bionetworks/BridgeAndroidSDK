@@ -72,7 +72,7 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
         get() = appConfig.map { extractProfileDataManagers(it) }
 
     private fun getRemoteAppConfig(): Completable {
-        val surveySingle = toV2SingleAsync(appConfigManager.remoteAppConfig)
+        val surveySingle = toV2SingleAsync(appConfigManager.appConfig)
         return surveySingle.observeOn(asyncScheduler)
                 .flatMapCompletable {
                     storeAppConfigInRoom(it)
