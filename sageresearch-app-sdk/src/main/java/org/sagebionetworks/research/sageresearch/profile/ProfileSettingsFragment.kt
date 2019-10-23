@@ -21,10 +21,11 @@ import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecycler
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 
 
-abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  {
+abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileItemDialogListener, Fragment()  {
 
     private var profileKey = "ProfileDataSource" //Initialized to the default key
     private var isMainView = true;
+    private var adapter: ProfileSettingsRecyclerViewAdapter? = null
 
     protected lateinit var profileViewModel: ProfileViewModel
 
@@ -89,10 +90,21 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, Fragment()  
             }
             profileViewModel.profileData(profileKey).observe(this, Observer { t -> val loader = t
                 val a = loader
-                view.list.adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
+                adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
+                view.list.adapter = adapter
             })
         }
         return view
+    }
+
+    override fun launchEditProfileItemDialog(value: String, profileItemKey: String) {
+        val dialogFragment = EditProfileItemDialogFragment.newInstance(value, profileItemKey, this)
+        dialogFragment.show(fragmentManager, "EditDialog")
+    }
+
+    override  fun saveEditDialogValue(value: String, profileItemKey: String) {
+        profileViewModel.saveStudyParticipantValue(value, profileItemKey)
+        adapter?.notifyDataSetChanged()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -90,6 +90,7 @@ interface OnListInteractionListener {
     fun startActivity(intent: Intent)
     fun getContext(): Context?
     fun launchStudyBurstReminderTime()
+    fun launchEditProfileItemDialog(value: String, profileItemKey: String)
 }
 
 abstract class ProfileRow {
@@ -170,7 +171,11 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
 
 class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profileDataLoader: ProfileDataLoader) : ProfileItemRow(profileItem, profileDataLoader) {
 
-    override fun onClick(listener: OnListInteractionListener) {}
+    override fun onClick(listener: OnListInteractionListener) {
+        when (profileItem.profileItemKey) {
+            "firstName" -> listener.launchEditProfileItemDialog(detail?: "", profileItem.profileItemKey)
+        }
+    }
 }
 
 class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
