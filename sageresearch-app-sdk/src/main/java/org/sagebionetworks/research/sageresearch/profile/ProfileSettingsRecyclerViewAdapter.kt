@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import kotlinx.android.synthetic.main.fragment_profilesettings_title_details_row.view.*
+import org.joda.time.DateTime
 import org.sagebionetworks.bridge.android.manager.models.*
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.SurveyReference
@@ -91,6 +92,7 @@ interface OnListInteractionListener {
     fun getContext(): Context?
     fun launchStudyBurstReminderTime()
     fun launchEditProfileItemDialog(value: String, profileItemKey: String)
+    fun launchWithdraw(firstName: String, joinedDate: DateTime)
 }
 
 abstract class ProfileRow {
@@ -119,7 +121,7 @@ abstract class ProfileRow {
                 }
                 is ProfileViewProfileTableView -> return ProfileViewRow(profileItem)
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
-                is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem)
+                is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem, profileDataLoader)
                 is SettingsProfileTableItem -> return SettingsRow(profileItem,  profileDataLoader)
                 else -> return DisplayOnlyRow(profileItem)
             }
@@ -139,11 +141,13 @@ class SectionRow(val profileItem: ProfileSection): ProfileRow() {
     override fun isClickable(): Boolean { return false }
 }
 
-class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem): ProfileRow() {
+class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
     override val title = profileItem.title
     override val detail: String?
         get() = if (BridgeDataProvider.getInstance().isConsented) "Enrolled in mPower study" else "Rejoin mPower study"
-    override fun onClick(listener: OnListInteractionListener) {}
+    override fun onClick(listener: OnListInteractionListener) {
+        listener.launchWithdraw(profileDataLoader.participantData.firstName?: "", profileDataLoader.participantData.createdOn)
+    }
 }
 
 abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
@@ -170,6 +174,13 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
 }
 
 class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profileDataLoader: ProfileDataLoader) : ProfileItemRow(profileItem, profileDataLoader) {
+
+    override fun isClickable(): Boolean {
+        when (profileItem.profileItemKey) {
+            "externalId" -> return false
+        }
+        return true
+    }
 
     override fun onClick(listener: OnListInteractionListener) {
         when (profileItem.profileItemKey) {

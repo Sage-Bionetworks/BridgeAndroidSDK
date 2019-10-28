@@ -13,6 +13,7 @@ import org.sagebionetworks.bridge.android.manager.AppConfigManager
 import org.sagebionetworks.bridge.android.manager.SurveyManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
+import org.sagebionetworks.bridge.android.manager.models.getSurveyReference
 import org.sagebionetworks.bridge.rest.RestUtils
 import org.sagebionetworks.bridge.rest.model.AppConfig
 import org.sagebionetworks.bridge.rest.model.Survey
@@ -71,6 +72,10 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
     val profileDataManagers: Single<Map<String, ProfileDataManager>>
         get() = appConfig.map { extractProfileDataManagers(it) }
 
+    fun getSurveyReference(surveyId: String): Single<SurveyReference> {
+        return appConfig.map { it.getSurveyReference(surveyId) }
+    }
+
     private fun getRemoteAppConfig(): Completable {
         val surveySingle = toV2SingleAsync(appConfigManager.appConfig)
         return surveySingle.observeOn(asyncScheduler)
@@ -99,8 +104,8 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
 class SurveyRepository(resourceDao: ResourceEntityDao, val surveyManager: SurveyManager): ResourceRepository<Survey>(resourceDao) {
 
 
-    fun getSurvey(surveyReference: SurveyReference): Flowable<Survey> {
-        return getSurvey(surveyReference.guid, surveyReference.createdOn)
+    fun getSurvey(surveyReference: SurveyReference): Single<Survey> {
+        return getSurvey(surveyReference.guid, surveyReference.createdOn).firstOrError()
     }
 
     private fun getSurvey(guid: String, createdOn: DateTime): Flowable<Survey> {

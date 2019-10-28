@@ -84,7 +84,7 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
     }
 
     fun loadSurvey(surveyReference: SurveyReference): Single<Survey> {
-        return surveyRepo.getSurvey(surveyReference).firstOrError().doOnSuccess { loadScheduledActivity(it.identifier) }
+        return surveyRepo.getSurvey(surveyReference).doOnSuccess { loadScheduledActivity(it.identifier) }
     }
 
     private fun loadScheduledActivity(surveyId: String) {

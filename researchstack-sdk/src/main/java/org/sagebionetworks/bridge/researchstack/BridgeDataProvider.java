@@ -161,6 +161,10 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     //region Consent
 
+    public Completable withdrawAndSignout(Context context, String reason) {
+        return withdrawAllConsents(reason).andThen(signOut(context)).toCompletable();
+    }
+
     @NonNull
     @Override
     public Observable<DataResponse> withdrawConsent(Context context, String reason) {
