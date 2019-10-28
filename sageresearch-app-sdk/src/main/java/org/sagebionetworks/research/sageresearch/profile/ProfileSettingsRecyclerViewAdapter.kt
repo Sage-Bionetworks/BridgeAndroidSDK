@@ -219,6 +219,7 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
             when(profileItem.htmlResource) {
                 "Licenses" -> return ResourceManager.getInstance().getLicense()
                 "consent" -> return ResourceManager.getInstance().consentHtml
+                "PrivacyPolicy" -> return ResourceManager.getInstance().privacyPolicy
                 else -> return null
             }
         }
