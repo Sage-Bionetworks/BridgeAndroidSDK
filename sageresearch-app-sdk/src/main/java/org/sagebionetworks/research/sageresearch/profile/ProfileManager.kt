@@ -7,6 +7,7 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Single
 import org.sagebionetworks.bridge.android.BridgeApplication
 import org.sagebionetworks.bridge.android.manager.models.*
+import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
 import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
@@ -146,6 +147,7 @@ class ProfileDataLoader(val profileDataDef: ProfileDataManager, val participantD
                 when(profileDataItem.profileKey) {
                     "firstName" -> return participantData.firstName
                     "externalId" -> return participantData.externalId
+                    "sharingScope" -> return participantData.sharingScope.value
                 }
 
             }
