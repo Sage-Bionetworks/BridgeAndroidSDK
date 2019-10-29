@@ -39,24 +39,26 @@
         android:scaleType="fitCenter"
         android:src="@drawable/rsb_ic_action_settings" />
 
-<android.support.v7.widget.RecyclerView
+    <android.support.v7.widget.RecyclerView
 
-    android:id="@+id/list"
-    android:name="org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:layout_below="@id/textView"
-    android:layout_alignParentBottom="true"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="parent"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layoutManager="LinearLayoutManager"
-    android:background="@color/colorPrimary"
-    tools:context="org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment"
-    tools:listitem="@layout/fragment_profilesettings_title_details_row" >
+        android:id="@+id/list"
+        android:name="org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/textView"
+        android:layout_alignParentBottom="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layoutManager="LinearLayoutManager"
+        android:background="@color/colorPrimary"
+        tools:context="org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment"
+        tools:listitem="@layout/fragment_profilesettings_title_details_row" >
 
 
-</android.support.v7.widget.RecyclerView>
+    </android.support.v7.widget.RecyclerView>
+    <include layout="@layout/loading_spinner"
+        android:id="@+id/spinner"/>
 </RelativeLayout>
 

@@ -4,6 +4,8 @@ import android.arch.lifecycle.Observer
 import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.support.v4.app.Fragment
 import android.support.v4.view.ViewCompat
 import android.support.v7.widget.DividerItemDecoration
@@ -43,6 +45,10 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
 
     abstract fun loadProfileViewModel(): ProfileViewModel
 
+    fun showLoading(show: Boolean) {
+        Handler(Looper.getMainLooper()).post {spinner.visibility = if (show) View.VISIBLE else View.GONE }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
 
@@ -62,6 +68,28 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
         val topListener = SystemWindowHelper.getOnApplyWindowInsetsListener(SystemWindowHelper.Direction.TOP)
         ViewCompat.setOnApplyWindowInsetsListener(view.textView, topListener)
 
+
+        return view
+    }
+
+    override fun launchEditProfileItemDialog(value: String, profileItemKey: String) {
+        val dialogFragment = EditProfileItemDialogFragment.newInstance(value, profileItemKey, this)
+        dialogFragment.show(fragmentManager, "EditDialog")
+    }
+
+    override  fun saveEditDialogValue(value: String, profileItemKey: String) {
+        profileViewModel.saveStudyParticipantValue(value, profileItemKey)
+        adapter?.notifyDataSetChanged()
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        settings_icon.setOnClickListener {
+            val settingsFragment = newInstance("SettingsDataSource", false)
+            addChildFragmentOnTop(settingsFragment, "settingsFragment")
+        }
+
+        showLoading(true)
         // Set the adapter
         if (view.list is RecyclerView) {
             with(view.list) {
@@ -92,27 +120,9 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
                 val a = loader
                 adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
                 view.list.adapter = adapter
+                showLoading(false)
             })
         }
-        return view
-    }
-
-    override fun launchEditProfileItemDialog(value: String, profileItemKey: String) {
-        val dialogFragment = EditProfileItemDialogFragment.newInstance(value, profileItemKey, this)
-        dialogFragment.show(fragmentManager, "EditDialog")
-    }
-
-    override  fun saveEditDialogValue(value: String, profileItemKey: String) {
-        profileViewModel.saveStudyParticipantValue(value, profileItemKey)
-        adapter?.notifyDataSetChanged()
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        settings_icon.setOnClickListener {
-            val settingsFragment = newInstance("SettingsDataSource", false)
-            addChildFragmentOnTop(settingsFragment, "settingsFragment")
-        }
-        super.onViewCreated(view, savedInstanceState)
     }
 
     override fun onAttach(context: Context) {
