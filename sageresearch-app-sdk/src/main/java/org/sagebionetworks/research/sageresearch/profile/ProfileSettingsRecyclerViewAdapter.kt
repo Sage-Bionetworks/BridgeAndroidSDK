@@ -18,11 +18,21 @@ import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecycler
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 import org.sagebionetworks.researchstack.backbone.ResourceManager
 import org.sagebionetworks.researchstack.backbone.ResourcePathManager
+import org.sagebionetworks.researchstack.backbone.model.TaskModel
+import java.util.*
 
-class ProfileSettingsRecyclerViewAdapter(
-        private val dataPair: Pair<ProfileDataSource?, ProfileDataLoader?>,
-        private val mListener: OnListInteractionListener)
-    : RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder>() {
+class ProfileSettingsRecyclerViewAdapter
+    : RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder> {
+
+    constructor(
+            dataPair: Pair<ProfileDataSource?, ProfileDataLoader?>,
+            listener: OnListInteractionListener) : super() {
+        mDataPair = dataPair
+        mOnClickListener = View.OnClickListener { v ->
+            val item = v.tag as ProfileRow
+            item.onClick(listener)
+        }
+    }
 
     companion object {
         const val VIEW_TYPE_SECTION = 0
@@ -31,16 +41,19 @@ class ProfileSettingsRecyclerViewAdapter(
 
     }
 
-    private val dataGroups = dataPair.second?.participantData?.dataGroups?: listOf()
-    private val mValues = dataPair.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, dataPair.second!!) } ?: listOf()
-
+    private lateinit var mValues: List<ProfileRow>
     private val mOnClickListener: View.OnClickListener
+    private var mDataPair: Pair<ProfileDataSource?, ProfileDataLoader?>
+        set(value) {
+            field = value
+            val dataGroups = value.second?.participantData?.dataGroups?: listOf()
+            mValues = value.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, value.second!!) } ?: listOf()
 
-    init {
-        mOnClickListener = View.OnClickListener { v ->
-            val item = v.tag as ProfileRow
-            item.onClick(mListener)
         }
+
+    fun updateDataLoader(loader: Pair<ProfileDataSource?, ProfileDataLoader?>) {
+        mDataPair = loader
+        notifyDataSetChanged()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -93,6 +106,7 @@ interface OnListInteractionListener {
     fun launchStudyBurstReminderTime()
     fun launchEditProfileItemDialog(value: String, profileItemKey: String)
     fun launchWithdraw(firstName: String, joinedDate: DateTime)
+    fun launchEditParticipantItem(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem)
 }
 
 abstract class ProfileRow {
@@ -188,6 +202,7 @@ class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profil
     override fun onClick(listener: OnListInteractionListener) {
         when (profileItem.profileItemKey) {
             "firstName" -> listener.launchEditProfileItemDialog(detail?: "", profileItem.profileItemKey)
+            "sharingScope" -> listener.launchEditParticipantItem(profileItem, profileDataLoader.getDataDef(profileItem.profileItemKey)!!)
         }
     }
 }

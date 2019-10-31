@@ -27,7 +27,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
 
     private var profileKey = "ProfileDataSource" //Initialized to the default key
     private var isMainView = true;
-    private var adapter: ProfileSettingsRecyclerViewAdapter? = null
+    var adapter: ProfileSettingsRecyclerViewAdapter? = null
 
     protected lateinit var profileViewModel: ProfileViewModel
 
@@ -41,6 +41,8 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
             profileKey = it.getString(ARG_PROFILE_KEY)
             isMainView = it.getBoolean(ARG_IS_MAIN_VIEW, true)
         }
+
+
     }
 
     abstract fun loadProfileViewModel(): ProfileViewModel
@@ -116,12 +118,20 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
                 this.addItemDecoration(divider)
 
             }
-            profileViewModel.profileData(profileKey).observe(this, Observer { t -> val loader = t
-                val a = loader
-                adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
+            if (adapter == null) {
+                profileViewModel.profileData(profileKey).observe(this, Observer { loader ->
+                    if (adapter == null) {
+                        adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
+                        view.list.adapter = adapter
+                    } else {
+                        adapter?.updateDataLoader(loader!!)
+                    }
+                    showLoading(false)
+                })
+            } else {
                 view.list.adapter = adapter
                 showLoading(false)
-            })
+            }
         }
     }
 

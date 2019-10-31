@@ -113,7 +113,7 @@ data class ProfileItemProfileTableItem(val map: Map<String, Any?>) : ProfileTabl
     val profileItemKey: String by map
     override val notInCohorts: List<String> by map
     override val inCohorts: List<String> by map
-    private val choices: List<Map<String, Any?>>? by map
+    val choices: List<Map<String, Any?>>? by map
 
     val valueMap: Map<String, String>? = choices?.mapNotNull { Choice(it) }?.map { it.value to it.text }?.toMap()
 }

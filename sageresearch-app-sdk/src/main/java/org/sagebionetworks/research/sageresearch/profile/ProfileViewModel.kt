@@ -7,7 +7,9 @@ import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Observable
 import io.reactivex.Single
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataItem
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
+import org.sagebionetworks.bridge.android.manager.models.ProfileItemProfileTableItem
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
+import org.sagebionetworks.bridge.rest.model.SharingScope
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.bridge.rest.model.SurveyReference
@@ -16,7 +18,9 @@ import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository
 import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager
+import org.sagebionetworks.researchstack.backbone.model.TaskModel
 import org.slf4j.LoggerFactory
+import java.util.*
 
 
 open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository): ViewModel() {
@@ -69,17 +73,27 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
     }
 
     fun saveStudyParticipantValue(value: String, profileItemKey: String) {
+        var studyParticipant: StudyParticipant? = null
         when (profileItemKey) {
             "firstName" -> {
                 cachedProfileDataLoader?.participantData?.firstName = value
-                val studyParticipant = StudyParticipant()
+                studyParticipant = StudyParticipant()
                 studyParticipant.firstName = value
-                compositeDisposable.add(toV2Observable(BridgeDataProvider.getInstance()
-                        .updateStudyParticipant(studyParticipant))
-                        .subscribe(
-                                { userSessionInfo -> LOGGER.info("Successfully updated study participant firstName") },
-                                { throwable -> LOGGER.warn("Error updating study participant firstName") }))
+
             }
+            "sharingScope" -> {
+                val scope = SharingScope.fromValue(value)
+                cachedProfileDataLoader?.participantData?.sharingScope = scope
+                studyParticipant = StudyParticipant()
+                studyParticipant.sharingScope = scope
+            }
+        }
+        if (studyParticipant != null) {
+            compositeDisposable.add(toV2Observable(BridgeDataProvider.getInstance()
+                    .updateStudyParticipant(studyParticipant))
+                    .subscribe(
+                            { userSessionInfo -> LOGGER.info("Successfully updated study participant") },
+                            { throwable -> LOGGER.warn("Error updating study participant") }))
         }
     }
 

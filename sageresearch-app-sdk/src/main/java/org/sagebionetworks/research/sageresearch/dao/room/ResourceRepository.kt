@@ -19,6 +19,9 @@ import org.sagebionetworks.bridge.rest.model.AppConfig
 import org.sagebionetworks.bridge.rest.model.Survey
 import org.sagebionetworks.bridge.rest.model.SurveyReference
 
+/**
+ * A generalized repository for storing and retrieving objects as JSON blobs.
+ */
 abstract class ResourceRepository<T: Any> constructor(
         protected val resourceDao: ResourceEntityDao) : BaseRepository() {
 
