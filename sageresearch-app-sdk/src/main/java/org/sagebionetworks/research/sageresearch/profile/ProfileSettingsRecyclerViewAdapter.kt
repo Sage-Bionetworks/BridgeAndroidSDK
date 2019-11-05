@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import kotlinx.android.synthetic.main.fragment_profilesettings_title_details_row.view.*
 import org.joda.time.DateTime
+import org.joda.time.LocalDate
 import org.sagebionetworks.bridge.android.manager.models.*
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.SurveyReference
@@ -19,7 +20,8 @@ import org.sagebionetworks.research.sageresearch_app_sdk.R
 import org.sagebionetworks.researchstack.backbone.ResourceManager
 import org.sagebionetworks.researchstack.backbone.ResourcePathManager
 import org.sagebionetworks.researchstack.backbone.model.TaskModel
-import java.util.*
+import android.net.Uri
+
 
 class ProfileSettingsRecyclerViewAdapter
     : RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder> {
@@ -137,6 +139,8 @@ abstract class ProfileRow {
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
                 is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem, profileDataLoader)
                 is SettingsProfileTableItem -> return SettingsRow(profileItem,  profileDataLoader)
+                is DownloadDataProfileTableItem -> return DownloadDataRow(profileItem, profileDataLoader)
+                is EmailProfileTableItem -> return EmailRow(profileItem)
                 else -> return DisplayOnlyRow(profileItem)
             }
         }
@@ -146,6 +150,13 @@ abstract class ProfileRow {
 class DisplayOnlyRow(val profileItem: ProfileTableItem): ProfileRow() {
     override val title = profileItem.title
     override fun isClickable(): Boolean { return false }
+}
+
+class DownloadDataRow(val profileItem: ProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+    override val title = profileItem.title
+    override fun onClick(listener: OnListInteractionListener) {
+        BridgeDataProvider.getInstance().downloadData(profileDataLoader.participantData.createdOn.toLocalDate(), LocalDate.now())
+    }
 }
 
 class SectionRow(val profileItem: ProfileSection): ProfileRow() {
@@ -238,6 +249,7 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
                 "Licenses" -> return ResourceManager.getInstance().getLicense()
                 "consent" -> return ResourceManager.getInstance().consentHtml
                 "PrivacyPolicy" -> return ResourceManager.getInstance().privacyPolicy
+                "StudyInformation" -> return ResourceManager.getInstance().studyOverview
                 else -> return null
             }
         }
@@ -247,6 +259,20 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
         val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(listener.getContext(),
             "", path, true)
         listener.startActivity(intent)
+    }
+}
+
+class EmailRow(val profileItem: EmailProfileTableItem): ProfileRow() {
+    override val title = profileItem.title
+
+    override fun onClick(listener: OnListInteractionListener) {
+        val subject = title
+        val message = ""
+        val intent = Intent(Intent.ACTION_SENDTO, Uri.fromParts(
+                "mailto", profileItem.email, null))
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject)
+        intent.putExtra(Intent.EXTRA_TEXT, message)
+        listener.startActivity(Intent.createChooser(intent, "Choose an Email client :"))
     }
 }
 

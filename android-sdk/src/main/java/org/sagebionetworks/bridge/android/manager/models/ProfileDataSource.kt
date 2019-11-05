@@ -74,6 +74,12 @@ data class ProfileSection(val map: Map<String, Any?>) : ProfileTableItem {
             "studyParticipation" -> {
                 profileItem =  StudyParticipationProfileTableItem(defaultMap)
             }
+            "downloadData" -> {
+                profileItem = DownloadDataProfileTableItem(defaultMap)
+            }
+            "mailTo" -> {
+                profileItem = EmailProfileTableItem(defaultMap)
+            }
 
             else -> {
                 //Error unknown type
@@ -163,6 +169,23 @@ data class StudyParticipationProfileTableItem(val map: Map<String, Any?>) : Prof
     override val hideOnAndroid: Boolean by map
     override val notInCohorts: List<String> by map
     override val inCohorts: List<String> by map
+}
+
+data class DownloadDataProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
+    override val type: String by map
+    override val title: String by map
+    override val hideOnAndroid: Boolean by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
+}
+
+data class EmailProfileTableItem(val map: Map<String, Any?>) : ProfileTableItem {
+    override val type: String by map
+    override val title: String by map
+    override val hideOnAndroid: Boolean by map
+    override val notInCohorts: List<String> by map
+    override val inCohorts: List<String> by map
+    val email: String by map
 }
 
 data class Choice(val map: Map<String, Any?>) {
