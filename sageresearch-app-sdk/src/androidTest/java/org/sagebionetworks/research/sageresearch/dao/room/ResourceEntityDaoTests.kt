@@ -27,14 +27,14 @@ class ResourceEntityDaoTests: RoomTestHelper() {
     @Test
     fun test_upsert_and_get() {
         resourceDao.upsert(resourceEntity)
-        Assert.assertEquals(resourceEntity, getValue(resourceDao.getResource(RESOURCE_ID)))
+        Assert.assertEquals(resourceEntity, getValue(resourceDao.getResource(RESOURCE_ID, resourceEntity.type)))
     }
 
     @Test
     fun test_clear() {
         resourceDao.upsert(resourceEntity)
         resourceDao.clear()
-        Assert.assertNull(getValue(resourceDao.getResource(RESOURCE_ID)))
+        Assert.assertNull(getValue(resourceDao.getResource(RESOURCE_ID, resourceEntity.type)))
     }
 
 }

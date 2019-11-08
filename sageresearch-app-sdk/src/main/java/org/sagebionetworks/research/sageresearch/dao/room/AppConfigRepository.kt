@@ -20,7 +20,7 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
 
     val appConfig : Flowable<AppConfig>
         get() {
-            return resourceDao.getResource(APP_CONFIG_ID).filter {
+            return resourceDao.getResource(APP_CONFIG_ID, ResourceEntity.ResourceType.APP_CONFIG).filter {
                 if (it.isEmpty() || it.get(0).lastUpdateTime + defaultUpdateFrequency < System.currentTimeMillis()) {
                     subscribeCompletable(getRemoteAppConfig(), "Get app config succeeded", "Get app config failed")
                 }

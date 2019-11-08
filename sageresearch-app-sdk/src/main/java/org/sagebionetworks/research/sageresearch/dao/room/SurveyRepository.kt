@@ -16,7 +16,7 @@ class SurveyRepository(resourceDao: ResourceEntityDao, val surveyManager: Survey
     }
 
     private fun getSurvey(guid: String, createdOn: DateTime): Flowable<Survey> {
-        return resourceDao.getResource(guid).filter {
+        return resourceDao.getResource(guid, ResourceEntity.ResourceType.SURVEY).filter {
             if (it.isEmpty() || it.get(0).lastUpdateTime + defaultUpdateFrequency < System.currentTimeMillis()) {
                 subscribeCompletable(getRemoteSurvey(guid, createdOn), "Get survey succeeded", "Get survey failed")
             }

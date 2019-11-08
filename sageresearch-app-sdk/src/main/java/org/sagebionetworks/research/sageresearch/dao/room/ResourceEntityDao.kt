@@ -16,7 +16,7 @@ interface ResourceEntityDao {
      * @return - a list that will either contain 1 resource or empty if not found
      */
     @Query(RoomSql.SELECT_RESOURCE_BY_IDENTIFIER)
-    fun getResource(resourceIdentifier: String): Flowable<List<ResourceEntity>>
+    fun getResource(resourceIdentifier: String, resourceType: ResourceEntity.ResourceType): Flowable<List<ResourceEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsert(resourceEntity: ResourceEntity)

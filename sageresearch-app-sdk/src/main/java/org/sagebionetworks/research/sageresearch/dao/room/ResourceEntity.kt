@@ -7,13 +7,12 @@ import com.google.gson.annotations.SerializedName
 import org.sagebionetworks.bridge.rest.RestUtils
 import java.lang.reflect.Type
 
-@Entity
+@Entity(primaryKeys = arrayOf("identifier", "type"))
 data class ResourceEntity(
 
     /**
      * @property identifier the resource identifier
      */
-    @PrimaryKey
     var identifier: String,
     /**
      * @property type the type of data stored in this resource

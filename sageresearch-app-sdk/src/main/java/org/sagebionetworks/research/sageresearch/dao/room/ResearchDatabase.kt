@@ -81,7 +81,7 @@ abstract class ResearchDatabase : RoomDatabase() {
                 object : Migration(2, 3) {
                     override fun migrate(database: SupportSQLiteDatabase) {
                         val reportTable = "ResourceEntity"
-                        database.execSQL("CREATE TABLE `ResourceEntity` (`identifier` TEXT NOT NULL, `type` TEXT NOT NULL, `resourceJson` TEXT, `lastUpdateTime` INTEGER NOT NULL, PRIMARY KEY(`identifier`))")
+                        database.execSQL("CREATE TABLE `ResourceEntity` (`identifier` TEXT NOT NULL, `type` TEXT NOT NULL, `resourceJson` TEXT, `lastUpdateTime` INTEGER NOT NULL, PRIMARY KEY(`identifier`, `type`))")
                         database.execSQL("CREATE  INDEX `index_ResourceEntity_type` ON `ResourceEntity` (`type`)")
                     }
                 })
@@ -206,7 +206,7 @@ internal class RoomSql {
         private const val REPORT_CONDITION_NEEDS_SYNCED_TO_BRIDGE =
                 "(needsSyncedToBridge IS NOT NULL AND needsSyncedToBridge = 1)"
 
-        private const val RESOURCE_CONDITION_RESOURCE_IDENTIFIER = "(identifier = :resourceIdentifier)"
+        private const val RESOURCE_CONDITION_RESOURCE_IDENTIFIER = "(identifier = :resourceIdentifier AND type =:resourceType)"
 
         /**
          * QUERY constants are full Room queries
