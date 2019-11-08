@@ -1,6 +1,7 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
 import io.reactivex.Completable
+import io.reactivex.Flowable
 import io.reactivex.Single
 import org.sagebionetworks.bridge.android.manager.AppConfigManager
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataManager
@@ -17,7 +18,7 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
 
     var cachedAppConfig: AppConfig? = null
 
-    val appConfig : Single<AppConfig>
+    val appConfig : Flowable<AppConfig>
         get() {
             return resourceDao.getResource(APP_CONFIG_ID).filter {
                 if (it.isEmpty() || it.get(0).lastUpdateTime + defaultUpdateFrequency < System.currentTimeMillis()) {
@@ -27,17 +28,17 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
             }.map {
                 cachedAppConfig = it.get(0).loadResource(AppConfig::class.java)
                 cachedAppConfig!!
-            }.firstOrError()
+            }
         }
 
     val profileDataSources: Single<Map<String, ProfileDataSource>>
-        get() = appConfig.map { extractProfileDataSources(it) }
+        get() = appConfig.firstOrError().map { extractProfileDataSources(it) }
 
     val profileDataManagers: Single<Map<String, ProfileDataManager>>
-        get() = appConfig.map { extractProfileDataManagers(it) }
+        get() = appConfig.firstOrError().map { extractProfileDataManagers(it) }
 
     fun getSurveyReference(surveyId: String): Single<SurveyReference> {
-        return appConfig.map { it.getSurveyReference(surveyId) }
+        return appConfig.firstOrError().map { it.getSurveyReference(surveyId) }
     }
 
     private fun getRemoteAppConfig(): Completable {
