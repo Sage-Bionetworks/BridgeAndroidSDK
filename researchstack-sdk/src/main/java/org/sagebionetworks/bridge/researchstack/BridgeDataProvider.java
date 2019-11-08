@@ -149,17 +149,12 @@ public abstract class BridgeDataProvider extends DataProvider {
         return bridgeConfig.getStudyId();
     }
 
-    //region AppConfig
-
-    /** Get app config from the cache, or fall back to server if there is no value in the cache. */
-    @NonNull
-    public Single<AppConfig> getAppConfig() {
-        return bridgeManagerProvider.getAppConfigManager().getAppConfig();
-    }
-
-    //endregion
 
     //region Consent
+
+    public Completable withdrawAndSignout(Context context, String reason) {
+        return withdrawAllConsents(reason).andThen(signOut(context)).toCompletable();
+    }
 
     @NonNull
     @Override

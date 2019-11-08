@@ -6,6 +6,7 @@ import android.arch.persistence.room.Insert
 import android.arch.persistence.room.OnConflictStrategy
 import android.arch.persistence.room.Query
 import android.support.annotation.VisibleForTesting
+import io.reactivex.Flowable
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDateTime
 
@@ -73,6 +74,14 @@ interface ScheduledActivityEntityDao {
      */
     @Query(RoomSql.SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP)
     fun activityGroup(activityGroup: Set<String>): LiveData<List<ScheduledActivityEntity>>
+
+    /**
+     * Get all the scheduled activities that have one of the identifiers specified in the task group
+     * @param activityGroup a set of identifiers to use as a filter for scheduled items
+     * @return the list of scheduled activities
+     */
+    @Query(RoomSql.SCHEDULE_QUERY_SELECT_ACTIVITY_GROUP)
+    fun activityGroupFlowable(activityGroup: Set<String>): Flowable<List<ScheduledActivityEntity>>
 
     /**
      * Get all the scheduled activities that are scheduled during and not expired yet during this date

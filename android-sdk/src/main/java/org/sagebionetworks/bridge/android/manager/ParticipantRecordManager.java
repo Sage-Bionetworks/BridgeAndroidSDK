@@ -40,6 +40,9 @@ import rx.Single;
 public class ParticipantRecordManager {
     private static final Logger logger = LoggerFactory.getLogger(ParticipantRecordManager.class);
 
+    private long lastLoad = 0;
+    private static long DEFAULT_REFRESH = 1000 * 60;
+
     @NonNull
     private final AccountDAO accountDAO;
     @NonNull
@@ -68,10 +71,17 @@ public class ParticipantRecordManager {
      */
     @NonNull
     public Single<StudyParticipant> getParticipantRecord() {
-        return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
-                .getUsersParticipantRecord(false))
-                .doOnSuccess(accountDAO::setStudyParticipant)
-                .doOnError(throwable -> logger.error(throwable.getLocalizedMessage()));
+        if (lastLoad + DEFAULT_REFRESH > System.currentTimeMillis()) {
+            return Single.just(getCachedParticipantRecord());
+        } else {
+            return toBodySingle(authStateHolderAtomicReference.get().forConsentedUsersApi
+                    .getUsersParticipantRecord(false))
+                    .doOnSuccess(participant -> {
+                        accountDAO.setStudyParticipant(participant);
+                        lastLoad = System.currentTimeMillis();
+                    })
+                    .doOnError(throwable -> logger.error(throwable.getLocalizedMessage()));
+        }
     }
 
 
