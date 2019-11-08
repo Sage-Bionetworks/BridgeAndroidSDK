@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.android.manager.models
 
 /**
- * A ProfileDatSource is a configuration element defined in the Bridge Study Manager. It is used to
+ * A ProfileDataSource is a configuration element defined in the Bridge Study Manager. It is used to
  * describe the items on a study's profile/settings screen(s). The values for each row are loaded using
  * a ProfileDataLoader which can be retrieved from the ProfileManager.
  */

@@ -36,27 +36,5 @@ class ResourceEntityDaoTests: RoomTestHelper() {
         resourceDao.clear()
         Assert.assertNull(getValue(resourceDao.getResource(RESOURCE_ID)))
     }
-//    @Rule
-//    var instantTaskExecutorRule = InstantTaskExecutorRule()
-//
-//
-//    private lateinit var resourceDao: ResourceEntityDao
-//    private lateinit var db: ResearchDatabase
-//
-//    @Before
-//    fun createDb() {
-//        val context = ApplicationProvider.getApplicationContext<Context>()
-//        db = Room.inMemoryDatabaseBuilder(context, ResearchDatabase::class.java)
-//                .allowMainThreadQueries()
-//                .build()
-//        resourceDao = db.resourceDao()
-//    }
-//
-//    @After
-//    @Throws(IOException::class)
-//    fun closeDb() {
-//        db.close()
-//    }
-
 
 }
