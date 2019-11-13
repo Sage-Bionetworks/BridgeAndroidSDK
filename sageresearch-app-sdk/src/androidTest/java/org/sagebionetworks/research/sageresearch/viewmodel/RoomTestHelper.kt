@@ -32,29 +32,23 @@
 
 package org.sagebionetworks.research.sageresearch.viewmodel
 
+import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.Observer
 import android.arch.persistence.room.Room
 import android.support.test.InstrumentationRegistry
+import android.support.test.runner.AndroidJUnit4
+import com.google.common.reflect.TypeToken
+import io.reactivex.Flowable
 import junit.framework.Assert.assertNull
 import org.junit.AfterClass
 import org.junit.BeforeClass
-import org.sagebionetworks.bridge.rest.RestUtils
-import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
-import org.sagebionetworks.research.sageresearch.dao.room.EntityTypeConverters
-import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
-import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao
-import java.io.IOException
-import java.nio.charset.Charset
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.Observer
-import android.support.test.runner.AndroidJUnit4
-import com.google.common.reflect.TypeToken
-import junit.framework.Assert.assertNotNull
 import org.junit.runner.RunWith
 import org.sagebionetworks.bridge.rest.model.ForwardCursorReportDataList
 import org.sagebionetworks.bridge.rest.model.ReportDataList
-import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity
-import org.sagebionetworks.research.sageresearch.dao.room.ReportEntityDao
+import org.sagebionetworks.bridge.rest.model.ScheduledActivityListV4
+import org.sagebionetworks.research.sageresearch.dao.room.*
+import java.io.IOException
+import java.nio.charset.Charset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -65,6 +59,7 @@ abstract class RoomTestHelper {
         lateinit var database: ResearchDatabase
         lateinit var activityDao: ScheduledActivityEntityDao
         lateinit var reportDao: ReportEntityDao
+        lateinit var resourceDao: ResourceEntityDao
 
         @BeforeClass
         @JvmStatic fun setup() {
@@ -74,6 +69,7 @@ abstract class RoomTestHelper {
 
             activityDao = database.scheduleDao()
             reportDao = database.reportDao()
+            resourceDao = database.resourceDao()
         }
 
         @AfterClass
@@ -95,6 +91,22 @@ abstract class RoomTestHelper {
             }
         }
         liveData.observeForever(observer)
+        latch.await(1, TimeUnit.SECONDS)
+
+        return data[0] as T
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @Throws(InterruptedException::class)
+    fun <T> getValue(flowable: Flowable<List<T>>): T {
+        val data = arrayOfNulls<Any>(1)
+        val latch = CountDownLatch(1)
+        flowable.subscribe {
+            if (!it.isEmpty()) {
+                data[0] = it.get(0)
+            }
+            latch.countDown()
+        }
         latch.await(1, TimeUnit.SECONDS)
 
         return data[0] as T

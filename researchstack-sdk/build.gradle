@@ -1,9 +1,12 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-android'
 apply plugin: 'org.jetbrains.dokka-android'
 
 repositories {
   // for PhilJay/MPAndroidChart, a ResearchStack:base transitive dependency
   maven { url "https://jitpack.io" }
+    mavenCentral()
 }
 
 // todo make pom include sage s3 repo for rest-client
@@ -54,6 +57,7 @@ dependencies {
   testImplementation 'org.powermock:powermock-module-junit4-rule-agent:1.7.1'
   testImplementation 'org.powermock:powermock-module-junit4-rule:1.7.1'
   testImplementation 'org.powermock:powermock-module-junit4:1.7.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
 apply from: "../config/artifact-deploy.gradle"

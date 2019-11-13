@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Widget.SageResearch.TextView.ListSectionTitle" parent="">
+        <item name="android:gravity">left</item>
+        <item name="android:fontFamily">@font/lato</item>
+        <item name="android:textColor">@color/appTextDark</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="Widget.SageResearch.TextView.SelectionItemTitle" parent="">
+        <item name="android:gravity">left</item>
+        <item name="android:fontFamily">@font/lato</item>
+        <item name="android:textColor">@color/appTextDark</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Widget.SageResearch.TextView.SelectionDetail" parent="">
+        <item name="android:gravity">left</item>
+        <item name="android:fontFamily">@font/lato</item>
+        <item name="android:textColor">@color/appLightGray</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+</resources>

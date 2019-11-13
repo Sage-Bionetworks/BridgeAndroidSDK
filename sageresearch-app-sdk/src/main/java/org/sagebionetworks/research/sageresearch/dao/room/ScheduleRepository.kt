@@ -73,7 +73,7 @@ import javax.inject.Inject
  * the schedules are currently synced with bridge.
  */
 open class ScheduleRepository constructor(
-        private val scheduleDao: ScheduledActivityEntityDao,
+        val scheduleDao: ScheduledActivityEntityDao,
         private val syncStateDao: ScheduledRepositorySyncStateDao,
         private val surveyManager: SurveyManager,
         private val activityManager: ActivityManager,

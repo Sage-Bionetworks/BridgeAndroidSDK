@@ -9,16 +9,21 @@ import com.google.common.collect.Sets;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.di.BridgeApplicationScope;
 import org.sagebionetworks.bridge.android.manager.ActivityManager;
+import org.sagebionetworks.bridge.android.manager.AppConfigManager;
 import org.sagebionetworks.bridge.android.manager.AuthenticationManager;
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager;
 import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
+import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository;
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
+import org.sagebionetworks.research.sageresearch.dao.room.ResourceEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduleRepository;
+import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository;
+import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager;
 import org.sagebionetworks.research.sageresearch.viewmodel.ReportTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.viewmodel.ScheduledActivityTaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledRepositorySyncStateDao;
@@ -87,6 +92,11 @@ public abstract class SageResearchAppSDKModule {
     }
 
     @Provides
+    static ResourceEntityDao provideResourceDao(ResearchDatabase researchDatabase) {
+        return researchDatabase.resourceDao();
+    }
+
+    @Provides
     @BridgeApplicationScope
     static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
             ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, SurveyManager surveyManager,
@@ -104,5 +114,32 @@ public abstract class SageResearchAppSDKModule {
 
         LOGGER.debug("Providing ReportRepository");
         return new ReportRepository(reportDao, participantRecordManager, bridgeConfig);
+    }
+
+    @Provides
+    @BridgeApplicationScope
+    static AppConfigRepository provideAppConfigRepository(ResourceEntityDao resourceDao,
+                                                          AppConfigManager appConfigManager) {
+
+        LOGGER.debug("Providing AppConfigtRepository");
+        return new AppConfigRepository(resourceDao, appConfigManager);
+    }
+
+    @Provides
+    @BridgeApplicationScope
+    static SurveyRepository provideSurveyRepository(ResourceEntityDao resourceDao,
+                                                       SurveyManager surveyManager) {
+
+        LOGGER.debug("Providing SurveyRepository");
+        return new SurveyRepository(resourceDao, surveyManager);
+    }
+
+    @Provides
+    @BridgeApplicationScope
+    static BridgeRepositoryManager provideBridgeRepositoryManager(ScheduleRepository scheduleRepo,
+                                                                  ReportRepository reportRepo) {
+
+        LOGGER.debug("Providing BridgeRepositoryManager");
+        return new BridgeRepositoryManager(scheduleRepo, reportRepo);
     }
 }

@@ -120,8 +120,6 @@ public class BridgeDataProviderTest {
     @Mock
     private ActivityManager activityManager;
     @Mock
-    private AppConfigManager appConfigManager;
-    @Mock
     protected AuthenticationManager authenticationManager;
     @Mock
     private ParticipantRecordManager participantRecordManager;
@@ -136,7 +134,6 @@ public class BridgeDataProviderTest {
         when(bridgeManagerProvider.getAccountDao()).thenReturn(accountDAO);
         when(bridgeManagerProvider.getConsentDao()).thenReturn(consentDAO);
         when(bridgeManagerProvider.getActivityManager()).thenReturn(activityManager);
-        when(bridgeManagerProvider.getAppConfigManager()).thenReturn(appConfigManager);
         when(bridgeManagerProvider.getAuthenticationManager()).thenReturn(authenticationManager);
         when(bridgeManagerProvider.getParticipantManager()).thenReturn(participantRecordManager);
 
@@ -279,17 +276,6 @@ public class BridgeDataProviderTest {
         dataProvider.withdrawConsent(context, reasonString).test().assertCompleted();
 
         verify(authenticationManager).withdrawAll(reasonString);
-    }
-
-    @Test
-    public void getAppConfig() {
-        // Set up mock.
-        when(appConfigManager.getAppConfig()).thenReturn(Single.just(new AppConfig().guid(
-                "dummy-app-config-guid")));
-
-        // Execute and validate.
-        AppConfig result = ((BridgeDataProvider) dataProvider).getAppConfig().toBlocking().value();
-        assertEquals("dummy-app-config-guid", result.getGuid());
     }
 
     @Test

@@ -109,6 +109,16 @@ class EntityTypeConverters {
     private val surveyRefListType = object : TypeToken<List<RoomSurveyReference>>() {}.type
 
     @TypeConverter
+    fun fromResourceTypeString(value: String): ResourceEntity.ResourceType {
+        return ResourceEntity.ResourceType.valueOf(value)
+    }
+
+    @TypeConverter
+    fun fromResourceType(value: ResourceEntity.ResourceType): String {
+        return value.name
+    }
+
+    @TypeConverter
     fun fromLocalDateString(value: String?): LocalDate? {
         val valueChecked = value ?: return null
         return LocalDate.parse(valueChecked)
