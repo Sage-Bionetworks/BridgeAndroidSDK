@@ -29,54 +29,42 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package org.sagebionetworks.research.sageresearch.viewmodel
 
-package org.sagebionetworks.research.sageresearch.viewmodel;
+import io.reactivex.Scheduler
+import io.reactivex.android.plugins.RxAndroidPlugins
+import io.reactivex.internal.schedulers.ExecutorScheduler.ExecutorWorker
+import io.reactivex.plugins.RxJavaPlugins
+import io.reactivex.schedulers.TestScheduler
+import org.junit.rules.TestRule
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
+import java.util.concurrent.Executor
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
-import io.reactivex.Scheduler;
-import io.reactivex.android.plugins.RxAndroidPlugins;
-import io.reactivex.internal.schedulers.ExecutorScheduler;
-import io.reactivex.plugins.RxJavaPlugins;
-import io.reactivex.schedulers.TestScheduler;
-
-public class TestSchedulerRule implements TestRule {
-    private final Scheduler immediate = new Scheduler() {
-        @Override
-        public Worker createWorker() {
-            return new ExecutorScheduler.ExecutorWorker(Runnable::run);
+class TestSchedulerRule : TestRule {
+    private val immediate: Scheduler = object : Scheduler() {
+        override fun createWorker(): Worker {
+            return ExecutorWorker(Executor { obj: Runnable -> obj.run() })
         }
-    };
-
-    private final TestScheduler testScheduler = new TestScheduler();
-
-    public TestScheduler getTestScheduler() {
-        return testScheduler;
     }
+    val testScheduler = TestScheduler()
 
-    @Override
-    public Statement apply(final Statement base, Description d) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                RxJavaPlugins.setIoSchedulerHandler(
-                        scheduler -> testScheduler);
-                RxJavaPlugins.setComputationSchedulerHandler(
-                        scheduler -> testScheduler);
-                RxJavaPlugins.setNewThreadSchedulerHandler(
-                        scheduler -> testScheduler);
-                RxAndroidPlugins.setMainThreadSchedulerHandler(
-                        scheduler -> immediate);
-
+    override fun apply(base: Statement,
+            d: Description): Statement {
+        return object : Statement() {
+            @Throws(Throwable::class)
+            override fun evaluate() {
+                RxJavaPlugins.setIoSchedulerHandler { scheduler: Scheduler? -> testScheduler }
+                RxJavaPlugins.setComputationSchedulerHandler { scheduler: Scheduler? -> testScheduler }
+                RxJavaPlugins.setNewThreadSchedulerHandler { scheduler: Scheduler? -> testScheduler }
+                RxAndroidPlugins.setMainThreadSchedulerHandler { scheduler: Scheduler? -> immediate }
                 try {
-                    base.evaluate();
+                    base.evaluate()
                 } finally {
-                    RxJavaPlugins.reset();
-                    RxAndroidPlugins.reset();
+                    RxJavaPlugins.reset()
+                    RxAndroidPlugins.reset()
                 }
             }
-        };
+        }
     }
 }
