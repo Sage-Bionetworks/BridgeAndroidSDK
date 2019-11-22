@@ -1,13 +1,12 @@
 package org.sagebionetworks.research.sageresearch_app_sdk.archive;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.research.domain.result.interfaces.Result;
-import org.sagebionetworks.research.sageresearch_app_sdk.archive.AbstractResultArchiveFactory.ResultArchiveFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -2,8 +2,8 @@ package org.sagebionetworks.bridge.android.receiver;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 

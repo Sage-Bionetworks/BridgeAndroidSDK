@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.android.di;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.AppConfigManager;

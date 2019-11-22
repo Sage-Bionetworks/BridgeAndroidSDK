@@ -1,16 +1,16 @@
 package org.sagebionetworks.research.sageresearch.profile
 
-import android.arch.lifecycle.Observer
+import androidx.lifecycle.Observer
 import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.support.v4.app.Fragment
-import android.support.v4.view.ViewCompat
-import android.support.v7.widget.DividerItemDecoration
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.fragment.app.Fragment
+import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +23,7 @@ import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecycler
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 
 
-abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileItemDialogListener, Fragment()  {
+abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileItemDialogListener, androidx.fragment.app.Fragment()  {
 
     private var profileKey = "ProfileDataSource" //Initialized to the default key
     private var isMainView = true;
@@ -76,7 +76,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
 
     override fun launchEditProfileItemDialog(value: String, profileItemKey: String) {
         val dialogFragment = EditProfileItemDialogFragment.newInstance(value, profileItemKey, this)
-        dialogFragment.show(fragmentManager, "EditDialog")
+        dialogFragment.show(fragmentManager!!, "EditDialog")
     }
 
     override  fun saveEditDialogValue(value: String, profileItemKey: String) {
@@ -93,13 +93,13 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
 
         showLoading(true)
         // Set the adapter
-        if (view.list is RecyclerView) {
+        if (view.list is androidx.recyclerview.widget.RecyclerView) {
             with(view.list) {
-                layoutManager = LinearLayoutManager(context)
+                layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
 
-                val divider = object : DividerItemDecoration(this.getContext(), DividerItemDecoration.VERTICAL) {
+                val divider = object : androidx.recyclerview.widget.DividerItemDecoration(this.getContext(), androidx.recyclerview.widget.DividerItemDecoration.VERTICAL) {
 
-                    override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+                    override fun getItemOffsets(outRect: Rect, view: View, parent: androidx.recyclerview.widget.RecyclerView, state: androidx.recyclerview.widget.RecyclerView.State) {
                         val pos = getChildAdapterPosition(view)
                         if (parent.adapter?.getItemViewType(pos) == VIEW_TYPE_SECTION) {
                             if (pos == 0) {
@@ -145,7 +145,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
      * @param childFragment The fragment to add on top of this fragment.
      * @param tag The tag for this fragment on the back stack.
      */
-    fun addChildFragmentOnTop(childFragment: Fragment, tag: String?) {
+    fun addChildFragmentOnTop(childFragment: androidx.fragment.app.Fragment, tag: String?) {
         fragmentManager!!
                 .beginTransaction()
                 .detach(this)

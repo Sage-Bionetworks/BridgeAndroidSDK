@@ -1,8 +1,8 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.Transformations
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
+import androidx.lifecycle.Transformations
 import com.google.gson.Gson
 import io.reactivex.Completable
 import io.reactivex.Flowable

@@ -2,12 +2,11 @@ package org.sagebionetworks.bridge.android.receiver;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import android.arch.core.executor.testing.InstantTaskExecutorRule;
-import android.support.test.InstrumentationRegistry;
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Before;
 import org.junit.Rule;

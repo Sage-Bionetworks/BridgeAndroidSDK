@@ -39,7 +39,7 @@
         android:scaleType="fitCenter"
         android:src="@drawable/rsb_ic_action_settings" />
 
-    <android.support.v7.widget.RecyclerView
+    <androidx.recyclerview.widget.RecyclerView
 
         android:id="@+id/list"
         android:name="org.sagebionetworks.research.sageresearch.profile.ProfileSettingsFragment"
@@ -57,7 +57,7 @@
         tools:listitem="@layout/fragment_profilesettings_title_details_row" >
 
 
-    </android.support.v7.widget.RecyclerView>
+    </androidx.recyclerview.widget.RecyclerView>
     <include layout="@layout/loading_spinner"
         android:id="@+id/spinner"/>
 </RelativeLayout>

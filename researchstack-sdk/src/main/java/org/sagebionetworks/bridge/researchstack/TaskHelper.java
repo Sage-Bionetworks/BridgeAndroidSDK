@@ -3,10 +3,9 @@ package org.sagebionetworks.bridge.researchstack;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.text.TextUtils;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.google.common.base.Strings;
 
@@ -28,7 +27,6 @@ import org.sagebionetworks.researchstack.backbone.storage.NotificationHelper;
 import org.sagebionetworks.researchstack.backbone.storage.database.AppDatabase;
 import org.sagebionetworks.researchstack.backbone.storage.database.TaskNotification;
 import org.sagebionetworks.researchstack.backbone.task.Task;
-import org.sagebionetworks.researchstack.backbone.utils.FormatHelper;
 import org.sagebionetworks.bridge.android.BridgeConfig;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.data.Archive;
@@ -39,9 +37,6 @@ import org.sagebionetworks.bridge.researchstack.factory.ArchiveFileFactory;
 import org.sagebionetworks.bridge.researchstack.survey.SurveyTaskScheduleModel;
 import org.sagebionetworks.bridge.researchstack.wrapper.StorageAccessWrapper;
 import org.sagebionetworks.bridge.rest.RestUtils;
-import org.sagebionetworks.bridge.rest.model.Activity;
-import org.sagebionetworks.bridge.rest.model.ScheduledActivity;
-import org.sagebionetworks.bridge.rest.model.TaskReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

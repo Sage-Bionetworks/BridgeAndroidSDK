@@ -1,11 +1,11 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
 import android.annotation.SuppressLint
-import android.arch.lifecycle.MutableLiveData
+import androidx.lifecycle.MutableLiveData
 import android.content.Context
 import android.content.SharedPreferences
-import android.support.annotation.RestrictTo
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.RestrictTo
+import androidx.annotation.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import hu.akarnokd.rxjava.interop.RxJavaInterop
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single

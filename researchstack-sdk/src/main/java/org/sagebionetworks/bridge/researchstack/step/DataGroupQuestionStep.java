@@ -17,8 +17,8 @@
 
 package org.sagebionetworks.bridge.researchstack.step;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.common.collect.Sets;
 
@@ -29,7 +29,6 @@ import org.sagebionetworks.researchstack.backbone.task.NavigableOrderedTask;
 import org.sagebionetworks.bridge.android.manager.BridgeManagerProvider;
 import org.sagebionetworks.bridge.researchstack.step.layout.DataGroupQuestionStepLayout;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

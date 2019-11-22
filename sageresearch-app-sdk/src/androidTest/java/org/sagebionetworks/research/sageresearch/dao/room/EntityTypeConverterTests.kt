@@ -32,7 +32,7 @@
 
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.support.test.InstrumentationRegistry
+import androidx.test.platform.app.InstrumentationRegistry
 import com.jakewharton.threetenabp.AndroidThreeTen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

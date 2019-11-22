@@ -18,7 +18,7 @@
 package org.sagebionetworks.bridge.android.manager;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.sagebionetworks.bridge.android.BridgeApplication;
 import org.sagebionetworks.bridge.android.BridgeConfig;

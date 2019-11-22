@@ -1,20 +1,14 @@
 package org.sagebionetworks.bridge.researchstack;
 
-import android.content.Context;
-import android.content.Intent;
-import android.support.annotation.NonNull;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.annotation.NonNull;
 
-import org.sagebionetworks.researchstack.backbone.DataProvider;
-import org.sagebionetworks.researchstack.backbone.DataResponse;
 import org.sagebionetworks.bridge.rest.model.Message;
+import org.sagebionetworks.researchstack.backbone.DataResponse;
 
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.adapter.rxjava.HttpException;
 import rx.Observable;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Created by liujoshua on 10/24/16.
@@ -45,28 +39,6 @@ public class ApiUtils {
         });
         // TODO: make it so this call will not exception during unit tests from calling Android APIs
         // .compose(ObservableUtils.applyDefault());
-    }
-
-    public static void handleError(@NonNull Context context, int responseCode) {
-        checkNotNull(context);
-
-        String intentAction = null;
-
-        switch (responseCode) {
-            // Not signed in.
-            case 401:
-                intentAction = DataProvider.ERROR_NOT_AUTHENTICATED;
-                break;
-
-            // Not Consented
-            case 412:
-                intentAction = DataProvider.ERROR_CONSENT_REQUIRED;
-                break;
-        }
-
-        if (intentAction != null) {
-            LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(intentAction));
-        }
     }
 
     @NonNull

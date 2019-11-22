@@ -33,9 +33,9 @@
 package org.sagebionetworks.research.sageresearch.viewmodel
 
 
-import android.support.test.InstrumentationRegistry
-import android.support.test.filters.MediumTest
-import android.support.test.runner.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.filters.MediumTest
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.reactivex.Completable
 import junit.framework.Assert.assertEquals
 import junit.framework.Assert.assertFalse

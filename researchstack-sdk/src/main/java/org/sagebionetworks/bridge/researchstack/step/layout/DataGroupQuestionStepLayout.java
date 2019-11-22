@@ -18,7 +18,7 @@
 package org.sagebionetworks.bridge.researchstack.step.layout;
 
 import android.content.Context;
-import android.support.annotation.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
 import android.util.AttributeSet;
 import org.sagebionetworks.researchstack.backbone.DataProvider;
 import org.sagebionetworks.researchstack.backbone.DataResponse;
