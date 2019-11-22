@@ -33,7 +33,7 @@ package org.sagebionetworks.research.sageresearch.viewmodel
 
 import io.reactivex.Scheduler
 import io.reactivex.android.plugins.RxAndroidPlugins
-import io.reactivex.internal.schedulers.ExecutorScheduler.ExecutorWorker
+import io.reactivex.internal.schedulers.ExecutorScheduler
 import io.reactivex.plugins.RxJavaPlugins
 import io.reactivex.schedulers.TestScheduler
 import org.junit.rules.TestRule
@@ -44,7 +44,7 @@ import java.util.concurrent.Executor
 class TestSchedulerRule : TestRule {
     private val immediate: Scheduler = object : Scheduler() {
         override fun createWorker(): Worker {
-            return ExecutorWorker(Executor { obj: Runnable -> obj.run() })
+            return ExecutorScheduler.ExecutorWorker(Executor { it.run() }, false)
         }
     }
     val testScheduler = TestScheduler()
