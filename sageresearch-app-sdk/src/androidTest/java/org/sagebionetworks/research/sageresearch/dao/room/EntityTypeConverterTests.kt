@@ -48,7 +48,7 @@ class EntityTypeConverterTests {
         @JvmStatic
         @BeforeClass
         fun setupTests() {
-            AndroidThreeTen.init(InstrumentationRegistry.getTargetContext())
+            AndroidThreeTen.init(InstrumentationRegistry.getInstrumentation().getTargetContext())
         }
     }
 

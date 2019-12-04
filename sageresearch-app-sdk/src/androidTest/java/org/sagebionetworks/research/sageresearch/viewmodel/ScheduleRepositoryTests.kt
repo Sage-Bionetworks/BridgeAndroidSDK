@@ -231,7 +231,7 @@ class ScheduleRepositoryTests: RoomTestHelper() {
     }
 
     class MockScheduleRepositorySyncStateDao:
-            ScheduledRepositorySyncStateDao(InstrumentationRegistry.getTargetContext()) {
+            ScheduledRepositorySyncStateDao(InstrumentationRegistry.getInstrumentation().getTargetContext()) {
 
         private var lastQueryEndDateLocal: DateTime? = null
 

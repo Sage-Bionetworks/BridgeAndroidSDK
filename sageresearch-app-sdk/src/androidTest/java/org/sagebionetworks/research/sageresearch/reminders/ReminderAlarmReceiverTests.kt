@@ -45,7 +45,7 @@ class ReminderAlarmReceiverTests {
 
     @Test
     fun test_ignoreAlarmRules() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val receiver = MockAlarmReceiver(
                 MockReminderManager(
                         context))
@@ -108,7 +108,7 @@ class ReminderAlarmReceiverTests {
 
     @Test
     fun test_rescheduleDailyReminder() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val reminderManager = MockReminderManager(
                 context)
         val receiver = MockAlarmReceiver(

@@ -43,7 +43,7 @@ import org.threeten.bp.LocalDateTime
 class ReminderManagerTests {
     @Test
     fun scheduleReminder() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val reminderManager = MockReminderManager(
                 context)
         val reminder1 = Reminder("guid1", "action", 1,
