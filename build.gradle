@@ -1,7 +1,7 @@
 apply plugin: 'project-report'
 
 allprojects {
-  version = '0.3.1'
+  version = '0.3.4'
   group = 'org.sagebionetworks.bridge'
 
   repositories {
@@ -46,7 +46,7 @@ buildscript {
   }
   dependencies {
     classpath 'com.android.tools.build:gradle:3.5.0'
-    classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+    classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
     classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
 
     // SageResearch
