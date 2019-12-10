@@ -16,6 +16,8 @@ import org.sagebionetworks.bridge.android.manager.SurveyManager;
 import org.sagebionetworks.bridge.android.manager.UploadManager;
 import org.sagebionetworks.research.presentation.perform_task.TaskResultProcessingManager.TaskResultProcessor;
 import org.sagebionetworks.research.sageresearch.dao.room.AppConfigRepository;
+import org.sagebionetworks.research.sageresearch.dao.room.HistoryItemEntityDao;
+import org.sagebionetworks.research.sageresearch.dao.room.HistoryItemManager;
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntityDao;
 import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository;
 import org.sagebionetworks.research.sageresearch.dao.room.ResearchDatabase;
@@ -97,6 +99,11 @@ public abstract class SageResearchAppSDKModule {
     }
 
     @Provides
+    static HistoryItemEntityDao provideHistoryDao(ResearchDatabase researchDatabase) {
+        return researchDatabase.historyDao();
+    }
+
+    @Provides
     @BridgeApplicationScope
     static ScheduleRepository provideScheduleRepository(ScheduledActivityEntityDao scheduledActivityEntityDao,
             ScheduledRepositorySyncStateDao scheduledRepositorySyncStateDao, SurveyManager surveyManager,
@@ -110,10 +117,10 @@ public abstract class SageResearchAppSDKModule {
     @Provides
     @BridgeApplicationScope
     static ReportRepository provideReportRepository(ReportEntityDao reportDao,
-            ParticipantRecordManager participantRecordManager, BridgeConfig bridgeConfig) {
+            ParticipantRecordManager participantRecordManager, BridgeConfig bridgeConfig, HistoryItemManager historyItemManager) {
 
         LOGGER.debug("Providing ReportRepository");
-        return new ReportRepository(reportDao, participantRecordManager, bridgeConfig);
+        return new ReportRepository(reportDao, participantRecordManager, bridgeConfig, historyItemManager);
     }
 
     @Provides
@@ -142,4 +149,5 @@ public abstract class SageResearchAppSDKModule {
         LOGGER.debug("Providing BridgeRepositoryManager");
         return new BridgeRepositoryManager(scheduleRepo, reportRepo);
     }
+
 }

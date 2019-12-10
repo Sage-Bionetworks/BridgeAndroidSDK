@@ -83,6 +83,14 @@ interface ReportEntityDao {
     fun reportsTODOREMOVE(reportIdentifier: String, start: LocalDate, end: LocalDate): LiveData<List<ReportEntity>>
 
     /**
+     * Get all reports for a reportIdentifier based on the dateTime field
+     * @param reportIdentifier reports returned will all have this report identifier
+     * @return all reports with reportIdentifier or none if there aren't any saved yet
+     */
+    @Query(RoomSql.SELECT_ALL_REPORTS_WITH_DATE_IDENTIFIER)
+    fun allReports(reportIdentifier: String): LiveData<List<ReportEntity>>
+
+    /**
      * Get the most recent report for a reportIdentifier based on the dateTime field
      * @param reportIdentifier reports returned will all have this report identifier
      * @return the most recent report report with reportIdentifier or none if there aren't any saved yet

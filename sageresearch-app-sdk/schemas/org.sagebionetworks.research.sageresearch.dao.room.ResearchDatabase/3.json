@@ -1,0 +1,418 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "6f9209e490413a82af5277b2d55ebbc0",
+    "entities": [
+      {
+        "tableName": "ScheduledActivityEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`schedulePlanGuid` TEXT, `startedOn` INTEGER, `finishedOn` INTEGER, `scheduledOn` TEXT, `expiresOn` TEXT, `persistent` INTEGER, `clientData` TEXT, `status` TEXT, `type` TEXT, `needsSyncedToBridge` INTEGER, `guid` TEXT NOT NULL, `activity_label` TEXT, `activity_labelDetail` TEXT, `activity_activityType` TEXT, `activity_type` TEXT, `activity_guid` TEXT, `activity_compound_schemaList` TEXT, `activity_compound_surveyList` TEXT, `activity_compound_type` TEXT, `activity_compound_taskIdentifier` TEXT, `activity_task_type` TEXT, `activity_task_identifier` TEXT, `activity_task_schema_revision` INTEGER, `activity_task_schema_type` TEXT, `activity_task_schema_id` TEXT, `activity_survey_identifier` TEXT, `activity_survey_createdOn` INTEGER, `activity_survey_href` TEXT, `activity_survey_type` TEXT, `activity_survey_guid` TEXT, PRIMARY KEY(`guid`))",
+        "fields": [
+          {
+            "fieldPath": "schedulePlanGuid",
+            "columnName": "schedulePlanGuid",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "startedOn",
+            "columnName": "startedOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "finishedOn",
+            "columnName": "finishedOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "scheduledOn",
+            "columnName": "scheduledOn",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "expiresOn",
+            "columnName": "expiresOn",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "persistent",
+            "columnName": "persistent",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "clientData",
+            "columnName": "clientData",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "needsSyncedToBridge",
+            "columnName": "needsSyncedToBridge",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "guid",
+            "columnName": "guid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity.label",
+            "columnName": "activity_label",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.labelDetail",
+            "columnName": "activity_labelDetail",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.activityType",
+            "columnName": "activity_activityType",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.type",
+            "columnName": "activity_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.guid",
+            "columnName": "activity_guid",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.schemaList",
+            "columnName": "activity_compound_schemaList",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.surveyList",
+            "columnName": "activity_compound_surveyList",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.type",
+            "columnName": "activity_compound_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.compoundActivity.taskIdentifier",
+            "columnName": "activity_compound_taskIdentifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.type",
+            "columnName": "activity_task_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.identifier",
+            "columnName": "activity_task_identifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.revision",
+            "columnName": "activity_task_schema_revision",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.type",
+            "columnName": "activity_task_schema_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.task.schema.id",
+            "columnName": "activity_task_schema_id",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.identifier",
+            "columnName": "activity_survey_identifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.createdOn",
+            "columnName": "activity_survey_createdOn",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.href",
+            "columnName": "activity_survey_href",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.type",
+            "columnName": "activity_survey_type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "activity.survey.guid",
+            "columnName": "activity_survey_guid",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "guid"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [
+          {
+            "name": "index_ScheduledActivityEntity_finishedOn",
+            "unique": false,
+            "columnNames": [
+              "finishedOn"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ScheduledActivityEntity_finishedOn` ON `${TABLE_NAME}` (`finishedOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_scheduledOn",
+            "unique": false,
+            "columnNames": [
+              "scheduledOn"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ScheduledActivityEntity_scheduledOn` ON `${TABLE_NAME}` (`scheduledOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_expiresOn",
+            "unique": false,
+            "columnNames": [
+              "expiresOn"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ScheduledActivityEntity_expiresOn` ON `${TABLE_NAME}` (`expiresOn`)"
+          },
+          {
+            "name": "index_ScheduledActivityEntity_needsSyncedToBridge",
+            "unique": false,
+            "columnNames": [
+              "needsSyncedToBridge"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ScheduledActivityEntity_needsSyncedToBridge` ON `${TABLE_NAME}` (`needsSyncedToBridge`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "ReportEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`primaryKey` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `identifier` TEXT, `data` TEXT, `dateTime` INTEGER, `localDate` TEXT, `needsSyncedToBridge` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "primaryKey",
+            "columnName": "primaryKey",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "data",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "dateTime",
+            "columnName": "dateTime",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "localDate",
+            "columnName": "localDate",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "needsSyncedToBridge",
+            "columnName": "needsSyncedToBridge",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "primaryKey"
+          ],
+          "autoGenerate": true
+        },
+        "indices": [
+          {
+            "name": "index_ReportEntity_identifier",
+            "unique": false,
+            "columnNames": [
+              "identifier"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ReportEntity_identifier` ON `${TABLE_NAME}` (`identifier`)"
+          },
+          {
+            "name": "index_ReportEntity_dateTime",
+            "unique": false,
+            "columnNames": [
+              "dateTime"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ReportEntity_dateTime` ON `${TABLE_NAME}` (`dateTime`)"
+          },
+          {
+            "name": "index_ReportEntity_localDate",
+            "unique": false,
+            "columnNames": [
+              "localDate"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ReportEntity_localDate` ON `${TABLE_NAME}` (`localDate`)"
+          },
+          {
+            "name": "index_ReportEntity_needsSyncedToBridge",
+            "unique": false,
+            "columnNames": [
+              "needsSyncedToBridge"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ReportEntity_needsSyncedToBridge` ON `${TABLE_NAME}` (`needsSyncedToBridge`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "ResourceEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`identifier` TEXT NOT NULL, `type` TEXT NOT NULL, `resourceJson` TEXT, `lastUpdateTime` INTEGER NOT NULL, PRIMARY KEY(`identifier`, `type`))",
+        "fields": [
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resourceJson",
+            "columnName": "resourceJson",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "lastUpdateTime",
+            "columnName": "lastUpdateTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "identifier",
+            "type"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [
+          {
+            "name": "index_ResourceEntity_type",
+            "unique": false,
+            "columnNames": [
+              "type"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ResourceEntity_type` ON `${TABLE_NAME}` (`type`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "HistoryItemEntity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `dateTime`))",
+        "fields": [
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataJson",
+            "columnName": "dataJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reportId",
+            "columnName": "reportId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateBucket",
+            "columnName": "dateBucket",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateTime",
+            "columnName": "dateTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "reportId",
+            "dateBucket",
+            "dateTime"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6f9209e490413a82af5277b2d55ebbc0')"
+    ]
+  }
+}

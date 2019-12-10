@@ -45,8 +45,9 @@ import androidx.room.migration.Migration
 @Database(entities = arrayOf(
         ScheduledActivityEntity::class,
         ReportEntity::class,
-        ResourceEntity::class),
-        version = 3)
+        ResourceEntity::class,
+        HistoryItemEntity::class),
+        version = 4)
 
 /**
  * version 1 - ScheduleActivityEntity table created and added
@@ -84,6 +85,12 @@ abstract class ResearchDatabase : RoomDatabase() {
                         database.execSQL("CREATE TABLE `ResourceEntity` (`identifier` TEXT NOT NULL, `type` TEXT NOT NULL, `resourceJson` TEXT, `lastUpdateTime` INTEGER NOT NULL, PRIMARY KEY(`identifier`, `type`))")
                         database.execSQL("CREATE  INDEX `index_ResourceEntity_type` ON `ResourceEntity` (`type`)")
                     }
+                },
+                object : Migration(3, 4) {
+                    override fun migrate(database: SupportSQLiteDatabase) {
+                        val tableName = "HistoryItemEntity"
+                        database.execSQL("CREATE TABLE IF NOT EXISTS `${tableName}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `dateTime`))")
+                    }
                 })
         /**
          * @param tableName to add the index to
@@ -98,6 +105,7 @@ abstract class ResearchDatabase : RoomDatabase() {
     abstract fun scheduleDao(): ScheduledActivityEntityDao
     abstract fun reportDao(): ReportEntityDao
     abstract fun resourceDao(): ResourceEntityDao
+    abstract fun historyDao(): HistoryItemEntityDao
 }
 
 internal class RoomSql {
@@ -117,6 +125,7 @@ internal class RoomSql {
         /**
          * DELETE constants delete tables
          */
+        const val HISTORY_DELETE = "DELETE FROM historyitementity"
         const val RESOURCE_DELETE = "DELETE FROM resourceentity"
         const val SCHEDULE_DELETE = "DELETE FROM scheduledactivityentity"
         const val REPORT_DELETE = "DELETE FROM reportentity"
@@ -275,6 +284,9 @@ internal class RoomSql {
 
         const val SELECT_MOST_RECENT_REPORT_WITH_DATE_IDENTIFIER =
                 REPORT_SELECT + REPORT_CONDITION_REPORT_IDENTIFIER + ORDER_BY_REPORT_DATE + LIMIT_1
+
+        const val SELECT_ALL_REPORTS_WITH_DATE_IDENTIFIER =
+                REPORT_SELECT + REPORT_CONDITION_REPORT_IDENTIFIER + ORDER_BY_REPORT_DATE
 
         const val SELECT_RESOURCE_BY_IDENTIFIER =
                 RESOURCE_SELECT + RESOURCE_CONDITION_RESOURCE_IDENTIFIER
