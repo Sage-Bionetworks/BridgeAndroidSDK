@@ -40,10 +40,3 @@ interface HistoryItemManager {
     fun updateHistoryItems(reportIdentifier: String, reports: List<ReportEntity>)
 
 }
-
-class HistoryItemManagerImpl(): HistoryItemManager {
-
-    override fun updateHistoryItems(reportIdentifier: String, reports: List<ReportEntity>) {
-        //NO OP implementation
-    }
-}
