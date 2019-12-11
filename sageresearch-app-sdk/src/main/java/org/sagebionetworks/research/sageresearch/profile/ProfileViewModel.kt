@@ -1,8 +1,8 @@
 package org.sagebionetworks.research.sageresearch.profile
 
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MediatorLiveData
-import android.arch.lifecycle.ViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.ViewModel
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Observable
 import io.reactivex.Single
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataItem

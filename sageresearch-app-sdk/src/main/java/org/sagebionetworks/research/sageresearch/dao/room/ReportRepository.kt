@@ -32,8 +32,8 @@
 
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.arch.lifecycle.LiveData
-import android.support.annotation.VisibleForTesting
+import androidx.lifecycle.LiveData
+import androidx.annotation.VisibleForTesting
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Single
 import io.reactivex.Completable
 import io.reactivex.Observable

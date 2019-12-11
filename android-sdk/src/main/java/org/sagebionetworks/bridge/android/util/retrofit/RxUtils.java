@@ -2,8 +2,8 @@ package org.sagebionetworks.bridge.android.util.retrofit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
 
 import retrofit2.Call;
 import rx.Observable;

@@ -32,10 +32,10 @@
 
 package org.sagebionetworks.research.sageresearch.viewmodel
 
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MediatorLiveData
-import android.arch.lifecycle.ViewModel
-import android.arch.lifecycle.ViewModelProvider
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 
 import com.google.common.base.Preconditions.checkArgument
 import org.sagebionetworks.research.sageresearch.dao.room.ReportEntity

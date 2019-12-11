@@ -1,7 +1,7 @@
 package org.sagebionetworks.bridge.android;
 
 import android.content.Context;
-import android.support.multidex.MultiDex;
+import androidx.multidex.MultiDex;
 
 import com.facebook.stetho.Stetho;
 

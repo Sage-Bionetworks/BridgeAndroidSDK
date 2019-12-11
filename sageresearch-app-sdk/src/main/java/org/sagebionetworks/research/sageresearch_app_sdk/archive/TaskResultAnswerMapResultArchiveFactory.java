@@ -32,20 +32,17 @@
 
 package org.sagebionetworks.research.sageresearch_app_sdk.archive;
 
-import android.support.annotation.CallSuper;
-import android.support.annotation.NonNull;
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
 
 import com.google.common.collect.ImmutableSet;
 
 import org.joda.time.DateTime;
 import org.sagebionetworks.bridge.data.ArchiveFile;
 import org.sagebionetworks.bridge.data.JsonArchiveFile;
-import org.sagebionetworks.research.domain.result.interfaces.AnswerResult;
-import org.sagebionetworks.research.domain.result.interfaces.Result;
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult;
 import org.sagebionetworks.research.sageresearch.extensions.ResultExtensions;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class TaskResultAnswerMapResultArchiveFactory extends TaskResultArchiveFactory {

@@ -2,7 +2,7 @@ package org.sagebionetworks.research.sageresearch.profile
 
 import android.content.Context
 import android.content.Intent
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,7 +24,7 @@ import android.net.Uri
 
 
 class ProfileSettingsRecyclerViewAdapter
-    : RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder> {
+    : androidx.recyclerview.widget.RecyclerView.Adapter<ProfileSettingsRecyclerViewAdapter.ViewHolder> {
 
     constructor(
             dataPair: Pair<ProfileDataSource?, ProfileDataLoader?>,
@@ -94,7 +94,7 @@ class ProfileSettingsRecyclerViewAdapter
         return mValues[position].viewType
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mTitle: TextView = mView.item_text
         val mDetails: TextView = mView.item_detail
         val chevron: View = mView.chevron

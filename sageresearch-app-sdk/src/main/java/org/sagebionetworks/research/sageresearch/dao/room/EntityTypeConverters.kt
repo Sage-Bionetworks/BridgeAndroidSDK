@@ -1,6 +1,6 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.arch.persistence.room.TypeConverter
+import androidx.room.TypeConverter
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException

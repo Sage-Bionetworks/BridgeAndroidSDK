@@ -33,7 +33,7 @@
 package org.sagebionetworks.research.sageresearch.reminders
 
 import android.content.Context
-import android.support.test.InstrumentationRegistry
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -43,7 +43,7 @@ import org.threeten.bp.LocalDateTime
 class ReminderManagerTests {
     @Test
     fun scheduleReminder() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val reminderManager = MockReminderManager(
                 context)
         val reminder1 = Reminder("guid1", "action", 1,

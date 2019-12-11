@@ -34,7 +34,7 @@ package org.sagebionetworks.research.sageresearch.reminders
 
 import android.app.AlarmManager.INTERVAL_DAY
 import android.content.Context
-import android.support.test.InstrumentationRegistry
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,7 +45,7 @@ class ReminderAlarmReceiverTests {
 
     @Test
     fun test_ignoreAlarmRules() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val receiver = MockAlarmReceiver(
                 MockReminderManager(
                         context))
@@ -108,7 +108,7 @@ class ReminderAlarmReceiverTests {
 
     @Test
     fun test_rescheduleDailyReminder() {
-        val context = InstrumentationRegistry.getTargetContext()
+        val context = InstrumentationRegistry.getInstrumentation().getTargetContext()
         val reminderManager = MockReminderManager(
                 context)
         val receiver = MockAlarmReceiver(

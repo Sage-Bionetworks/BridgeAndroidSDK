@@ -1,6 +1,6 @@
 package org.sagebionetworks.research.sageresearch.dao.room
 
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import hu.akarnokd.rxjava.interop.RxJavaInterop
 import io.reactivex.Completable
 import io.reactivex.Scheduler

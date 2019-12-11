@@ -2,7 +2,7 @@ package org.sagebionetworks.research.sageresearch_app_sdk.archive;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;

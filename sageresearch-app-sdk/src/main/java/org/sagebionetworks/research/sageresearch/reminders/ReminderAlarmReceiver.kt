@@ -43,8 +43,8 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
-import android.support.annotation.VisibleForTesting
-import android.support.v4.app.NotificationCompat
+import androidx.annotation.VisibleForTesting
+import androidx.core.app.NotificationCompat
 import org.sagebionetworks.researchstack.backbone.ui.MainActivity
 import org.sagebionetworks.research.sageresearch.extensions.isBetweenInclusive
 import org.sagebionetworks.research.sageresearch_app_sdk.R

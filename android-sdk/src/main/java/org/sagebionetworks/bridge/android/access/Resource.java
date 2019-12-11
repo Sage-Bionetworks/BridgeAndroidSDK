@@ -2,8 +2,8 @@ package org.sagebionetworks.bridge.android.access;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 // A generic class that contains data and status about loading this data.
 public class Resource<T> {

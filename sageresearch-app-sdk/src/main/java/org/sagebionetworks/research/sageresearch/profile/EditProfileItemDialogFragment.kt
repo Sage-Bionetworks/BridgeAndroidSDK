@@ -3,22 +3,22 @@ package org.sagebionetworks.research.sageresearch.profile
 import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
-import android.support.v4.app.DialogFragment
-import android.support.v4.app.Fragment
-import android.support.v7.app.AlertDialog
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.appcompat.app.AlertDialog
 import kotlinx.android.synthetic.main.dialog_edit_profileitem.view.*
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 
 
 
-class EditProfileItemDialogFragment: DialogFragment() {
+class EditProfileItemDialogFragment: androidx.fragment.app.DialogFragment() {
 
     companion object {
 
         const val VALUE_KEY = "value_key"
         const val ITEM_KEY = "item_key"
 
-        fun newInstance(value: String, profileItemKey: String, listener: Fragment): EditProfileItemDialogFragment {
+        fun newInstance(value: String, profileItemKey: String, listener: androidx.fragment.app.Fragment): EditProfileItemDialogFragment {
             val fragment = EditProfileItemDialogFragment()
             val args = Bundle()
             args.putString(VALUE_KEY, value)
@@ -50,7 +50,7 @@ class EditProfileItemDialogFragment: DialogFragment() {
                             })
                     .setNegativeButton(R.string.rsb_BUTTON_CANCEL,
                             DialogInterface.OnClickListener { dialog, id ->
-                                getDialog().cancel()
+                                getDialog()?.cancel()
                             })
             builder.create()
         } ?: throw IllegalStateException("Activity cannot be null")

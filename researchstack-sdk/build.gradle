@@ -46,7 +46,7 @@ dependencies {
 
   api project(":android-sdk") // to export BridgeApplication
 
-  implementation "com.android.support:appcompat-v7:${support_library_version}"
+  implementation 'androidx.appcompat:appcompat:1.1.0'
 
   annotationProcessor 'co.touchlab.squeaky:squeaky-processor:0.4.0.0'
 

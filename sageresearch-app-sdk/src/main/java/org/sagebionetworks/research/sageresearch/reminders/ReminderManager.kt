@@ -42,7 +42,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import org.slf4j.LoggerFactory

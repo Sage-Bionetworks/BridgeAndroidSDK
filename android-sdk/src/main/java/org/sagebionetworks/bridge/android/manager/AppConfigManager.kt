@@ -17,7 +17,7 @@
 
 package org.sagebionetworks.bridge.android.manager
 
-import android.support.annotation.AnyThread
+import androidx.annotation.AnyThread
 import org.sagebionetworks.bridge.android.BridgeConfig
 import org.sagebionetworks.bridge.android.di.BridgeStudyScope
 import org.sagebionetworks.bridge.android.util.retrofit.RxUtils
