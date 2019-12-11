@@ -45,6 +45,9 @@ interface HistoryItemEntityDao {
     @Query("SELECT * FROM historyitementity ORDER BY dateBucket DESC, dateTime ASC")
     fun historyItems() : DataSource.Factory<Int, HistoryItemEntity>
 
+    /**
+     * Insert or update the given history item.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsert(historyItemEntity: HistoryItemEntity)
 
@@ -54,10 +57,16 @@ interface HistoryItemEntityDao {
     @Query(RoomSql.HISTORY_DELETE)
     fun clear()
 
+    /**
+     * Delete all rows with the given type and dateBucket
+     */
     @Query("DELETE FROM historyitementity where type = :type AND dateBucket = :dateBucket")
     fun delete(type: String, dateBucket: String)
 
-
+    /**
+     * As a single transaction, delete all rows with the given type and dateBucket,
+     * then update with passed list of history items.
+     */
     @Transaction
     fun deleteAndUpdate(type: String, dateBucket: String, items: List<HistoryItemEntity>) {
         delete(type, dateBucket)
@@ -67,6 +76,9 @@ interface HistoryItemEntityDao {
 
     }
 
+    /**
+     * As a single transaction insert/update list of history items.
+     */
     @Transaction
     fun update(items: List<HistoryItemEntity>) {
         for (item in items) {

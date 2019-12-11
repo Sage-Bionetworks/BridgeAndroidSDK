@@ -38,8 +38,15 @@ import org.threeten.bp.Instant
 @Entity(primaryKeys = arrayOf("reportId", "dateBucket", "dateTime"))
 data class HistoryItemEntity(
 
+
+        /**
+         * @property type of the history item
+         */
         var type: String,
 
+        /**
+         * @property dataJson - json representation of this history item
+         */
         var dataJson: String,
 
         /**
