@@ -38,6 +38,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import org.threeten.bp.LocalDate
 
 @Dao
 interface HistoryItemEntityDao {
@@ -61,14 +62,14 @@ interface HistoryItemEntityDao {
      * Delete all rows with the given type and dateBucket
      */
     @Query("DELETE FROM historyitementity where type = :type AND dateBucket = :dateBucket")
-    fun delete(type: String, dateBucket: String)
+    fun delete(type: String, dateBucket: LocalDate)
 
     /**
      * As a single transaction, delete all rows with the given type and dateBucket,
      * then update with passed list of history items.
      */
     @Transaction
-    fun deleteAndUpdate(type: String, dateBucket: String, items: List<HistoryItemEntity>) {
+    fun deleteAndUpdate(type: String, dateBucket: LocalDate, items: List<HistoryItemEntity>) {
         delete(type, dateBucket)
         for (item in items) {
             upsert(item)

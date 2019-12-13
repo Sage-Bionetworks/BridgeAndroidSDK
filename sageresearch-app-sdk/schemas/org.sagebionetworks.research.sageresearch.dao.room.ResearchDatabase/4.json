@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "6f9209e490413a82af5277b2d55ebbc0",
+    "identityHash": "a764996d41637fe4e3e695ce920ec400",
     "entities": [
       {
         "tableName": "ScheduledActivityEntity",
@@ -364,7 +364,7 @@
       },
       {
         "tableName": "HistoryItemEntity",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `dateTime`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, `time` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `time`))",
         "fields": [
           {
             "fieldPath": "type",
@@ -395,13 +395,19 @@
             "columnName": "dateTime",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
           "columnNames": [
             "reportId",
             "dateBucket",
-            "dateTime"
+            "time"
           ],
           "autoGenerate": false
         },
@@ -412,7 +418,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6f9209e490413a82af5277b2d55ebbc0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a764996d41637fe4e3e695ce920ec400')"
     ]
   }
 }

@@ -89,7 +89,7 @@ abstract class ResearchDatabase : RoomDatabase() {
                 object : Migration(3, 4) {
                     override fun migrate(database: SupportSQLiteDatabase) {
                         val tableName = "HistoryItemEntity"
-                        database.execSQL("CREATE TABLE IF NOT EXISTS `${tableName}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `dateTime`))")
+                        database.execSQL("CREATE TABLE IF NOT EXISTS `${tableName}` (`type` TEXT NOT NULL, `dataJson` TEXT NOT NULL, `reportId` TEXT NOT NULL, `dateBucket` TEXT NOT NULL, `dateTime` INTEGER NOT NULL, `time` INTEGER NOT NULL, PRIMARY KEY(`reportId`, `dateBucket`, `time`))")
                     }
                 })
         /**

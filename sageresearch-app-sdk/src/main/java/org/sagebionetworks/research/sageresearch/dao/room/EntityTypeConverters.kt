@@ -33,6 +33,7 @@ import org.threeten.bp.Instant
 import org.threeten.bp.LocalDate
 
 import org.threeten.bp.LocalDateTime
+import org.threeten.bp.LocalTime
 import org.threeten.bp.ZonedDateTime
 import org.threeten.bp.format.DateTimeFormatter
 import java.io.IOException
@@ -152,6 +153,18 @@ class EntityTypeConverters {
     fun fromInstantTimestamp(value: Instant?): Long? {
         val valueChecked = value ?: return null
         return valueChecked.toEpochMilli()
+    }
+
+    @TypeConverter
+    fun fromLocalTime(value: Long?): LocalTime? {
+        val valueChecked = value ?: return null
+        return LocalTime.ofNanoOfDay(valueChecked)
+    }
+
+    @TypeConverter
+    fun fromLocalTimeStamp(value: LocalTime?): Long? {
+        val valueChecked = value ?: return null
+        return valueChecked.toNanoOfDay()
     }
 
     @TypeConverter

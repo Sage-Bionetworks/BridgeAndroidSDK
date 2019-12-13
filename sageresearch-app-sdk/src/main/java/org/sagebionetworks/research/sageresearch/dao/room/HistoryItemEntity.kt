@@ -34,8 +34,11 @@ package org.sagebionetworks.research.sageresearch.dao.room
 
 import androidx.room.Entity
 import org.threeten.bp.Instant
+import org.threeten.bp.LocalDate
+import org.threeten.bp.LocalTime
+import org.threeten.bp.ZonedDateTime
 
-@Entity(primaryKeys = arrayOf("reportId", "dateBucket", "dateTime"))
+@Entity(primaryKeys = arrayOf("reportId", "dateBucket", "time"))
 data class HistoryItemEntity(
 
 
@@ -55,14 +58,19 @@ data class HistoryItemEntity(
         var reportId: String,
 
         /**
-         * @property dateBucket day string in format: yyyy-MM-dd
+         * @property dateBucket day when history item occured
          */
-        var dateBucket: String,
+        var dateBucket: LocalDate,
 
         /**
          * @property dateTime of when the history item occurred
          */
-        var dateTime: Instant
+        var dateTime: Instant,
+
+        /**
+         * @property time of day when history item occurred
+         */
+        var time: LocalTime
 
 
 
