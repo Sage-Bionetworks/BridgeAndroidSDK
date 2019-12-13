@@ -28,7 +28,7 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="@color/rsb_white"
-        android:text="Your Profile"/>
+        android:text="@string/your_profile"/>
     <ImageView
         android:id="@+id/settings_icon"
         android:layout_width="27dp"

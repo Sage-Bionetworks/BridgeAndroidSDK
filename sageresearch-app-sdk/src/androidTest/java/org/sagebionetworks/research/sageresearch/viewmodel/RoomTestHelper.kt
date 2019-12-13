@@ -60,16 +60,18 @@ abstract class RoomTestHelper {
         lateinit var activityDao: ScheduledActivityEntityDao
         lateinit var reportDao: ReportEntityDao
         lateinit var resourceDao: ResourceEntityDao
+        lateinit var historyDao: HistoryItemEntityDao
 
         @BeforeClass
         @JvmStatic fun setup() {
             database = Room.inMemoryDatabaseBuilder(
-                    InstrumentationRegistry.getTargetContext(), ResearchDatabase::class.java)
+                    InstrumentationRegistry.getInstrumentation().getTargetContext(), ResearchDatabase::class.java)
                     .allowMainThreadQueries().build()
 
             activityDao = database.scheduleDao()
             reportDao = database.reportDao()
             resourceDao = database.resourceDao()
+            historyDao = database.historyDao()
         }
 
         @AfterClass

@@ -50,16 +50,13 @@ import org.sagebionetworks.bridge.android.BridgeConfig.ReportCategory.*
 import org.sagebionetworks.bridge.android.manager.ParticipantRecordManager
 import org.sagebionetworks.research.domain.Schema
 import org.sagebionetworks.research.domain.result.interfaces.TaskResult
-import org.sagebionetworks.research.sageresearch.extensions.clientDataAnswerMap
-import org.sagebionetworks.research.sageresearch.extensions.toInstant
-import org.sagebionetworks.research.sageresearch.extensions.toJodaLocalDate
-import org.sagebionetworks.research.sageresearch.extensions.toThreeTenLocalDate
-import org.sagebionetworks.research.sageresearch.extensions.toThreeTenLocalDateTime
+import org.sagebionetworks.research.sageresearch.extensions.*
 import org.slf4j.LoggerFactory
 import org.threeten.bp.Instant
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalDateTime
 import org.threeten.bp.ZoneId
+import org.threeten.bp.ZoneOffset.UTC
 import java.util.Collections
 
 /**
@@ -68,9 +65,12 @@ import java.util.Collections
 open class ReportRepository constructor(
         protected val reportDao: ReportEntityDao,
         protected val participantManager: ParticipantRecordManager,
-        protected val bridgeConfig: BridgeConfig) {
+        protected val bridgeConfig: BridgeConfig,
+        protected val historyItemManager: HistoryItemManager) {
 
     private val logger = LoggerFactory.getLogger(ReportRepository::class.java)
+
+    private val lastUpdateMap = mutableMapOf<String, Long>()
 
     protected val compositeDispose = CompositeDisposable()
     /**
@@ -184,9 +184,9 @@ open class ReportRepository constructor(
                         start.toInstant(defaultTimeZone()),
                         end.toInstant(defaultTimeZone()))
             GROUP_BY_DAY ->
-                fetchReportsV3(reportIdentifier,
-                        start.toLocalDate().toJodaLocalDate(),
-                        end.toLocalDate().toJodaLocalDate())
+                fetchAllReportsV4(reportIdentifier,
+                        start.toInstant(defaultTimeZone()),
+                        end.toInstant(defaultTimeZone()))
             SINGLETON ->
                 fetchReportsV3(reportIdentifier,
                         reportSingletonJodaLocalDate,
@@ -273,19 +273,36 @@ open class ReportRepository constructor(
                 }
     }
 
+
+    fun fetchAllReports(reportIdentifier: String): LiveData<List<ReportEntity>> {
+        return fetchReports(reportIdentifier, true)
+    }
+
+    fun fetchMostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
+        return fetchReports(reportIdentifier, false)
+    }
+
     /**
      * This function will first check if the most recent report is in the database.
      * If it is, no fetch from bridge is needed. If not, we need to query for all reports in the study duration.
      * @param reportIdentifier of the report
      */
-    fun fetchMostRecentReport(reportIdentifier: String): LiveData<List<ReportEntity>> {
+    private fun fetchReports(reportIdentifier: String, all: Boolean): LiveData<List<ReportEntity>> {
         subscribeCompletable(
             Observable.just(reportDao)
                     .observeOn(asyncScheduler)
                     .concatMap {
-                        if (it.mostRecentReportInternal(reportIdentifier).isEmpty()) {
+                        //TODO: This assumes this is the only client modifying reports -nathaniel 11/14/2019
+                        val recentReports = it.mostRecentReportInternal(reportIdentifier)
+                        if (recentReports.isEmpty()) {
                             val end = now().toThreeTenLocalDateTime()
                             val start = studyStartDate()?.toThreeTenLocalDateTime() ?: end
+                            return@concatMap fetchCompletable(reportIdentifier, start, end)
+                                    .toObservable<ReportEntityDao>()
+                        } else  {
+                            //TODO: Add logic to prevent excessive/redundant web calls -nbrown 11/19/2019
+                            val start = recentReports[0].localDate?.atStartOfDay()?: LocalDateTime.ofInstant(recentReports[0].dateTime, ZoneId.systemDefault()).startOfDay()
+                            val end = now().toThreeTenLocalDateTime()
                             return@concatMap fetchCompletable(reportIdentifier, start, end)
                                     .toObservable<ReportEntityDao>()
                         }
@@ -295,8 +312,12 @@ open class ReportRepository constructor(
                         Completable.complete()
                     }, "Fetch most recent finished", "Fetch most recent failed")
 
-        // return the live data link to the database query for the most recent report
-        return reportDao.mostRecentReport(reportIdentifier)
+        if (all) {
+            return reportDao.allReports(reportIdentifier);
+        } else {
+            // return the live data link to the database query for the most recent report
+            return reportDao.mostRecentReport(reportIdentifier)
+        }
     }
 
     /**
@@ -336,6 +357,7 @@ open class ReportRepository constructor(
                         appendReportToRoom(it)
                     }
                     .onErrorResumeNext { throwable ->
+                        //TODO: there doesn't appear to be any retry logic -nbrown 11/19/19
                         // TODO: mdephillips 11/6/18 are there any errors that mean we shouldn't try to re-sync later?
                         logger.warn(throwable.localizedMessage)
                         it.needsSyncedToBridge = true
@@ -484,18 +506,19 @@ open class ReportRepository constructor(
      */
     protected fun writeReportToRoom(report: ReportEntity): Completable {
         logger.info("cacheReports called for report: $report")
-        return writeReportsToRoom(Collections.singletonList(report))
+        return writeReportsToRoom(report.identifier!!, Collections.singletonList(report))
     }
 
     /**
      * Encapsulate the db write operation in its own function for encapsulation into a completable
      * @param reports to write to the database
      */
-    protected fun writeReportsToRoom(reports: List<ReportEntity>): Completable {
+    protected fun writeReportsToRoom(reportIdentifier: String, reports: List<ReportEntity>): Completable {
         logger.info("cacheReports called for reports with size: ${reports.size}")
 
         return Completable.fromAction {
                     reportDao.upsert(reports)
+                    historyItemManager.updateHistoryItems(reportIdentifier, reports)
                 }
                 .doOnError {
                     logger.warn(it.localizedMessage)
@@ -516,8 +539,10 @@ open class ReportRepository constructor(
             reports: List<ReportEntity>): Completable {
 
         return Completable.fromAction {
+                //TODO: Should check needsSyncedToBridge flag before replacing -nbrown 11/19/2019
                 reportDao.delete(reportIdentifier, start, end)
                 reportDao.upsert(reports)
+                historyItemManager.updateHistoryItems(reportIdentifier, reports)
             }
             .doOnError {
                 logger.warn(it.localizedMessage)
@@ -538,8 +563,10 @@ open class ReportRepository constructor(
             reports: List<ReportEntity>): Completable {
 
         return Completable.fromAction {
+                //TODO: Should check needsSyncedToBridge flag before replacing -nbrown 11/19/2019
                 reportDao.delete(reportIdentifier, start, end)
                 reportDao.upsert(reports)
+                historyItemManager.updateHistoryItems(reportIdentifier, reports)
             }
             .doOnError {
                 logger.warn(it.localizedMessage)

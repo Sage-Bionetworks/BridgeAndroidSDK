@@ -28,7 +28,7 @@ buildscript {
     artifact_deploy_gitHubUrl = 'https://github.com/Sage-Bionetworks/BridgeAndroidSDK.git'
   }
 
-  ext.sage_research_version = '0.1.1'
+  ext.sage_research_version = '0.2.0'
   ext.dokka_version = '0.9.17'
   ext.kotlin_version = '1.3.11'
   ext.support_library_version = '28.0.0'
