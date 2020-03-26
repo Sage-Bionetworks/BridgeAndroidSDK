@@ -109,6 +109,7 @@ interface OnListInteractionListener {
     fun launchEditProfileItemDialog(value: String, profileItemKey: String)
     fun launchWithdraw(firstName: String, joinedDate: DateTime)
     fun launchEditParticipantItem(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem)
+    fun launchPassiveDataAllowed(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem, value: String?)
 }
 
 abstract class ProfileRow {
@@ -197,6 +198,10 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
         val surveyRef = reportProfileDataItem.surveyReference
         if (surveyRef != null) {
             listener.launchSurvey(surveyRef)
+        } else {
+            when (profileItem.profileItemKey) {
+                "passiveDataAllowed" -> listener.launchPassiveDataAllowed(profileItem, profileDataLoader.getDataDef(profileItem.profileItemKey)!!, detail)
+            }
         }
     }
 }
