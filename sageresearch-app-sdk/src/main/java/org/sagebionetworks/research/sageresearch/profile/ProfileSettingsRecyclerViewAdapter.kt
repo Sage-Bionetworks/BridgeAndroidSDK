@@ -109,7 +109,8 @@ interface OnListInteractionListener {
     fun launchEditProfileItemDialog(value: String, profileItemKey: String)
     fun launchWithdraw(firstName: String, joinedDate: DateTime)
     fun launchEditParticipantItem(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem)
-    fun launchPassiveDataAllowed(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem, value: String?)
+    fun launchPassiveDataAllowed(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem,
+            value: String?)
 }
 
 abstract class ProfileRow {
@@ -194,13 +195,27 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
                            profileItem: ProfileItemProfileTableItem,
                            profileDataLoader: ProfileDataLoader) : ProfileItemRow(profileItem, profileDataLoader) {
 
+    override val detail: String?
+        get() {
+            var value = profileDataLoader.getValueString(profileItem.profileItemKey)
+            if (value != null ) {
+                value = when (profileItem.profileItemKey) {
+                    "passiveDataAllowed" -> if (value == "true") "Enabled" else "Disabled"
+                    else -> profileItem.valueMap?.get(value)?: value
+                }
+            }
+            return value?: ""
+        }
+
     override fun onClick(listener: OnListInteractionListener) {
         val surveyRef = reportProfileDataItem.surveyReference
         if (surveyRef != null) {
             listener.launchSurvey(surveyRef)
         } else {
             when (profileItem.profileItemKey) {
-                "passiveDataAllowed" -> listener.launchPassiveDataAllowed(profileItem, profileDataLoader.getDataDef(profileItem.profileItemKey)!!, detail)
+                "passiveDataAllowed" -> listener.launchPassiveDataAllowed(profileItem,
+                        profileDataLoader.getDataDef(profileItem.profileItemKey)!!,
+                        profileDataLoader.getValueString(profileItem.profileItemKey))
             }
         }
     }
