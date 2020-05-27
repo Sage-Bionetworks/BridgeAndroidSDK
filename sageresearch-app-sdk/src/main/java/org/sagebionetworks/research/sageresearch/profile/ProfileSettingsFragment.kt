@@ -48,7 +48,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
     abstract fun loadProfileViewModel(): ProfileViewModel
 
     fun showLoading(show: Boolean) {
-        Handler(Looper.getMainLooper()).post {spinner.visibility = if (show) View.VISIBLE else View.GONE }
+        Handler(Looper.getMainLooper()).post {spinner?.visibility = if (show) View.VISIBLE else View.GONE }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
