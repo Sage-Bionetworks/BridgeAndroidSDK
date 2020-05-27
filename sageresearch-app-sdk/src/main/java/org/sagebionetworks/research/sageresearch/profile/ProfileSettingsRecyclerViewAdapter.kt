@@ -203,6 +203,8 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
                     "passiveDataAllowed" -> if (value == "true") "Enabled" else "Disabled"
                     else -> profileItem.valueMap?.get(value)?: value
                 }
+            }else if (profileItem.profileItemKey == "passiveDataAllowed") {
+                return "Function is not available"
             }
             return value?: ""
         }
