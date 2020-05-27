@@ -2,7 +2,7 @@ package org.sagebionetworks.research.sageresearch.profile
 
 import android.content.Context
 import android.content.Intent
-import androidx.recyclerview.widget.RecyclerView
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,14 +13,11 @@ import org.joda.time.LocalDate
 import org.sagebionetworks.bridge.android.manager.models.*
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.SurveyReference
-import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_ICON_TITLE
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_SECTION
 import org.sagebionetworks.research.sageresearch.profile.ProfileSettingsRecyclerViewAdapter.Companion.VIEW_TYPE_TITLE_DETAILS
 import org.sagebionetworks.research.sageresearch_app_sdk.R
 import org.sagebionetworks.researchstack.backbone.ResourceManager
 import org.sagebionetworks.researchstack.backbone.ResourcePathManager
-import org.sagebionetworks.researchstack.backbone.model.TaskModel
-import android.net.Uri
 
 
 class ProfileSettingsRecyclerViewAdapter
@@ -48,8 +45,9 @@ class ProfileSettingsRecyclerViewAdapter
     private var mDataPair: Pair<ProfileDataSource?, ProfileDataLoader?>
         set(value) {
             field = value
-            val dataGroups = value.second?.participantData?.dataGroups?: listOf()
-            mValues = value.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, value.second!!) } ?: listOf()
+            val dataGroups = value.second?.participantData?.dataGroups ?: listOf()
+            mValues = value.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, value.second!!) }
+                    ?: listOf()
 
         }
 
@@ -110,29 +108,33 @@ interface OnListInteractionListener {
     fun launchWithdraw(firstName: String, joinedDate: DateTime)
     fun launchEditParticipantItem(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem)
     fun launchPassiveDataAllowed(profileItem: ProfileItemProfileTableItem, profileDataItem: ProfileDataItem,
-            value: String?)
+                                 value: String?)
 }
 
 abstract class ProfileRow {
     enum class TYPE {
         SECTION, PROFILE_ITEM, PROFILE_VIEW
     }
+
     open val type = TYPE.PROFILE_ITEM
     open val viewType = VIEW_TYPE_TITLE_DETAILS
     abstract val title: String
     open val detail: String? = null
-    open fun isClickable(): Boolean {return true}
+    open fun isClickable(): Boolean {
+        return true
+    }
+
     open fun onClick(listener: OnListInteractionListener) {}
 
     companion object {
 
         fun createProfileRow(profileItem: ProfileTableItem, profileDataLoader: ProfileDataLoader): ProfileRow {
-            when(profileItem) {
-                is ProfileSection ->  return SectionRow(profileItem)
+            when (profileItem) {
+                is ProfileSection -> return SectionRow(profileItem)
                 is ProfileItemProfileTableItem -> {
                     val dataDef = profileDataLoader.getDataDef(profileItem.profileItemKey)
                     when (dataDef) {
-                        is ReportProfileDataItem -> return ReportProfileItemRow(dataDef,profileItem, profileDataLoader)
+                        is ReportProfileDataItem -> return ReportProfileItemRow(dataDef, profileItem, profileDataLoader)
                         is ParticipantProfileDataItem -> return ParticipantProfileItemRow(profileItem, profileDataLoader)
                         else -> return DisplayOnlyRow(profileItem)
                     }
@@ -140,7 +142,7 @@ abstract class ProfileRow {
                 is ProfileViewProfileTableView -> return ProfileViewRow(profileItem)
                 is HtmlProfileTableItem -> return HtmlRow(profileItem)
                 is StudyParticipationProfileTableItem -> return StudyParticipationProfileItemRow(profileItem, profileDataLoader)
-                is SettingsProfileTableItem -> return SettingsRow(profileItem,  profileDataLoader)
+                is SettingsProfileTableItem -> return SettingsRow(profileItem, profileDataLoader)
                 is DownloadDataProfileTableItem -> return DownloadDataRow(profileItem, profileDataLoader)
                 is EmailProfileTableItem -> return EmailRow(profileItem)
                 else -> return DisplayOnlyRow(profileItem)
@@ -149,44 +151,50 @@ abstract class ProfileRow {
     }
 }
 
-class DisplayOnlyRow(val profileItem: ProfileTableItem): ProfileRow() {
+class DisplayOnlyRow(val profileItem: ProfileTableItem) : ProfileRow() {
     override val title = profileItem.title
-    override fun isClickable(): Boolean { return false }
+    override fun isClickable(): Boolean {
+        return false
+    }
 }
 
-class DownloadDataRow(val profileItem: ProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+class DownloadDataRow(val profileItem: ProfileTableItem, val profileDataLoader: ProfileDataLoader) : ProfileRow() {
     override val title = profileItem.title
     override fun onClick(listener: OnListInteractionListener) {
         BridgeDataProvider.getInstance().downloadData(profileDataLoader.participantData.createdOn.toLocalDate(), LocalDate.now())
     }
 }
 
-class SectionRow(val profileItem: ProfileSection): ProfileRow() {
+class SectionRow(val profileItem: ProfileSection) : ProfileRow() {
     override val type = TYPE.SECTION
     override val viewType = VIEW_TYPE_SECTION
     override val title = profileItem.title
-    override fun isClickable(): Boolean { return false }
-}
-
-class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
-    override val title = profileItem.title
-    override val detail: String?
-        get() = if (BridgeDataProvider.getInstance().isConsented) "Enrolled in mPower study" else "Rejoin mPower study"
-    override fun onClick(listener: OnListInteractionListener) {
-        listener.launchWithdraw(profileDataLoader.participantData.firstName?: "", profileDataLoader.participantData.createdOn)
+    override fun isClickable(): Boolean {
+        return false
     }
 }
 
-abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+class StudyParticipationProfileItemRow(val profileItem: StudyParticipationProfileTableItem, val profileDataLoader: ProfileDataLoader) : ProfileRow() {
+    override val title = profileItem.title
+    override val detail: String?
+        get() = if (BridgeDataProvider.getInstance().isConsented) "Enrolled in mPower study" else "Rejoin mPower study"
+
+    override fun onClick(listener: OnListInteractionListener) {
+        listener.launchWithdraw(profileDataLoader.participantData.firstName
+                ?: "", profileDataLoader.participantData.createdOn)
+    }
+}
+
+abstract class ProfileItemRow(val profileItem: ProfileItemProfileTableItem, val profileDataLoader: ProfileDataLoader) : ProfileRow() {
     override val title = profileItem.title
 
     override val detail: String?
         get() {
             var value = profileDataLoader.getValueString(profileItem.profileItemKey)
-            if (value != null ) {
-                value = profileItem.valueMap?.get(value)?: value
+            if (value != null) {
+                value = profileItem.valueMap?.get(value) ?: value
             }
-            return value?: ""
+            return value ?: ""
         }
 
 }
@@ -198,15 +206,15 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
     override val detail: String?
         get() {
             var value = profileDataLoader.getValueString(profileItem.profileItemKey)
-            if (value != null ) {
+            if (value != null) {
                 value = when (profileItem.profileItemKey) {
                     "passiveDataAllowed" -> if (value == "true") "Enabled" else "Disabled"
-                    else -> profileItem.valueMap?.get(value)?: value
+                    else -> profileItem.valueMap?.get(value) ?: value
                 }
-            }else if (profileItem.profileItemKey == "passiveDataAllowed") {
+            } else if (profileItem.profileItemKey == "passiveDataAllowed") {
                 return "Function is not available"
             }
-            return value?: ""
+            return value ?: ""
         }
 
     override fun onClick(listener: OnListInteractionListener) {
@@ -234,13 +242,14 @@ class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profil
 
     override fun onClick(listener: OnListInteractionListener) {
         when (profileItem.profileItemKey) {
-            "firstName" -> listener.launchEditProfileItemDialog(detail?: "", profileItem.profileItemKey)
+            "firstName" -> listener.launchEditProfileItemDialog(detail
+                    ?: "", profileItem.profileItemKey)
             "sharingScope" -> listener.launchEditParticipantItem(profileItem, profileDataLoader.getDataDef(profileItem.profileItemKey)!!)
         }
     }
 }
 
-class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoader: ProfileDataLoader): ProfileRow() {
+class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoader: ProfileDataLoader) : ProfileRow() {
     override val title = profileItem.title
 
     val setting = profileItem.setting
@@ -256,18 +265,18 @@ class SettingsRow(val profileItem: SettingsProfileTableItem, val profileDataLoad
     override val detail: String?
         get() {
             val value = profileDataLoader.getValueString(profileItem.profileItemKey)
-            return value?: ""
+            return value ?: ""
         }
 
 }
 
 
-class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
+class HtmlRow(val profileItem: HtmlProfileTableItem) : ProfileRow() {
     override val title = profileItem.title
     override val detail = profileItem.detail
     val htmlResource: ResourcePathManager.Resource?
         get() {
-            when(profileItem.htmlResource) {
+            when (profileItem.htmlResource) {
                 "Licenses" -> return ResourceManager.getInstance().getLicense()
                 "consent" -> return ResourceManager.getInstance().consentHtml
                 "PrivacyPolicy" -> return ResourceManager.getInstance().privacyPolicy
@@ -279,12 +288,12 @@ class HtmlRow(val profileItem: HtmlProfileTableItem): ProfileRow() {
     override fun onClick(listener: OnListInteractionListener) {
         val path = htmlResource?.absolutePath
         val intent = org.sagebionetworks.researchstack.backbone.ui.ViewWebDocumentActivity.newIntentForPath(listener.getContext(),
-            "", path, true)
+                "", path, true)
         listener.startActivity(intent)
     }
 }
 
-class EmailRow(val profileItem: EmailProfileTableItem): ProfileRow() {
+class EmailRow(val profileItem: EmailProfileTableItem) : ProfileRow() {
     override val title = profileItem.title
 
     override fun onClick(listener: OnListInteractionListener) {
@@ -298,7 +307,7 @@ class EmailRow(val profileItem: EmailProfileTableItem): ProfileRow() {
     }
 }
 
-class ProfileViewRow(val profileItem: ProfileViewProfileTableView): ProfileRow() {
+class ProfileViewRow(val profileItem: ProfileViewProfileTableView) : ProfileRow() {
     override val title = profileItem.title
     override fun onClick(listener: OnListInteractionListener) {}
 }
