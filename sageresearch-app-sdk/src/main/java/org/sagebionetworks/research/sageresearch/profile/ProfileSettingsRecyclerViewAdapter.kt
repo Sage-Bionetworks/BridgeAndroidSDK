@@ -78,7 +78,7 @@ class ProfileSettingsRecyclerViewAdapter
         holder.mDetails.text = item.detail
         holder.mTitle.visibility = if (holder.mTitle.text == null) View.GONE else View.VISIBLE
         holder.mDetails.visibility = if (holder.mDetails.text == null) View.GONE else View.VISIBLE
-        holder.chevron?.visibility = if (item.isClickable()) View.VISIBLE else View.GONE
+        holder.chevron.visibility = if (item.isClickable()) View.VISIBLE else View.GONE
         holder.mView.isClickable = item.isClickable()
         with(holder.mView) {
             tag = item
@@ -212,7 +212,7 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
                     else -> profileItem.valueMap?.get(value) ?: value
                 }
             } else if (profileItem.profileItemKey == "passiveDataAllowed") {
-                return "Function is not available"
+                return "Unavailable"
             }
             return value ?: ""
         }
@@ -223,9 +223,11 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
             listener.launchSurvey(surveyRef)
         } else {
             when (profileItem.profileItemKey) {
-                "passiveDataAllowed" -> listener.launchPassiveDataAllowed(profileItem,
-                        profileDataLoader.getDataDef(profileItem.profileItemKey)!!,
-                        profileDataLoader.getValueString(profileItem.profileItemKey))
+                "passiveDataAllowed" -> profileDataLoader.getDataDef(profileItem.profileItemKey)?.let {
+                    listener.launchPassiveDataAllowed(profileItem,
+                            it,
+                            profileDataLoader.getValueString(profileItem.profileItemKey))
+                }
             }
         }
     }
@@ -244,7 +246,9 @@ class ParticipantProfileItemRow(profileItem: ProfileItemProfileTableItem, profil
         when (profileItem.profileItemKey) {
             "firstName" -> listener.launchEditProfileItemDialog(detail
                     ?: "", profileItem.profileItemKey)
-            "sharingScope" -> listener.launchEditParticipantItem(profileItem, profileDataLoader.getDataDef(profileItem.profileItemKey)!!)
+            "sharingScope" -> profileDataLoader.getDataDef(profileItem.profileItemKey)?.let{
+                listener.launchEditParticipantItem(profileItem, it)
+            }
         }
     }
 }
