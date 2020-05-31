@@ -46,7 +46,7 @@ class ProfileSettingsRecyclerViewAdapter
         set(value) {
             field = value
             val dataGroups = value.second?.participantData?.dataGroups ?: listOf()
-            mValues = value.first?.filteredProfileItemList(dataGroups)?.map { ProfileRow.createProfileRow(it, value.second!!) }
+            mValues = value.first?.filteredProfileItemList(dataGroups)?.map { value.second?.let{ second -> ProfileRow.createProfileRow(it, second)}?: return }
                     ?: listOf()
 
         }
