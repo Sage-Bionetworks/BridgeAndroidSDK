@@ -5,9 +5,7 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel
 import hu.akarnokd.rxjava.interop.RxJavaInterop.toV2Observable
 import io.reactivex.Single
-import org.sagebionetworks.bridge.android.manager.models.ProfileDataItem
 import org.sagebionetworks.bridge.android.manager.models.ProfileDataSource
-import org.sagebionetworks.bridge.android.manager.models.ProfileItemProfileTableItem
 import org.sagebionetworks.bridge.researchstack.BridgeDataProvider
 import org.sagebionetworks.bridge.rest.model.SharingScope
 import org.sagebionetworks.bridge.rest.model.StudyParticipant
@@ -18,14 +16,12 @@ import org.sagebionetworks.research.sageresearch.dao.room.ReportRepository
 import org.sagebionetworks.research.sageresearch.dao.room.ScheduledActivityEntity
 import org.sagebionetworks.research.sageresearch.dao.room.SurveyRepository
 import org.sagebionetworks.research.sageresearch.repos.BridgeRepositoryManager
-import org.sagebionetworks.researchstack.backbone.model.TaskModel
 import org.slf4j.LoggerFactory
-import java.util.*
 
 
-open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository): ViewModel() {
+open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val reportRepo: ReportRepository, val appConfigRepo: AppConfigRepository, val surveyRepo: SurveyRepository) : ViewModel() {
 
-    private val LOGGER = LoggerFactory.getLogger(ProfileViewModel::class.java!!)
+    private val LOGGER = LoggerFactory.getLogger(ProfileViewModel::class.java)
 
     val profileManager = ProfileManager(reportRepo, appConfigRepo)
 
@@ -104,7 +100,7 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
     private fun loadScheduledActivity(surveyId: String) {
         compositeDisposable.add(bridgeRepoManager.scheduleRepo.scheduleDao.activityGroupFlowable(setOf(surveyId))
                 .firstOrError()
-                .subscribe({currentScheduledActivity = it.firstOrNull()},{"fail"})
+                .subscribe({ currentScheduledActivity = it.firstOrNull() }, { "fail" })
         )
     }
 
@@ -112,6 +108,4 @@ open class ProfileViewModel(val bridgeRepoManager: BridgeRepositoryManager, val 
         super.onCleared()
         compositeDisposable.dispose()
     }
-
-
 }

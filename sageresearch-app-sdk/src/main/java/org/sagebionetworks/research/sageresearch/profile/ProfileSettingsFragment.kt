@@ -76,7 +76,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
 
     override fun launchEditProfileItemDialog(value: String, profileItemKey: String) {
         val dialogFragment = EditProfileItemDialogFragment.newInstance(value, profileItemKey, this)
-        dialogFragment.show(fragmentManager!!, "EditDialog")
+        dialogFragment.show(requireFragmentManager(), "EditDialog")
     }
 
     override  fun saveEditDialogValue(value: String, profileItemKey: String) {
@@ -113,7 +113,7 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
                     }
 
                 }
-                val drawable = this.context!!.resources.getDrawable(R.drawable.form_step_divider)
+                val drawable = requireContext().resources.getDrawable(R.drawable.form_step_divider)
                 divider.setDrawable(drawable)
                 this.addItemDecoration(divider)
 
@@ -121,10 +121,10 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
             if (adapter == null) {
                 profileViewModel.profileData(profileKey).observe(this, Observer { loader ->
                     if (adapter == null) {
-                        adapter = ProfileSettingsRecyclerViewAdapter(loader!!, this)
+                        adapter = ProfileSettingsRecyclerViewAdapter(loader, this)
                         view.list.adapter = adapter
                     } else {
-                        adapter?.updateDataLoader(loader!!)
+                        adapter?.updateDataLoader(loader)
                     }
                     showLoading(false)
                 })
@@ -146,10 +146,10 @@ abstract class ProfileSettingsFragment : OnListInteractionListener, EditProfileI
      * @param tag The tag for this fragment on the back stack.
      */
     fun addChildFragmentOnTop(childFragment: androidx.fragment.app.Fragment, tag: String?) {
-        fragmentManager!!
+        requireFragmentManager()
                 .beginTransaction()
                 .detach(this)
-                .add((this.view!!.parent as ViewGroup).id, childFragment)
+                .add((this.requireView().parent as ViewGroup).id, childFragment)
                 .addToBackStack(null)
                 .commit()
     }

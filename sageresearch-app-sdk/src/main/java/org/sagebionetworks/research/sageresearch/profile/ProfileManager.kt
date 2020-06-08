@@ -84,11 +84,13 @@ class ProfileManager(val reportRepo: ReportRepository, val appConfigRepo: AppCon
 
             addSource(loadDefaultProfileManagerLiveData()) {
                 profileDataManager = it
-                addSource(loadReports(it!!.reportIds)) {
-                    reportMap = it
+                it?.reportIds?.let { item ->
+                    addSource(loadReports(item)) {
+                        reportMap = it
+                        update()
+                    }
                     update()
                 }
-                update()
             }
 
             addSource(loadParticipantRecordLiveData()) {
