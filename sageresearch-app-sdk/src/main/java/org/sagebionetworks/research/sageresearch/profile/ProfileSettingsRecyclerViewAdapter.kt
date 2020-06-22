@@ -208,7 +208,7 @@ class ReportProfileItemRow(val reportProfileDataItem: ReportProfileDataItem,
             var value = profileDataLoader.getValueString(profileItem.profileItemKey)
             if (value != null) {
                 value = when (profileItem.profileItemKey) {
-                    "passiveDataAllowed" -> if (value == "true") "Enabled" else "Disabled"
+                    "passiveDataAllowed" -> if (value.toBoolean()) "Enabled" else "Disabled"
                     else -> profileItem.valueMap?.get(value) ?: value
                 }
             } else if (profileItem.profileItemKey == "passiveDataAllowed") {
