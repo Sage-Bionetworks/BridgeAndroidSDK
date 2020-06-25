@@ -506,7 +506,7 @@ open class ReportRepository constructor(
      */
     protected fun writeReportToRoom(report: ReportEntity): Completable {
         logger.info("cacheReports called for report: $report")
-        return writeReportsToRoom(report.identifier!!, Collections.singletonList(report))
+        return writeReportsToRoom(report.identifier?:"", Collections.singletonList(report))
     }
 
     /**

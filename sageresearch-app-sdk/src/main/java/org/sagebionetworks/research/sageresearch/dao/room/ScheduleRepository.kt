@@ -213,7 +213,9 @@ open class ScheduleRepository constructor(
                 .observeOn(asyncScheduler)
                 .filter { requestMap[it] != null }
                 .flatMapSingle {
-                    toV2Single(activityManager.getActivities(it, requestMap[it]!!))
+                    requestMap[it]?.let {requestMapItem ->
+                        toV2Single(activityManager.getActivities(it, requestMapItem))
+                    }
                 }
                 .flatMapCompletable {
                     // If another request previously failed we won't trigger any success callbacks

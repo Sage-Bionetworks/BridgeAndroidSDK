@@ -41,7 +41,7 @@ open class SingletonWithParam<out T, in A>(creator: (A) -> T) {
     private var creator: ((A) -> T)? = creator
     @Volatile private var instance: T? = null
 
-    fun getInstance(arg: A): T {
+    fun getInstance(arg: A): T? {
         val i = instance
         if (i != null) {
             return i
@@ -52,7 +52,7 @@ open class SingletonWithParam<out T, in A>(creator: (A) -> T) {
             if (i2 != null) {
                 i2
             } else {
-                val created = creator!!(arg)
+                val created = creator?.let { it(arg) }
                 instance = created
                 creator = null
                 created

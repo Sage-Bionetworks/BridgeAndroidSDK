@@ -26,8 +26,8 @@ class AppConfigRepository(resourceDao: ResourceEntityDao, val appConfigManager: 
                 }
                 !it.isEmpty()
             }.map {
-                cachedAppConfig = it.get(0).loadResource(AppConfig::class.java)
-                cachedAppConfig!!
+                cachedAppConfig = it.getOrNull(0)?.loadResource(AppConfig::class.java)
+                cachedAppConfig
             }
         }
 

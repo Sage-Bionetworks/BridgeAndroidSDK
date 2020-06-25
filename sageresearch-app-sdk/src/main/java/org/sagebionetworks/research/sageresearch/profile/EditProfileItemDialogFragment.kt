@@ -45,7 +45,7 @@ class EditProfileItemDialogFragment: androidx.fragment.app.DialogFragment() {
                             DialogInterface.OnClickListener { dialog, id ->
                                 if (targetFragment is EditProfileItemDialogListener) {
                                     val listener: EditProfileItemDialogListener? = targetFragment as? EditProfileItemDialogListener
-                                    listener?.saveEditDialogValue(layout.editText.text.toString(), arguments!!.getString(ITEM_KEY))
+                                    listener?.saveEditDialogValue(layout.editText.text.toString(), requireArguments().getString(ITEM_KEY)?:"")
                                 }
                             })
                     .setNegativeButton(R.string.rsb_BUTTON_CANCEL,
