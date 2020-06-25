@@ -54,12 +54,6 @@ buildscript {
     classpath "org.jetbrains.dokka:dokka-android-gradle-plugin:$dokka_version"
     classpath "com.jakewharton:butterknife-gradle-plugin:$butterknife_version"
 
-
-    classpath "org.sagebionetworks.research:domain:$sage_research_version"
-    classpath "org.sagebionetworks.research:presentation:$sage_research_version"
-    classpath "org.sagebionetworks.research:data:$sage_research_version"
-
-
     // code quality
     classpath 'net.ltgt.gradle:gradle-errorprone-plugin:0.0.13'
     classpath 'com.chaitanyapramod.gradle:findbugs-android:1.0'
