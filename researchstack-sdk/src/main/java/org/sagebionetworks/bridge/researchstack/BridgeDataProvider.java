@@ -348,7 +348,15 @@ public abstract class BridgeDataProvider extends DataProvider {
 
     @NonNull
     public Observable<DataResponse> signUp(@NonNull SignUp signUp) {
-        logger.debug("Called signUp with open ended sign up data model");
+        // saving email to user object should exist elsewhere.
+        // Save email to user object.
+
+        return signUp(signUp.getEmail(), signUp.getPassword());
+    }
+
+    @NonNull
+    public Observable<DataResponse> signUpPhone(@NonNull SignUp signUp) {
+        logger.debug("Called signUpPhone");
 
         return authenticationManager
                 .signUp(signUp)
@@ -359,7 +367,7 @@ public abstract class BridgeDataProvider extends DataProvider {
     public Observable<DataResponse> signUp(@NonNull String email, @Nullable String password) {
         checkNotNull(email);
 
-        logger.debug("Called signUp with email and password");
+        logger.debug("Called signUp");
 
         return authenticationManager
                 .signUp(email, password)
