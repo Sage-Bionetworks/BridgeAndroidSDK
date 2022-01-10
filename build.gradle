@@ -12,12 +12,13 @@ allprojects {
     }
     maven { url 'http://repo-maven.sagebridge.org/' }
     maven { url "https://jitpack.io" }
-    maven { url 'https://dl.bintray.com/sage-bionetworks/research-stack/' }
+    maven {url = "https://sagebionetworks.jfrog.io/artifactory/mobile-sdks/"}
+    //maven { url 'https://dl.bintray.com/sage-bionetworks/research-stack/' }
 
     mavenLocal()
 
     // for temp repo https://bintray.com/sage-bionetworks/bridge-maven-release/rest-client-android
-    maven { url 'https://dl.bintray.com/sage-bionetworks/bridge-maven-release' }
+    //maven { url 'https://dl.bintray.com/sage-bionetworks/bridge-maven-release' }
   }
 }
 
